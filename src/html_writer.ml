@@ -1,0 +1,135 @@
+(* This file is part of Markup.ml, released under the BSD 2-clause license. See
+   doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
+
+open Common
+
+let _escape_attribute s =
+  let buffer = Buffer.create (String.length s) in
+  Uutf.String.fold_utf_8 (fun () _ -> function
+    | `Malformed _ -> ()
+    | `Uchar c ->
+      match c with
+      | 0x0026 -> Buffer.add_string buffer "&amp;"
+      | 0x00A0 -> Buffer.add_string buffer "&nbsp;"
+      | 0x0022 -> Buffer.add_string buffer "&quot;"
+      | _ -> add_utf_8 buffer c)
+    () s;
+  Buffer.contents buffer
+
+let _escape_text s =
+  let buffer = Buffer.create (String.length s) in
+  Uutf.String.fold_utf_8 (fun () _ -> function
+    | `Malformed _ -> ()
+    | `Uchar c ->
+      match c with
+      | 0x0026 -> Buffer.add_string buffer "&amp;"
+      | 0x00A0 -> Buffer.add_string buffer "&nbsp;"
+      | 0x003C -> Buffer.add_string buffer "&lt;"
+      | 0x003E -> Buffer.add_string buffer "&gt;"
+      | _ -> add_utf_8 buffer c)
+    () s;
+  Buffer.contents buffer
+
+let _void_elements =
+  ["area"; "base"; "basefont"; "bgsound"; "br"; "col"; "embed"; "frame"; "hr";
+   "img"; "input"; "keygen"; "link"; "meta"; "param"; "source"; "track"; "wbr"]
+
+let _prepend_newline_for = ["pre"; "textarea"; "listing"]
+
+open Kstream
+
+let write signals =
+  let open_elements = ref [] in
+
+  let rec queue = ref next_signal
+
+  and emit_list l throw e k =
+    match l with
+    | [] -> next_signal throw e k
+    | s::more ->
+      queue := emit_list more;
+      k s
+
+  and next_signal throw e k =
+    next signals throw e begin function
+      | `Start_element ((ns, name') as name, attributes) ->
+        let tag_name =
+          match name with
+          | ns, local_name when List.mem ns [html_ns; svg_ns; mathml_ns] ->
+            local_name
+          | ns, local_name when ns = xml_ns -> "xml:" ^ local_name
+          | ns, local_name when ns = xmlns_ns -> "xmlns:" ^ local_name
+          | ns, local_name when ns = xlink_ns -> "xlink:" ^ local_name
+          | _, local_name -> (* An error. *) local_name
+        in
+
+        let attributes =
+          attributes |> List.map (fun ((ns, local_name) as name, value) ->
+            let name =
+              match name with
+              | "", _ -> local_name
+              | _ when ns = xml_ns -> "xml:" ^ local_name
+              | _, "xmlns" when ns = xmlns_ns -> "xmlns"
+              | _ when ns = xmlns_ns -> "xmlns:" ^ local_name
+              | _ when ns = xlink_ns -> "xlink:" ^ local_name
+              | _ -> (* An error. *) local_name
+            in
+            name, value)
+        in
+
+        let rec prepend_attributes words = function
+          | [] -> words
+          | (name, value)::more ->
+            prepend_attributes
+              (" "::name::"=\""::(_escape_attribute value)::"\""::words) more
+        in
+
+        let tag =
+          "<"::tag_name::(prepend_attributes [">"] (List.rev attributes)) in
+
+        let is_void = ns = html_ns && List.mem name' _void_elements in
+
+        if is_void then
+          emit_list tag throw e k
+        else begin
+          open_elements := tag_name::!open_elements;
+
+          if ns = html_ns && List.mem name' _prepend_newline_for then
+            peek_option signals throw (function
+              | Some (`Text s) when String.length s > 0 && s.[0] == '\x0A' ->
+                emit_list (tag @ ["\n"]) throw e k
+              | _ -> emit_list tag throw e k)
+          else
+            emit_list tag throw e k
+        end
+
+      | `End_element ->
+        begin match !open_elements with
+        | [] -> ()
+        | name::rest ->
+          open_elements := rest;
+          emit_list ["</"; name; ">"] throw e k
+        end
+
+      | `Text s ->
+        if String.length s > 0 then
+          emit_list [_escape_text s] throw e k
+        else
+          next_signal throw e k
+
+      | `Comment s ->
+        emit_list ["<!--"; s; "-->"] throw e k
+
+      | `PI (target, s) ->
+        emit_list ["<?"; target; " "; s; ">"] throw e k
+
+      | `Doctype {doctype_name = Some name} ->
+        emit_list ["<!DOCTYPE "; name; ">"] throw e k
+
+      | `Doctype _ | `Xml _ ->
+        next_signal throw e k
+    end
+
+  in
+
+  (fun throw e k -> !queue throw e k) |> make

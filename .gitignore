@@ -1,0 +1,8 @@
+scratch/
+_build/
+bisect*.out
+test/coverage
+doc/markup.odocl
+doc/html
+doc/publish
+opam
