@@ -128,7 +128,10 @@ let () =
         let open Soup in
         match soup $? "a[href*=github]" with
         | None -> ()
-        | Some a -> a |> texts |> List.iter print_string; print_newline ()
+        | Some a ->
+          a |> texts |> List.iter print_string;
+          print_newline ();
+          exit 0
     end
   end
 ```

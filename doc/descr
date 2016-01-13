@@ -1,4 +1,4 @@
-Error-recovering functional HTML5 and XML parsers and writers.
+Error-recovering functional HTML5 and XML parsers and writers
 
 Markup.ml provides an HTML parser and an XML parser. The parsers are wrapped in
 a simple interface: they are functions that transform byte streams to parsing
