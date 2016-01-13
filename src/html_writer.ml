@@ -105,7 +105,7 @@ let write signals =
 
       | `End_element ->
         begin match !open_elements with
-        | [] -> ()
+        | [] -> next_signal throw e k
         | name::rest ->
           open_elements := rest;
           emit_list ["</"; name; ">"] throw e k

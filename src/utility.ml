@@ -48,6 +48,61 @@ let tree ~text ~element s throw k =
     | [] -> k None
     | t::_ -> k (Some t))
 
+let elements select s =
+  let depth = ref 0 in
+  let started = ref 0 in
+  let finished = ref 0 in
+
+  let rec scan throw e k =
+    next s throw e begin function
+      | `Start_element (name, attributes) as signal
+          when !started = !finished && select name attributes ->
+
+        let index = !started + 1 in
+        started := index;
+        depth := 0;
+
+        let constructor _ k =
+          push s signal;
+          (fun throw e k ->
+            if !finished >= index then e ()
+            else
+              next s throw e begin function
+                | `Start_element _ as signal ->
+                  depth := !depth + 1;
+                  k signal
+
+                | `End_element as signal ->
+                  depth := !depth - 1;
+                  if !depth = 0 then
+                    finished := index;
+                  k signal
+
+                | signal -> k signal
+              end)
+          |> make
+          |> k
+        in
+
+        construct constructor |> k
+
+      | `Start_element _ when !started > !finished ->
+        depth := !depth + 1;
+        scan throw e k
+
+      | `End_element when !started > !finished ->
+        depth := !depth - 1;
+        if !depth = 0 then
+          finished := !started;
+        scan throw e k
+
+      | _ ->
+        scan throw e k
+    end
+  in
+
+  make scan
+
 let content s =
   s
   |> filter_map (fun v _ k ->

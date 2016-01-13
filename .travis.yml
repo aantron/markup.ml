@@ -17,9 +17,10 @@ before_script:
   - eval `opam config env`
 
 script:
+  - opam install -y ounit
+  - "[ -n $DOCS ] || opam install -y lambdasoup"
   - "[ -z $LWT ] || opam install -y lwt js_of_ocaml"
   - "[ -z $COVERALLS ] || opam install -y bisect_ppx ocveralls"
-  - opam install -y ounit js_of_ocaml lambdasoup
   - make install
   - make dependency-test
   - make test

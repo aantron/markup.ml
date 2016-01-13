@@ -1,8 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-(** Flexible error-recovering HTML and XML parsers and writers with a simple
-    interface.
+(** Error-recovering functional HTML and XML parsers and writers.
 
     Markup.ml is an HTML and XML parsing and serialization library. It:
 
@@ -74,8 +73,10 @@ val write_xml  : signal stream -> char stream
     {!ASYNCHRONOUS}, which will later be shared with a planned [Markup_async]
     module.
 
-    Markup.ml is developed on GitHub and distributed under the BSD license.
-    [LINKS]. This documentation is for version 0.5 of the library. *)
+    Markup.ml is developed on {{:https://github.com/aantron/markup.ml} GitHub}
+    and distributed under the
+    {{:https://github.com/aantron/markup.ml/blob/master/doc/LICENSE}
+    BSD license}. This documentation is for version 0.5 of the library. *)
 
 
 
@@ -527,6 +528,24 @@ Element ("p" [
 ]}
  *)
 
+val elements :
+  (name -> (name * string) list -> bool) -> (signal, 's) stream ->
+    ((signal, 's) stream, 's) stream
+(** [elements f s] scans the signal stream [s] for
+    [`Start_element (name, attributes)] signals that satisfy
+    [f name attributes]. Each such matching signal is the beginning of a
+    substream that ends with the corresponding [`End_element] signal. The result
+    of [elements f s] is the stream of these substreams. In simpler words,
+    [elements f s] creates a sequence of streams of elements in [s] that match
+    [f].
+
+    Matches don't nest. If there is a matching element contained in another
+    matching element, only the top one results in a substream.
+
+    Code using [elements] does not have to read each substream to completion, or
+    at all. However, once the using code has tried to get the next substream, it
+    should not try to read a previous one. *)
+
 val drop_locations : (location * signal, 's) stream -> (signal, 's) stream
 (** Forgets location information emitted by the parsers. It is equivalent to
     [map snd]. *)
@@ -570,6 +589,10 @@ val xhtml :
 val xhtml_entity : string -> string option
 (** Translates XHTML entities. This function is for use with the [~entity]
     argument of [parse_xml] when parsing XHTML. *)
+
+val strings_to_bytes : (string, 's) stream -> (char, 's) stream
+(** [strings_to_bytes s] is the stream of all the bytes of all strings in
+    [s]. *)
 
 
 

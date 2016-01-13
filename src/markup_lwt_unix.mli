@@ -1,7 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-(** Unix functions based on [Lwt_io] for the Lwt interface to Markup.ml.
+(** Stream functions based on [Lwt_io].
 
     This module contains additional functions over {!Markup_lwt}.
 

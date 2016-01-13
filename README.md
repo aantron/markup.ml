@@ -1,14 +1,20 @@
-# Markup.ml &nbsp; [![version pre0.5][version]][releases] [![(BSD license)][license-img]][license]
+# Markup.ml &nbsp; [![version 0.5][version]][releases] [![(BSD license)][license-img]][license]
 
-[version]:       https://img.shields.io/badge/version-pre0.5-blue.svg
+[version]:       https://img.shields.io/badge/version-0.5-blue.svg
 [license-img]:   https://img.shields.io/badge/license-BSD-blue.svg
 
-Markup.ml is a pair of streaming, error-recovering parsers, one for HTML and one
-for XML, with a simple interface: each parser is a function that transforms
-streams.
+Markup.ml is a pair of parsers implementing the HTML5 and XML specifications.
+Usage is simple, because each parser is just a function from byte streams to
+parsing signal streams.
 
-Here is an example of pretty-printing and correcting an HTML fragment. The code
-is in the left column.
+HTML5 gives complicated rules for well-formed markup, error reporting, and
+recovery. Markup.ml encapsulates them. While the XML specification does not
+include error recovery, Markup.ml also recovers from XML errors, after reporting
+them. Thus, it provides best-effort parsing of both HTML and XML.
+
+Here is an example of Markup.ml correcting errors in a small HTML fragment, then
+pretty-printing it. The code is in the left column, and the center column shows
+the values produced.
 
 ```ocaml
 open Markup;;
@@ -18,10 +24,9 @@ string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
 |> parse_html           `Start_element "p"
                         `Start_element "em"
                         `Text "Markup.ml"
-                        ~report (1, 4)  (* can use ~report to abort parsing; *)
-                          (`Unmatched_start_tag "em")  (* ignored by default *)
+                        ~report (1, 4) (`Unmatched_start_tag "em")
                         `End_element                   (* /em: recovery *)
-                        `End_element                   (* /p *)
+                        `End_element                   (* /p: not an error *)
                         `Start_element "p"
                         `Start_element "em"            (* recovery *)
                         `Text "rocks!"
@@ -39,26 +44,33 @@ string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
                          </p>"                         (* valid HTML *)
 ```
 
-Some features:
+In addition to being error-correcting, the parsers are:
 
-- Supports both strict and error-correcting parsing.
-- Based on the [HTML5][HTML5] and [XML][XML] specifications. This concerns HTML
-  error recovery especially.
-- Character encodings detected automatically; emits UTF-8.
-- Can be used in simple synchronous style or with [Lwt][lwt].
-- Streaming and lazy – partial input is processed as it is received, but only if
-  needed.
-- Parses input in one pass and does not build up a document representation in
-  memory.
+- *streaming*: capable of parsing partial input while more input is still being
+  received;
+- *lazy*: not parsing input unless it is needed to emit the next parsing signal,
+  so you can easily stop parsing partway through a document;
+- *non-blocking*: they can be used with [Lwt][lwt], but still provide a
+  straightforward synchronous interface for simple usage; and
+- *one-pass*: memory consumption is limited since the parsers don't build up a
+  document representation, nor buffer input beyond a small amount of lookahead.
 
-The interface is centered around four transformations between byte streams and
-signal streams: [`parse_html`][parse_html], [`write_html`][write_html],
+The parsers detect character encodings automatically. Strings emitted are in
+UTF-8.
+
+The parsers are subjected to fairly thorough [testing][tests], with more tests
+to be added in the future.
+
+## Interface and simple usage
+
+The interface is centered around four functions between byte streams and signal
+streams: [`parse_html`][parse_html], [`write_html`][write_html],
 [`parse_xml`][parse_xml], and [`write_xml`][write_xml]. These have several
 optional arguments for fine-tuning their behavior. The rest of the functions
 either input or output byte streams, or transform signal streams in some
 interesting way.
 
-Here are some more usage examples:
+Some examples:
 
 ```ocaml
 (* Show up to 10 XML well-formedness errors to the user. Stop after
@@ -82,8 +94,57 @@ file "some_file"
   ~element:(fun (_, name) _ children -> Element (name, children))
 ```
 
-The library is subjected to fairly thorough [testing][tests], with more tests on
-the way before 1.0 release.
+## Advanced: Cohttp + Markup.ml + Lambda Soup + Lwt
+
+The code below is a complete program that requests a Google search, then
+performs a streaming scrape of result titles. The first GitHub link is printed,
+then the program exits without waiting for the rest of input. Perhaps early exit
+is not so important for a Google results page, but it may be needed for large
+documents. Memory consumption is low because only the `h3` elements are
+converted into DOM-like trees.
+
+```ocaml
+open Lwt.Infix
+
+let () =
+  Markup_lwt.ensure_tail_calls ();    (* Workaround for current Lwt :( *)
+
+  Lwt_main.run begin
+    Uri.of_string "https://www.google.com/search?q=markup.ml"
+    |> Cohttp_lwt_unix.Client.get
+    >|= snd                           (* Assume success and get body. *)
+    >|= Cohttp_lwt_body.to_stream     (* Now an Lwt_stream.t. *)
+    >|= Markup_lwt.lwt_stream         (* Now a Markup.stream. *)
+    >|= Markup.strings_to_bytes
+    >|= Markup.parse_html
+    >|= Markup.drop_locations
+    >|= Markup.elements (fun name _ -> snd name = "h3")
+    >>= Markup_lwt.iter begin fun h3_subtree ->
+      h3_subtree
+      |> Markup.write_html
+      |> Markup_lwt.to_string
+      >|= Soup.parse
+      >|= fun soup ->
+        let open Soup in
+        match soup $? "a[href*=github]" with
+        | None -> ()
+        | Some a -> a |> texts |> List.iter print_string; print_newline ()
+    end
+  end
+```
+
+This prints `aantron/markup.ml · GitHub`. To run it, do:
+
+```sh
+ocamlfind opt -linkpkg -package lwt.unix -package cohttp.lwt \
+    -package markup.lwt -package lambdasoup scrape.ml && ./a.out
+```
+
+You can get all the necessary packages by
+
+```sh
+opam install lwt cohttp lambdasoup markup
+```
 
 ## Installing
 
@@ -103,7 +164,8 @@ To remove the pin later, run `make uninstall`.
 ## Documentation
 
 The interface of Markup.ml is three modules [`Markup`][Markup],
-[`Markup_lwt`][Markup_lwt], and [`Markup_lwt_unix`][Markup_lwt_unix].
+[`Markup_lwt`][Markup_lwt], and [`Markup_lwt_unix`][Markup_lwt_unix]. The last
+two are available only if you have Lwt installed.
 
 ## Help wanted
 
@@ -111,7 +173,7 @@ Parsing markup has more applications than one person can easily think of, which
 makes it difficult to do exhaustive testing. I would greatly appreciate any bug
 reports.
 
-While the parsers are in an "advanced" state of completion, there is still
+Although the parsers are in an "advanced" state of completion, there is still
 considerable work to be done on standard conformance and speed. Again, any help
 would be appreciated.
 
@@ -127,7 +189,7 @@ Feel free to open any issues on GitHub, or send me an email at
 
 [travis]:        https://travis-ci.org/aantron/markup.ml/branches
 [travis-img]:    https://img.shields.io/travis/aantron/markup.ml/master.svg
-[coveralls]:     google.com
+[coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
 [coveralls-img]: https://img.shields.io/coveralls/aantron/markup.ml/master.svg
 
 ## License
@@ -137,27 +199,6 @@ Markup.ml is distributed under the BSD license. See [LICENSE][license].
 The Markup.ml source distribution includes a copy of the HTML5 entity list,
 which is distributed under the W3C document license. The copyright notices and
 text of this license are also found in [LICENSE][license].
-
-## Interesting
-
-As it turns out, there is no simple way to read an entire text file into a
-string using the standard library of OCaml. If you have Markup.ml installed,
-however, you can do
-
-```ocaml
-file "foo.txt" |> to_string
-```
-
-This only supports text mode.
-
-Markup.ml also makes a decent half of a character encodings library – you can
-use it to convert byte sources into Unicode scalar values. For example, suppose
-you have a file in UTF-16. Then, you can do
-
-```ocaml
-open Encoding
-file "encoded.txt" |> decode utf_16 |> iter (*...do something with the ints...*)
-```
 
 [releases]:        https://github.com/aantron/markup.ml/releases
 [parse_html]:      http://aantron.github.io/markup.ml/#VALparse_html

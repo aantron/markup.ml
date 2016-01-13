@@ -74,7 +74,7 @@ let write report prefix signals =
       | _, `End_element ->
         Namespace.Writing.pop namespaces;
         begin match !open_elements with
-        | [] -> ()
+        | [] -> next_signal throw e k
         | name::rest ->
           open_elements := rest;
           emit_list ["</"; name; ">"] throw e k
