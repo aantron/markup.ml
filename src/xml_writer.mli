@@ -4,7 +4,7 @@
 open Common
 
 val write :
-  ((signal * int) -> Error.t -> (exn -> unit) -> (unit -> unit) -> unit) ->
+  Error.write_handler ->
   (string -> string option) ->
-  signal Kstream.t ->
+  [< signal ] Kstream.t ->
     string Kstream.t

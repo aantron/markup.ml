@@ -98,7 +98,9 @@ let write signals =
             peek_option signals throw (function
               | Some (`Text s) when String.length s > 0 && s.[0] == '\x0A' ->
                 emit_list (tag @ ["\n"]) throw e k
-              | _ -> emit_list tag throw e k)
+              | Some (`Text _ | `Start_element _ | `End_element | `Comment _ |
+                      `PI _ | `Doctype _ | `Xml _)
+              | None -> emit_list tag throw e k)
           else
             emit_list tag throw e k
         end

@@ -16,6 +16,16 @@ type dom =
   | Element of string * dom list
 
 let tests = [
+  ("utility.content" >:: fun _ ->
+    "<?xml version='1.0'?><!DOCTYPE html><!--blah--><p>foo</p><?bar baz?>"
+    |> string
+    |> parse_xml
+    |> content
+    |> drop_locations
+    |> write_xml
+    |> to_string
+    |> assert_equal "<p>foo</p>");
+
   ("utility.strings_to_bytes" >:: fun _ ->
     ["foo"; "bar"]
     |> Kstream.of_list
@@ -47,7 +57,7 @@ let tests = [
     |> tree ~text:ignore ~element:(fun _ _ _ -> ())
     |> assert_equal None);
 
-  ("utility.content" >:: fun _ ->
+  ("utility.text" >:: fun _ ->
     [`Xml {Markup.version = "1.0"; encoding = None; standalone = None};
      `Comment "blah";
      `Text "foo";
@@ -55,7 +65,7 @@ let tests = [
      `Text "bar";
      `End_element]
     |> of_list
-    |> content
+    |> text
     |> to_string
     |> assert_equal "foobar");
 

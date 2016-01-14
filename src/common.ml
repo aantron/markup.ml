@@ -47,6 +47,11 @@ type signal =
   | `PI of string * string
   | `Comment of string ]
 
+type content_signal =
+  [ `Start_element of name * (name * string) list
+  | `End_element
+  | `Text of string ]
+
 type general_token =
   [ `Xml of xml_declaration
   | `Doctype of doctype

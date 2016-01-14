@@ -45,9 +45,11 @@ let write report prefix signals =
     next signals throw e begin function
       | i, (`Start_element (name, attributes) as signal) ->
         (fun k' ->
-          next signals throw (fun () -> k' false) (function
+          next signals throw (fun () -> k' false) (fun s ->
+            match s with
             | _, `End_element -> k' true
-            | s -> push signals s; k' false))
+            | _, (`Text _ | `Start_element _ | `Comment _ | `PI _ | `Doctype _ |
+                  `Xml _) -> push signals s; k' false))
         (fun self_closing ->
           Namespace.Writing.push (fun () -> report (signal, i))
             namespaces name attributes

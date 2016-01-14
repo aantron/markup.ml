@@ -70,6 +70,7 @@ type doctype = Common.doctype =
    force_quirks      : bool}
 
 type signal = Common.signal
+type content_signal = Common.content_signal
 
 let signal_to_string = Common.signal_to_string
 
@@ -167,7 +168,7 @@ sig
   val write_xml :
     ?report:((signal * int) -> Error.t -> unit io) ->
     ?prefix:(string -> string option) ->
-    (signal, _) stream -> (char, async) stream
+    ([< signal ], _) stream -> (char, async) stream
 
   val parse_html :
     ?report:(location -> Error.t -> unit io) ->
@@ -175,7 +176,7 @@ sig
     ?context:[ `Document | `Fragment of string ] ->
     (char, _) stream -> (location * signal, async) stream
 
-  val write_html : (signal, _) stream -> (char, async) stream
+  val write_html : ([< signal ], _) stream -> (char, async) stream
 
   val fn : (unit -> char option io) -> (char, async) stream
 
@@ -199,7 +200,7 @@ sig
   val tree :
     text:(string -> 'a) ->
     element:(name -> (name * string) list -> 'a list -> 'a) ->
-    (signal, _) stream -> 'a option io
+    ([< signal ], _) stream -> 'a option io
 end
 
 module Asynchronous (IO : IO) =

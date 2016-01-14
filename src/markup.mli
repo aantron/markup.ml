@@ -285,7 +285,16 @@ content ::= `Text | element | `PI | `Comment
 ]}
  *)
 
-val signal_to_string : signal -> string
+type content_signal =
+  [ `Start_element of name * (name * string) list
+  | `End_element
+  | `Text of string ]
+(** A restriction of type {!signal} to only elements and text, i.e. no comments,
+    processing instructions, or declarations. This can be useful for pattern
+    matching in applications that only care about the content and element
+    structure of a document. See the helper {!content}. *)
+
+val signal_to_string : [< signal ] -> string
 (** Provides a human-readable representation of signals for debugging. *)
 
 (** {2 XML} *)
@@ -322,7 +331,7 @@ val parse_xml :
 val write_xml :
   ?report:((signal * int) -> Error.t -> unit) ->
   ?prefix:(string -> string option) ->
-  (signal, 's) stream -> (char, 's) stream
+  ([< signal ], 's) stream -> (char, 's) stream
 (** Converts an XML signal stream to a byte stream.
 
     If [~report] is provided, it is called for every error encountered. The
@@ -371,7 +380,7 @@ foo</bar>
 
  *)
 
-val write_html : (signal, 's) stream -> (char, 's) stream
+val write_html : ([< signal ], 's) stream -> (char, 's) stream
 (** Similar to {!write_xml}, but emits HTML5 instead of XML. *)
 
 
@@ -482,10 +491,15 @@ val to_list : ('a, sync) stream -> 'a list
 
 (** {2 Utility} *)
 
+val content :
+  (location * [< signal ], 's) stream -> (location * content_signal, 's) stream
+(** Converts a {!signal} stream into a {!content_signal} stream by filtering out
+    all signals besides [`Start_element], [`End_element], and [`Text]. *)
+
 val tree :
   text:(string -> 'a) ->
   element:(name -> (name * string) list -> 'a list -> 'a) ->
-  (signal, sync) stream -> 'a option
+  ([< signal ], sync) stream -> 'a option
 (** Assembles tree data structures from signal streams. This is done by first
     ignoring all signals except [`Text], [`Start_element], and [`End_element].
     The remaining signals are then parsed according to the following grammar:
@@ -529,8 +543,9 @@ Element ("p" [
  *)
 
 val elements :
-  (name -> (name * string) list -> bool) -> (signal, 's) stream ->
-    ((signal, 's) stream, 's) stream
+  (name -> (name * string) list -> bool) ->
+  ([< signal ] as 'a, 's) stream ->
+    (('a, 's) stream, 's) stream
 (** [elements f s] scans the signal stream [s] for
     [`Start_element (name, attributes)] signals that satisfy
     [f name attributes]. Each such matching signal is the beginning of a
@@ -546,21 +561,21 @@ val elements :
     at all. However, once the using code has tried to get the next substream, it
     should not try to read a previous one. *)
 
-val drop_locations : (location * signal, 's) stream -> (signal, 's) stream
+val drop_locations : (location * 'a, 's) stream -> ('a, 's) stream
 (** Forgets location information emitted by the parsers. It is equivalent to
     [map snd]. *)
 
-val content : (signal, 's) stream -> (char, 's) stream
-(** Extracts all the content in a signal stream by discarding all markup, i.e.
-    for each [`Text s] signal, the result stream has the bytes of [s], and all
-    other signals are ignored. *)
+val text : ([< signal ], 's) stream -> (char, 's) stream
+(** Extracts all the text in a signal stream by discarding all markup, i.e. for
+    each [`Text s] signal, the result stream has the bytes of [s], and all other
+    signals are ignored. *)
 
-val trim : (signal, 's) stream -> (signal, 's) stream
+val trim : ([> `Text of string ] as 'a, 's) stream -> ('a, 's) stream
 (** Trims whitespace in a signal stream. For each signal [`Text s], applies
     [String.trim] to [s], then eliminates all [`Text ""] signals. All signals
     besides [`Text] are unaffected. *)
 
-val normalize_text : (signal, 's) stream -> (signal, 's) stream
+val normalize_text : ([> `Text of string ] as 'a, 's) stream -> ('a, 's) stream
 (** Concatenates adjacent [`Text] signals, then eliminates all [`Text ""]
     signals. Signals besides [`Text] are unaffected. Note that signal streams
     emitted by the parsers already have normalized text. This function is useful
@@ -568,11 +583,11 @@ val normalize_text : (signal, 's) stream -> (signal, 's) stream
     generating streams from scratch, and would like to clean up the [`Text]
     signals. *)
 
-val pretty_print : (signal, 's) stream -> (signal, 's) stream
+val pretty_print : ([> content_signal ] as 'a, 's) stream -> ('a, 's) stream
 (** Adjusts the [`Text] signals in the given stream so that the output appears
     nicely-indented when the stream is written. *)
 
-val html5 : (signal, 's) stream -> (signal, 's) stream
+val html5 : ([< signal ], 's) stream -> (signal, 's) stream
 (** Converts a signal stream into an HTML5 signal stream by stripping any
     document type declarations, XML declarations, and processing instructions,
     and prefixing the HTML5 doctype declaration. This is useful when converting
@@ -580,7 +595,7 @@ val html5 : (signal, 's) stream -> (signal, 's) stream
 
 val xhtml :
   ?dtd:[ `Strict_1_0 | `Transitional_1_0 | `Frameset_1_0 | `Strict_1_1 ] ->
-  (signal, 's) stream -> (signal, 's) stream
+  ([< signal ], 's) stream -> (signal, 's) stream
 (** Similar to [html], but does not strip processing instructions, and prefixes
     an XHTML document type declaration and an XML declaration. The [~dtd]
     argument specifies which DTD to refer to in the doctype declaration. The
@@ -666,7 +681,7 @@ sig
   val write_xml :
     ?report:((signal * int) -> Error.t -> unit io) ->
     ?prefix:(string -> string option) ->
-    (signal, _) stream -> (char, async) stream
+    ([< signal ], _) stream -> (char, async) stream
 
   (** {2 HTML} *)
 
@@ -676,7 +691,7 @@ sig
     ?context:[ `Document | `Fragment of string ] ->
     (char, _) stream -> (location * signal, async) stream
 
-  val write_html : (signal, _) stream -> (char, async) stream
+  val write_html : ([< signal ], _) stream -> (char, async) stream
 
   (** {2 I/O} *)
 
@@ -706,7 +721,7 @@ sig
   val tree :
     text:(string -> 'a) ->
     element:(name -> (name * string) list -> 'a list -> 'a) ->
-    (signal, _) stream -> 'a option io
+    ([< signal ], _) stream -> 'a option io
 end
 
 (**/**)

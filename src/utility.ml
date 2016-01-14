@@ -4,6 +4,15 @@
 open Common
 open Kstream
 
+let content s =
+  let filter (l, signal) _ k =
+    match signal with
+    | `Start_element _ | `End_element | `Text _ as signal ->
+      k (Some (l, signal))
+    | `Comment _ | `PI _ | `Doctype _ | `Xml _ -> k None
+  in
+  filter_map filter s
+
 let strings_to_bytes strings =
   let current_string = ref "" in
   let index = ref 0 in
@@ -54,8 +63,9 @@ let elements select s =
   let finished = ref 0 in
 
   let rec scan throw e k =
-    next s throw e begin function
-      | `Start_element (name, attributes) as signal
+    next s throw e begin fun signal ->
+      match signal with
+      | `Start_element (name, attributes)
           when !started = !finished && select name attributes ->
 
         let index = !started + 1 in
@@ -67,18 +77,19 @@ let elements select s =
           (fun throw e k ->
             if !finished >= index then e ()
             else
-              next s throw e begin function
-                | `Start_element _ as signal ->
+              next s throw e begin fun signal ->
+                match signal with
+                | `Start_element _ ->
                   depth := !depth + 1;
                   k signal
 
-                | `End_element as signal ->
+                | `End_element ->
                   depth := !depth - 1;
                   if !depth = 0 then
                     finished := index;
                   k signal
 
-                | signal -> k signal
+                | `Text _ | `Comment _ | `PI _ | `Doctype _ | `Xml _ -> k signal
               end)
           |> make
           |> k
@@ -96,19 +107,22 @@ let elements select s =
           finished := !started;
         scan throw e k
 
-      | _ ->
+      | `Text _ | `Start_element _ | `End_element | `Comment _ | `PI _
+      | `Doctype _ | `Xml _ ->
         scan throw e k
     end
   in
 
   make scan
 
-let content s =
-  s
-  |> filter_map (fun v _ k ->
+let text s =
+  let filter v _ k =
     match v with
     | `Text s -> k (Some s)
-    | _ -> k None)
+    | `Start_element _ | `End_element | `Comment _ | `PI _ | `Doctype _
+    | `Xml _ -> k None
+  in
+  filter_map filter s
   |> strings_to_bytes
 
 let trim s =
@@ -119,7 +133,7 @@ let trim s =
       | "" -> k None
       | s -> k (Some (`Text s))
       end
-    | signal -> k (Some signal))
+    | _ -> k (Some v))
 
 let normalize_text s =
   let rec match_text acc throw e k =
@@ -156,16 +170,17 @@ let pretty_print s =
   let rec current_state = ref (fun throw e k -> row 0 throw e k)
 
   and row depth throw e k =
-    next s throw e begin function
-      | `Start_element _ as v ->
+    next s throw e begin fun v ->
+      match v with
+      | `Start_element _ ->
         list [`Text (indent depth); v; `Text "\n"]
           (row (depth + 1)) throw e k
 
-      | `End_element as v ->
+      | `End_element ->
         list [`Text (indent (depth - 1)); v; `Text "\n"]
           (row (depth - 1)) throw e k
 
-      | v ->
+      | _ ->
         list [`Text (indent depth); v; `Text "\n"]
           (row depth) throw e k
     end
@@ -186,11 +201,14 @@ let pretty_print s =
 let drop_locations s = s |> map (fun v _ k -> k (snd v))
 
 let html5 s =
-  s
-  |> filter (fun v _ k ->
+  let remove_markup v _ k =
     match v with
-    | `Doctype _ | `Xml _ | `PI _ -> k false
-    | _ -> k true)
+    | `Doctype _ | `Xml _ | `PI _ as v -> k (Some v)
+    | `Text _ | `Start_element _ | `End_element | `Comment _ -> k None
+  in
+
+  s
+  |> filter_map remove_markup
   |> fun s ->
     push s (`Doctype
       {doctype_name      = Some "html";
@@ -220,10 +238,14 @@ let xhtml ?(dtd = `Strict_1_1) s =
       "\"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\""
   in
 
-  s |> filter (fun v _ k ->
+  let remove_markup v _ k =
     match v with
-    | `Doctype _ | `Xml _ -> k false
-    | _ -> k true)
+    | `Doctype _ | `Xml _ as v -> k (Some v)
+    | `Text _ | `Start_element _ | `End_element | `Comment _ | `PI _ -> k None
+  in
+
+  s
+  |> filter_map remove_markup
   |> fun s ->
     push s (`Doctype
       {doctype_name      = None;

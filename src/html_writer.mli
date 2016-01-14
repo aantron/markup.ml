@@ -3,4 +3,4 @@
 
 open Common
 
-val write : signal Kstream.t -> string Kstream.t
+val write : [< signal ] Kstream.t -> string Kstream.t
