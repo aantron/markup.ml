@@ -1,6 +1,6 @@
-# Markup.ml &nbsp; [![version 0.5][version]][releases] [![(BSD license)][license-img]][license]
+# Markup.ml &nbsp; [![version 0.6][version]][releases] [![(BSD license)][license-img]][license]
 
-[version]:       https://img.shields.io/badge/version-0.5-blue.svg
+[version]:       https://img.shields.io/badge/version-0.6-blue.svg
 [license-img]:   https://img.shields.io/badge/license-BSD-blue.svg
 
 Markup.ml is a pair of parsers implementing the HTML5 and XML specifications.
