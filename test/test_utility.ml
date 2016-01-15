@@ -20,8 +20,8 @@ let tests = [
     "<?xml version='1.0'?><!DOCTYPE html><!--blah--><p>foo</p><?bar baz?>"
     |> string
     |> parse_xml
+    |> signals
     |> content
-    |> drop_locations
     |> write_xml
     |> to_string
     |> assert_equal "<p>foo</p>");
@@ -128,17 +128,5 @@ let tests = [
       `End_element;
       `Text ["\n"];
       `End_element;
-      `Text ["\n"]]);
-
-  ("utility.drop_locations" >:: fun _ ->
-    [(1, 1), start_element "a";
-     (1, 4), `Text ["foo"];
-     (1, 7), `End_element]
-    |> of_list
-    |> drop_locations
-    |> to_list
-    |> assert_equal [
-      start_element "a";
-      `Text ["foo"];
-      `End_element])
+      `Text ["\n"]])
 ]

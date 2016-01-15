@@ -15,6 +15,8 @@ let construct c =
     | Some s' -> s'.f throw e k)
   |> make
 
+let empty () = (fun _ e _ -> e ()) |> make
+
 let next {f} throw e k = f throw e k
 
 let next_option {f} throw k = f throw (fun () -> k None) (fun v -> k (Some v))

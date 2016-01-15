@@ -22,7 +22,7 @@ open Markup;;
 string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
 
 |> parse_html           `Start_element "p"
-                        `Start_element "em"
+|> signals              `Start_element "em"
                         `Text ["Markup.ml"]
                         ~report (1, 4) (`Unmatched_start_tag "em")
                         `End_element                   (* /em: recovery *)
@@ -32,7 +32,7 @@ string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
                         `Text ["rocks!"]
                         `End_element                   (* /em *)
                         `End_element                   (* /p *)
-|> drop_locations
+
 |> pretty_print         (* adjusts the `Text signals *)
 
 |> write_html
@@ -117,7 +117,7 @@ let () =
     >|= Markup_lwt.lwt_stream         (* Now a Markup.stream. *)
     >|= Markup.strings_to_bytes
     >|= Markup.parse_html
-    >|= Markup.drop_locations
+    >|= Markup.signals
     >|= Markup.elements (fun name _ -> snd name = "h3")
     >>= Markup_lwt.iter begin fun h3_subtree ->
       h3_subtree

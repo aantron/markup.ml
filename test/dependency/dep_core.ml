@@ -6,6 +6,4 @@ open Markup
 let (|>) x f = f x
 
 let () =
-  "foo"
-  |> string |> parse_html
-  |> drop_locations |> write_html |> to_string |> ignore
+  string "foo" |> parse_html |> signals |> write_html |> to_string |> ignore

@@ -5,10 +5,9 @@ open Common
 open Kstream
 
 let content s =
-  let filter (l, signal) _ k =
+  let filter signal _ k =
     match signal with
-    | `Start_element _ | `End_element | `Text _ as signal ->
-      k (Some (l, signal))
+    | `Start_element _ | `End_element | `Text _ as signal -> k (Some signal)
     | `Comment _ | `PI _ | `Doctype _ | `Xml _ -> k None
   in
   filter_map filter s
@@ -225,8 +224,6 @@ let pretty_print s =
   (fun throw e k -> !current_state throw e k)
   |> make
   |> normalize_text
-
-let drop_locations s = s |> map (fun v _ k -> k (snd v))
 
 let html5 s =
   let remove_markup v _ k =

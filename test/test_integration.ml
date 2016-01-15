@@ -11,7 +11,7 @@ let tests = [
     "<?xml version='1.0' encoding='windows-1252'?><root>\xa0</root><a></a>"
     |> string
     |> parse_xml
-    |> drop_locations
+    |> signals
     |> write_xml
     |> to_string
     |> assert_equal
@@ -21,7 +21,7 @@ let tests = [
     "\xfe\xff\x00f\x00o\x00o"
     |> string
     |> parse_xml
-    |> drop_locations
+    |> signals
     |> write_xml
     |> to_string
     |> assert_equal "foo");
@@ -30,7 +30,7 @@ let tests = [
     "<!DOCTYPE html><html><body><p><em>foo<p>bar"
     |> string
     |> parse_html
-    |> drop_locations
+    |> signals
     |> write_html
     |> to_string
     |> assert_equal
@@ -41,11 +41,24 @@ let tests = [
     "<root>foo<nested>bar</nested><nested>baz</nested></root>"
     |> string
     |> parse_xml
-    |> drop_locations
+    |> signals
     |> pretty_print
     |> write_xml
     |> to_string
     |> assert_equal
       ("<root>\n  foo\n  <nested>\n    bar\n  </nested>\n" ^
-       "  <nested>\n    baz\n  </nested>\n</root>\n"))
+       "  <nested>\n    baz\n  </nested>\n</root>\n"));
+
+  ("integration.locations" >:: fun _ ->
+    let parser = "<root>foo</root>" |> string |> parse_xml in
+
+    assert_equal (location parser) (1, 1);
+    parser |> signals |> next |> ignore;
+    assert_equal (location parser) (1, 1);
+    parser |> signals |> next |> ignore;
+    assert_equal (location parser) (1, 7);
+    parser |> signals |> next |> ignore;
+    assert_equal (location parser) (1, 10);
+    parser |> signals |> next |> ignore;
+    assert_equal (location parser) (1, 10))
 ]

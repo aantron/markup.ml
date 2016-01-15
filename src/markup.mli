@@ -28,7 +28,7 @@ open Markup
 
 (* Correct and pretty-print HTML. *)
 channel stdin
-|> parse_html |> drop_locations |> pretty_print
+|> parse_html |> signals |> pretty_print
 |> write_html |> to_channel stdout
 
 (* Show up to 10 XML well-formedness errors to the user. Stop after
@@ -40,13 +40,14 @@ let report =
     count := !count + 1;
     if !count >= 10 then raise_notrace Exit
 
-string "some xml" |> parse_xml ~report |> drain
+string "some xml" |> parse_xml ~report |> signals |> drain
 
 (* Load HTML into a custom document tree data type. *)
 type html = Text of string | Element of string * html list
 
 file "some_file"
 |> parse_html
+|> signals
 |> tree
   ~text:(fun ss -> Text (String.concat "" ss))
   ~element:(fun (_, name) _ children -> Element (name, children))
@@ -302,6 +303,24 @@ type content_signal =
 val signal_to_string : [< signal ] -> string
 (** Provides a human-readable representation of signals for debugging. *)
 
+
+
+(** {2 Parsers} *)
+
+type 's parser
+(** A ['s parser] is a thin wrapper around a [(signal, 's) stream] that supports
+    access to additional information that is not carried directly in the stream,
+    such as source locations. *)
+
+val signals : 's parser -> (signal, 's) stream
+(** Converts a parser to its underlying signal stream. *)
+
+val location : _ parser -> location
+(** Evaluates to the location of the last signal emitted on the parser's signal
+    stream. If no signals have yet been emitted, evaluates to [(1, 1)]. *)
+
+
+
 (** {2 XML} *)
 
 val parse_xml :
@@ -310,8 +329,10 @@ val parse_xml :
   ?namespace:(string -> string option) ->
   ?entity:(string -> string option) ->
   ?context:[ `Document | `Fragment ] ->
-  (char, 's) stream -> (location * signal, 's) stream
-(** Converts an XML byte stream to a signal stream.
+  (char, 's) stream -> 's parser
+(** Creates a parser that converts an XML byte stream to a signal stream.
+
+    For simple usage, [bytes |> parse_xml |> signals].
 
     If [~report] is provided, [report] is called for every error encountered.
     You may raise an exception in [report], and it will propagate to the code
@@ -348,13 +369,15 @@ val write_xml :
     for a namespace URI. If it evaluates to [Some s], the writer uses [s] for
     the URI. Otherwise, the writer reports [`Bad_namespace]. *)
 
+
+
 (** {2 HTML} *)
 
 val parse_html :
   ?report:(location -> Error.t -> unit) ->
   ?encoding:Encoding.t ->
   ?context:[ `Document | `Fragment of string ] ->
-  (char, 's) stream -> (location * signal, 's) stream
+  (char, 's) stream -> 's parser
 (** Similar to {!parse_xml}, but parses HTML with embedded SVG and MathML, never
     emits signals [`Xml] or [`PI], and [~context] has a different type on tag
     [`Fragment].
@@ -496,8 +519,7 @@ val to_list : ('a, sync) stream -> 'a list
 
 (** {2 Utility} *)
 
-val content :
-  (location * [< signal ], 's) stream -> (location * content_signal, 's) stream
+val content : ([< signal ], 's) stream -> (content_signal, 's) stream
 (** Converts a {!signal} stream into a {!content_signal} stream by filtering out
     all signals besides [`Start_element], [`End_element], and [`Text]. *)
 
@@ -531,7 +553,7 @@ type dom = Text of string | Element of name * dom list
 "<p>HTML5 is <em>easy</em> to parse"
 |> string
 |> parse_html
-|> drop_locations
+|> signals
 |> tree
   ~text:(fun ss -> Text (String.concat "" ss))
   ~element:(fun (name, _) children -> Element (name, children))
@@ -565,10 +587,6 @@ val elements :
     Code using [elements] does not have to read each substream to completion, or
     at all. However, once the using code has tried to get the next substream, it
     should not try to read a previous one. *)
-
-val drop_locations : (location * 'a, 's) stream -> ('a, 's) stream
-(** Forgets location information emitted by the parsers. It is equivalent to
-    [map snd]. *)
 
 val text : ([< signal ], 's) stream -> (char, 's) stream
 (** Extracts all the text in a signal stream by discarding all markup, i.e. for
@@ -687,7 +705,7 @@ sig
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
     ?context:[ `Document | `Fragment ] ->
-    (char, _) stream -> (location * signal, async) stream
+    (char, _) stream -> async parser
 
   val write_xml :
     ?report:((signal * int) -> Error.t -> unit io) ->
@@ -700,7 +718,7 @@ sig
     ?report:(location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?context:[ `Document | `Fragment of string ] ->
-    (char, _) stream -> (location * signal, async) stream
+    (char, _) stream -> async parser
 
   val write_html : ([< signal ], _) stream -> (char, async) stream
 

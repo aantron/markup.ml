@@ -74,6 +74,19 @@ type content_signal = Common.content_signal
 
 let signal_to_string = Common.signal_to_string
 
+type 's parser =
+  {mutable location : location;
+   mutable signals  : (signal, 's) stream}
+
+let signals parser = parser.signals
+let location parser = parser.location
+
+let stream_to_parser s =
+  let parser = {location = (1, 1); signals = Kstream.empty ()} in
+  parser.signals <-
+    s |> Kstream.map (fun (l, v) _ k -> parser.location <- l; k v);
+  parser
+
 module Cps =
 struct
   let parse_xml
@@ -96,6 +109,7 @@ struct
     in
 
     Kstream.construct constructor
+    |> stream_to_parser
 
   let write_xml report prefix signals =
     signals
@@ -121,6 +135,7 @@ struct
     in
 
     Kstream.construct constructor
+    |> stream_to_parser
 
   let write_html signals =
     signals
@@ -163,7 +178,7 @@ sig
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
     ?context:[ `Document | `Fragment ] ->
-    (char, _) stream -> (location * signal, async) stream
+    (char, _) stream -> async parser
 
   val write_xml :
     ?report:((signal * int) -> Error.t -> unit io) ->
@@ -174,7 +189,7 @@ sig
     ?report:(location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?context:[ `Document | `Fragment of string ] ->
-    (char, _) stream -> (location * signal, async) stream
+    (char, _) stream -> async parser
 
   val write_html : ([< signal ], _) stream -> (char, async) stream
 

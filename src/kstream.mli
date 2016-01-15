@@ -21,6 +21,7 @@ type 'a t
 
 val make : (exn cont -> unit cont -> 'a cont -> unit) -> 'a t
 val construct : 'a t cps -> 'a t
+val empty : unit -> 'a t
 
 val next : 'a t -> exn cont -> unit cont -> 'a cont -> unit
 val next_option : 'a t -> 'a option cps
