@@ -41,7 +41,7 @@ type doctype =
 type signal =
   [ `Start_element of name * (name * string) list
   | `End_element
-  | `Text of string
+  | `Text of string list
   | `Xml of xml_declaration
   | `Doctype of doctype
   | `PI of string * string
@@ -50,14 +50,14 @@ type signal =
 type content_signal =
   [ `Start_element of name * (name * string) list
   | `End_element
-  | `Text of string ]
+  | `Text of string list ]
 
 type general_token =
   [ `Xml of xml_declaration
   | `Doctype of doctype
   | `Start of Token_tag.t
   | `End of Token_tag.t
-  | `Chars of string
+  | `Chars of string list
   | `Char of int
   | `PI of string * string
   | `Comment of string
@@ -182,8 +182,8 @@ let signal_to_string = function
   | `End_element ->
     "</...>"
 
-  | `Text s ->
-    Printf.sprintf "\"%s\"" s
+  | `Text ss ->
+    String.concat "" ss
 
   | `Xml x ->
     let s = Printf.sprintf "<?xml version=\"%s\">" x.version in
@@ -222,8 +222,8 @@ let token_to_string = function
   | `End t ->
     Printf.sprintf "</%s>" t.Token_tag.name
 
-  | `Chars s ->
-    s
+  | `Chars ss ->
+    String.concat "" ss
 
   | `Char i ->
     char i
@@ -237,26 +237,34 @@ let token_to_string = function
   | `EOF ->
     "EOF"
 
-(* String.trim not available for OCaml < 4.00. *)
-let trim_string =
-    let whitespace = " \t\n\r" in
-    fun s ->
-      let rec measure_prefix index =
-        if index = String.length s then index
-        else
-          if String.contains whitespace s.[index] then
-            measure_prefix (index + 1)
-          else index
-      in
-      let prefix_length = measure_prefix 0 in
-      let s = String.sub s prefix_length (String.length s - prefix_length) in
+let _whitespace_chars = " \t\n\r"
 
-      let rec measure_suffix rindex =
-        if rindex = String.length s then rindex
-        else
-          if String.contains whitespace s.[String.length s - rindex - 1] then
-            measure_suffix (rindex + 1)
-          else rindex
-      in
-      let suffix_length = measure_suffix 0 in
-      String.sub s 0 (String.length s - suffix_length)
+let _whitespace_prefix_length s =
+  let rec loop index =
+    if index = String.length s then index
+    else
+      if String.contains _whitespace_chars s.[index] then loop (index + 1)
+      else index
+  in
+  loop 0
+
+let _whitespace_suffix_length s =
+  let rec loop rindex =
+    if rindex = String.length s then rindex
+    else
+      if String.contains _whitespace_chars s.[String.length s - rindex - 1] then
+        loop (rindex + 1)
+      else rindex
+  in
+  loop 0
+
+let trim_string_left s =
+  let prefix_length = _whitespace_prefix_length s in
+  String.sub s prefix_length (String.length s - prefix_length)
+
+let trim_string_right s =
+  let suffix_length = _whitespace_suffix_length s in
+  String.sub s 0 (String.length s - suffix_length)
+
+(* String.trim not available for OCaml < 4.00. *)
+let trim_string s = s |> trim_string_left |> trim_string_right

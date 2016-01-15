@@ -198,7 +198,7 @@ sig
   val to_list : ('a, _) stream -> 'a list io
 
   val tree :
-    text:(string -> 'a) ->
+    text:(string list -> 'a) ->
     element:(name -> (name * string) list -> 'a list -> 'a) ->
     ([< signal ], _) stream -> 'a option io
 end

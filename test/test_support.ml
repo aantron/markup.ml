@@ -8,6 +8,13 @@ let sprintf = Printf.sprintf
 
 let wrong_k message = fun _ -> assert_failure message
 
+let with_text_limit n f =
+  let limit = !Text.length_limit in
+  Text.length_limit := n;
+
+  try f (); Text.length_limit := limit
+  with exn -> Text.length_limit := limit; raise exn
+
 let expect_error :
   ?allow_recovery:int -> location -> Error.t -> (Error.parse_handler -> unit) ->
     unit

@@ -82,9 +82,11 @@ let write report prefix signals =
           emit_list ["</"; name; ">"] throw e k
         end
 
-      | _, `Text s ->
-        if s = "" then next_signal throw e k
-        else emit_list [_escape s] throw e k
+      | _, `Text ss ->
+        if List.for_all (fun s -> String.length s = 0) ss then
+          next_signal throw e k
+        else
+          emit_list (List.map _escape ss) throw e k
 
       | _, `Xml {version; encoding; standalone} ->
         let attributes =

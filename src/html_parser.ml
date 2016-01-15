@@ -262,19 +262,11 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   let open_elements = ref [] in
   let active_formatting_elements = ref [] in
-  let current_text = ref None in
+  let text = Text.prepare () in
   let template_insertion_modes = ref [] in
   let frameset_ok = ref true in
 
-  let add_character location c =
-    match !current_text with
-    | None ->
-      let buffer = Buffer.create 256 in
-      add_utf_8 buffer c;
-      current_text := Some (location, buffer)
-    | Some (_, buffer) ->
-      add_utf_8 buffer c
-  in
+  let add_character = Text.add text in
 
   let current_element () =
     match !open_elements with
@@ -424,12 +416,10 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and emit' l s m = current_mode := m; !output (l, s)
 
   and emit_text m =
-    match !current_text with
+    match Text.emit text with
     | None -> m ()
-    | Some (l', buffer) ->
-      let t = Buffer.contents buffer in
-      current_text := None;
-      emit' l' (`Text t) m
+    | Some (l', strings) ->
+      emit' l' (`Text strings) m
 
   and emit l s m = emit_text (fun () -> emit' l s m)
 

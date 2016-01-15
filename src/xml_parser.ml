@@ -5,6 +5,8 @@ open Common
 open Kstream
 open Common.Token_tag
 
+let is_whitespace_only strings = List.for_all is_whitespace_only strings
+
 let parse context namespace report tokens =
   let open_elements = ref [] in
   let namespaces = Namespace.Parsing.init namespace in

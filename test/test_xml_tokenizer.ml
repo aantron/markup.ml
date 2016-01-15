@@ -45,81 +45,81 @@ let tests = [
 
   ("xml.tokenizer.whitespace" >:: fun _ ->
     expect " \t \n \x09 \x0d \x0d\x0a "
-      [ 1,  1, S (`Chars " \t \n \x09 \x0a \x0a ");
+      [ 1,  1, S (`Chars [" \t \n \x09 \x0a \x0a "]);
         4,  2, S  `EOF]);
 
   ("xml.tokenizer.text" >:: fun _ ->
     expect "foo bar"
-      [ 1,  1, S (`Chars "foo bar");
+      [ 1,  1, S (`Chars ["foo bar"]);
         1,  8, S  `EOF];
 
     expect "foo > bar"
-      [ 1,  1, S (`Chars "foo > bar");
+      [ 1,  1, S (`Chars ["foo > bar"]);
         1, 10, S  `EOF]);
 
   ("xml.tokenizer.spurious-cdata-end" >:: fun _ ->
     expect "foo]]>bar"
       [ 1,  4, E (`Bad_token ("]]>", "text", "must end a CDATA section"));
-        1,  1, S (`Chars "foo]]>bar");
+        1,  1, S (`Chars ["foo]]>bar"]);
         1, 10, S  `EOF];
 
     expect "foo]]]>bar"
       [ 1,  5, E (`Bad_token ("]]>", "text", "must end a CDATA section"));
-        1,  1, S (`Chars "foo]]]>bar");
+        1,  1, S (`Chars ["foo]]]>bar"]);
         1, 11, S  `EOF];
 
     expect "foo]]bar"
-      [ 1,  1, S (`Chars "foo]]bar");
+      [ 1,  1, S (`Chars ["foo]]bar"]);
         1,  9, S  `EOF];
 
     expect "foo]>bar"
-      [ 1,  1, S (`Chars "foo]>bar");
+      [ 1,  1, S (`Chars ["foo]>bar"]);
         1,  9, S  `EOF]);
 
   ("xml.tokenizer.comment" >:: fun _ ->
     expect "text<!-- foo -->text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (`Comment " foo ");
-        1, 17, S (`Chars "text");
+        1, 17, S (`Chars ["text"]);
         1, 21, S  `EOF]);
 
   ("xml.tokenizer.bad-comment-start" >:: fun _ ->
     expect "text<!foo -->"
       [ 1,  5, E (`Bad_token ("<!", "comment", "should start with '<!--'"));
         1,  5, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "text<!foo -->");
+        1,  1, S (`Chars ["text<!foo -->"]);
         1, 14, S  `EOF];
 
     expect "<!<!-- foo -->"
       [ 1,  1, E (`Bad_token ("<!", "comment", "should start with '<!--'"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<!");
+        1,  1, S (`Chars ["<!"]);
         1,  3, S (`Comment " foo ");
         1, 15, S  `EOF];
 
     expect "<!"
       [ 1,  1, E (`Bad_token ("<!", "comment", "should start with '<!--'"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<!");
+        1,  1, S (`Chars ["<!"]);
         1,  3, S  `EOF];
 
     expect "text<!-foo -->"
       [ 1,  5, E (`Bad_token ("<!-", "comment", "should start with '<!--'"));
         1,  5, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "text<!-foo -->");
+        1,  1, S (`Chars ["text<!-foo -->"]);
         1, 15, S  `EOF];
 
     expect "<!-<!-- foo -->"
       [ 1,  1, E (`Bad_token ("<!-", "comment", "should start with '<!--'"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<!-");
+        1,  1, S (`Chars ["<!-"]);
         1,  4, S (`Comment " foo ");
         1, 16, S  `EOF];
 
     expect "<!-"
       [ 1,  1, E (`Bad_token ("<!-", "comment", "should start with '<!--'"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<!-");
+        1,  1, S (`Chars ["<!-"]);
         1,  4, S  `EOF]);
 
   ("xml.tokenizer.comment-end" >:: fun _ ->
@@ -169,79 +169,79 @@ let tests = [
 
   ("xml.tokenizer.cdata" >:: fun _ ->
     expect "text<![CDATA[foo<bar>&amp;]]baz]]]quux]]]>text"
-      [ 1,  1, S (`Chars "textfoo<bar>&amp;]]baz]]]quux]text");
+      [ 1,  1, S (`Chars ["textfoo<bar>&amp;]]baz]]]quux]text"]);
         1, 47, S  `EOF]);
 
   ("xml.tokenizer.bad-cdata-start" >:: fun _ ->
     expect "<![foo"
       [ 1,  1, E (`Bad_token ("<![", "cdata", "should start with '<![CDATA['"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<![foo");
+        1,  1, S (`Chars ["<![foo"]);
         1,  7, S  `EOF];
 
     expect "<![cdata"
       [ 1,  1, E (`Bad_token ("<![", "cdata", "should start with '<![CDATA['"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<![cdata");
+        1,  1, S (`Chars ["<![cdata"]);
         1,  9, S  `EOF];
 
     expect "<![<![CDATA[bar]]>"
       [ 1,  1, E (`Bad_token ("<![", "cdata", "should start with '<![CDATA['"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<![bar");
+        1,  1, S (`Chars ["<![bar"]);
         1, 19, S  `EOF];
 
     expect "<!["
       [ 1,  1, E (`Bad_token ("<![", "cdata", "should start with '<![CDATA['"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<![");
+        1,  1, S (`Chars ["<!["]);
         1,  4, S  `EOF]);
 
   ("xml.tokenizer.unterminated-cdata" >:: fun _ ->
     expect "<![CDATA[foo"
-      [ 1,  1, S (`Chars "foo");
+      [ 1,  1, S (`Chars ["foo"]);
         1, 13, E (`Unexpected_eoi "cdata");
         1, 13, S  `EOF];
 
     expect "<![CDATA[foo]"
-      [ 1,  1, S (`Chars "foo");
+      [ 1,  1, S (`Chars ["foo"]);
         1, 14, E (`Unexpected_eoi "cdata");
         1, 14, S  `EOF];
 
     expect "<![CDATA[foo]]"
-      [ 1,  1, S (`Chars "foo");
+      [ 1,  1, S (`Chars ["foo"]);
         1, 15, E (`Unexpected_eoi "cdata");
         1, 15, S  `EOF]);
 
   ("xml.tokenizer.doctype" >:: fun _ ->
     expect "text<!DOCTYPE html [ <!ELEMENT foo (#PCDATA)> ]>text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (raw_doctype "html [ <!ELEMENT foo (#PCDATA)> ]");
-        1, 49, S (`Chars "text");
+        1, 49, S (`Chars ["text"]);
         1, 53, S  `EOF];
 
     expect "text<!DOCTYPE html SYSTEM \"html.dtd\">text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (raw_doctype "html SYSTEM \"html.dtd\"");
-        1, 38, S (`Chars "text");
+        1, 38, S (`Chars ["text"]);
         1, 42, S  `EOF];
 
     expect "text<!DOCTYPE html SYSTEM \"<!ELEMENT\">text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (raw_doctype "html SYSTEM \"<!ELEMENT\"");
-        1, 39, S (`Chars "text");
+        1, 39, S (`Chars ["text"]);
         1, 43, S  `EOF];
 
     expect "text<!DOCTYPE html SYSTEM 'html.dtd'>text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (raw_doctype "html SYSTEM 'html.dtd'");
-        1, 38, S (`Chars "text");
+        1, 38, S (`Chars ["text"]);
         1, 42, S  `EOF];
 
     expect "text<!DOCTYPE html SYSTEM '<!ELEMENT'>text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (raw_doctype "html SYSTEM '<!ELEMENT'");
-        1, 39, S (`Chars "text");
+        1, 39, S (`Chars ["text"]);
         1, 43, S  `EOF]);
 
   ("xml.tokenizer.bad-doctype-start" >:: fun _ ->
@@ -251,20 +251,20 @@ let tests = [
     expect "<!Doctype html>"
       [ 1,  1, E  error;
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<!Doctype html>");
+        1,  1, S (`Chars ["<!Doctype html>"]);
         1, 16, S  `EOF];
 
     expect "<!D<!DOCTYPE html>"
       [ 1,  1, E  error;
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<!D");
+        1,  1, S (`Chars ["<!D"]);
         1,  4, S (raw_doctype "html");
         1, 19, S `EOF];
 
     expect "<!DOC"
       [ 1,  1, E  error;
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<!DOC");
+        1,  1, S (`Chars ["<!DOC"]);
         1,  6, S  `EOF]);
 
   ("xml.tokenizer.unterminated-doctype" >:: fun _ ->
@@ -311,59 +311,59 @@ let tests = [
 
   ("xml.tokenizer.reference" >:: fun _ ->
     expect "foo&lt;bar&gt;&amp;&quot;&apos;baz&#48;&#x31;quux"
-      [ 1,  1, S (`Chars "foo<bar>&\"'baz01quux");
+      [ 1,  1, S (`Chars ["foo<bar>&\"'baz01quux"]);
         1, 50, S  `EOF]);
 
   ("xml.tokenizer.bad-reference" >:: fun _ ->
     expect "&"
       [ 1,  2, E (`Unexpected_eoi "reference");
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&");
+        1,  1, S (`Chars ["&"]);
         1,  2, S  `EOF];
 
     expect "&lt"
       [ 1,  4, E (`Unexpected_eoi "reference");
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&lt");
+        1,  1, S (`Chars ["&lt"]);
         1,  4, S  `EOF];
 
     expect "&;"
       [ 1,  1, E (`Bad_token ("&;", "reference", "empty reference"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&;");
+        1,  1, S (`Chars ["&;"]);
         1,  3, S  `EOF];
 
     expect "&<!-- foo -->"
       [ 1,  2, E (`Bad_token ("<", "reference", "invalid start character"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&");
+        1,  1, S (`Chars ["&"]);
         1,  2, S (`Comment " foo ");
         1, 14, S  `EOF];
 
     expect "&lt<!-- foo -->"
       [ 1,  4, E (`Bad_token ("<", "reference", "invalid name character"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&lt");
+        1,  1, S (`Chars ["&lt"]);
         1,  4, S (`Comment " foo ");
         1, 16, S  `EOF];
 
     expect "&#<!-- foo -->"
       [ 1,  3, E (`Bad_token ("<", "reference", "expected digit"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&#");
+        1,  1, S (`Chars ["&#"]);
         1,  3, S (`Comment " foo ");
         1, 15, S  `EOF];
 
     expect "&#;"
       [ 1,  1, E (`Bad_token ("&#;", "reference", "empty character reference"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&#;");
+        1,  1, S (`Chars ["&#;"]);
         1,  4, S  `EOF];
 
     expect "&#x<!-- foo -->"
       [ 1,  4, E (`Bad_token ("<", "reference", "expected digit"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&#x");
+        1,  1, S (`Chars ["&#x"]);
         1,  4, S (`Comment " foo ");
         1, 16, S  `EOF];
 
@@ -371,20 +371,20 @@ let tests = [
     expect "&#x;"
       [ 1,  1, E (`Bad_token ("&#x;", "reference", empty_character_reference));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&#x;");
+        1,  1, S (`Chars ["&#x;"]);
         1,  5, S  `EOF];
 
     expect "&#6a;"
       [ 1,  4, E (`Bad_token ("a", "reference", "expected digit"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&#6a;");
+        1,  1, S (`Chars ["&#6a;"]);
         1,  6, S  `EOF];
 
     let absurd = "&#x1000000000000000000000000000000000000000;" in
     expect absurd
       [ 1,  1, E (`Bad_token (absurd, "reference", "number out of range"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars absurd);
+        1,  1, S (`Chars [absurd]);
         1, 45, S  `EOF]);
 
   ("xml.tokenizer.custom-reference" >:: fun _ ->
@@ -395,25 +395,25 @@ let tests = [
     in
 
     expect ~entity "&test; &lt;"
-      [ 1,  1, S (`Chars "custom <");
+      [ 1,  1, S (`Chars ["custom <"]);
         1, 12, S  `EOF];
 
     expect ~entity "&other;"
       [ 1,  1, E (`Bad_token ("other", "reference", "unknown entity"));
         1,  1, E (`Bad_token ("&", "text", "replace with '&amp;'"));
-        1,  1, S (`Chars "&other;");
+        1,  1, S (`Chars ["&other;"]);
         1,  8, S  `EOF]);
 
   ("xml.tokenizer.faux-markup" >:: fun _ ->
     expect "&lt;!-- foo -->"
-      [ 1,  1, S (`Chars "<!-- foo -->");
+      [ 1,  1, S (`Chars ["<!-- foo -->"]);
         1, 16, S  `EOF]);
 
   ("xml.tokenizer.start-tag" >:: fun _ ->
     expect "text<foo>text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (`Start (tag "foo" []));
-        1, 10, S (`Chars "text");
+        1, 10, S (`Chars ["text"]);
         1, 14, S  `EOF];
 
     expect "<foo  >"
@@ -442,53 +442,53 @@ let tests = [
     expect "<<foo>"
       [ 1,  2, E (`Bad_token ("<", "tag", "invalid start character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<");
+        1,  1, S (`Chars ["<"]);
         1,  2, S (`Start (tag "foo" []));
         1,  7, S  `EOF];
 
     expect "</<foo>"
       [ 1,  3, E (`Bad_token ("<", "tag", "invalid start character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "</");
+        1,  1, S (`Chars ["</"]);
         1,  3, S (`Start (tag "foo" []));
         1,  8, S  `EOF];
 
     expect "<abc<foo>"
       [ 1,  5, E (`Bad_token ("<", "tag", "invalid name character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<abc");
+        1,  1, S (`Chars ["<abc"]);
         1,  5, S (`Start (tag "foo" []));
         1, 10, S  `EOF];
 
     expect "</abc<foo>"
       [ 1,  6, E (`Bad_token ("<", "tag", "invalid name character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "</abc");
+        1,  1, S (`Chars ["</abc"]);
         1,  6, S (`Start (tag "foo" []));
         1, 11, S  `EOF];
 
     expect "< foo>"
       [ 1,  2, E (`Bad_token (" ", "tag", "invalid start character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "< foo>");
+        1,  1, S (`Chars ["< foo>"]);
         1,  7, S  `EOF];
 
     expect "</ foo>"
       [ 1,  3, E (`Bad_token (" ", "tag", "invalid start character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "</ foo>");
+        1,  1, S (`Chars ["</ foo>"]);
         1,  8, S  `EOF];
 
     expect "<>"
       [ 1,  2, E (`Bad_token (">", "tag", "invalid start character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<>");
+        1,  1, S (`Chars ["<>"]);
         1,  3, S  `EOF];
 
     expect "</>"
       [ 1,  3, E (`Bad_token (">", "tag", "invalid start character"));
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "</>");
+        1,  1, S (`Chars ["</>"]);
         1,  4, S  `EOF]);
 
   ("xml.tokenizer.junk-in-end-tag" >:: fun _ ->
@@ -507,25 +507,25 @@ let tests = [
     expect "<foo"
       [ 1,  5, E (`Unexpected_eoi "tag");
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "<foo");
+        1,  1, S (`Chars ["<foo"]);
         1,  5, S  `EOF];
 
     expect "foo<"
       [ 1,  5, E (`Unexpected_eoi "tag");
         1,  4, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "foo<");
+        1,  1, S (`Chars ["foo<"]);
         1,  5, S  `EOF];
 
     expect "</"
       [ 1,  3, E (`Unexpected_eoi "tag");
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "</");
+        1,  1, S (`Chars ["</"]);
         1,  3, S  `EOF];
 
     expect "</foo"
       [ 1,  6, E (`Unexpected_eoi "tag");
         1,  1, E (`Bad_token ("<", "text", "replace with '&lt;'"));
-        1,  1, S (`Chars "</foo");
+        1,  1, S (`Chars ["</foo"]);
         1,  6, S  `EOF];
 
     expect "</foo "
@@ -578,7 +578,7 @@ let tests = [
       [ 1, 12, E (`Bad_token ("'", "reference", "invalid start character"));
         1, 11, E (`Bad_token ("&", "attribute", "replace with '&amp;'"));
         1,  1, S (`Start (tag "foo" ["bar", "&"]));
-        1, 14, S (`Chars "text");
+        1, 14, S (`Chars ["text"]);
         1, 18, S  `EOF]);
 
   ("xml.tokenizer.bad-attribute-name" >:: fun _ ->
@@ -648,9 +648,9 @@ let tests = [
 
   ("xml.tokenizer.processing-instruction" >:: fun _ ->
     expect "text<?target content?>text"
-      [ 1,  1, S (`Chars "text");
+      [ 1,  1, S (`Chars ["text"]);
         1,  5, S (`PI ("target", "content"));
-        1, 23, S (`Chars "text");
+        1, 23, S (`Chars ["text"]);
         1, 27, S  `EOF];
 
     (* Disabled to avoid trigraph warning from the C compiler. *)
@@ -788,5 +788,16 @@ let tests = [
     expect "<?xml version='1.0' "
       [ 1, 21, E (`Unexpected_eoi xml);
         1,  1, S (xml_decl "1.0" None None);
-        1, 21, S  `EOF])
+        1, 21, S  `EOF]);
+
+  ("xml.tokenizer.large-text" >:: fun _ ->
+    with_text_limit 8 begin fun () ->
+      expect "foobar"
+        [ 1,  1, S (`Chars ["foobar"]);
+          1,  7, S  `EOF];
+
+      expect "foobarbaz"
+        [ 1,  1, S (`Chars ["foobarba"; "z"]);
+          1, 10, S  `EOF]
+    end)
 ]

@@ -22,12 +22,12 @@ let tests = [
     expect "empty" [] []);
 
   ("xml.writer.text" >:: fun _ ->
-    expect "text" [`Text "foo"] [S "foo"];
-    expect "adjacent text" [`Text "foo"; `Text "bar"] [S "foo"; S "bar"];
-    expect "empty text" [`Text ""] []);
+    expect "text" [`Text ["foo"]] [S "foo"];
+    expect "adjacent text" [`Text ["foo"]; `Text ["bar"]] [S "foo"; S "bar"];
+    expect "empty text" [`Text [""]] []);
 
   ("xml.writer.text-escaping" >:: fun _ ->
-    expect "text escaping" [`Text "<foo&bar>"] [S "&lt;foo&amp;bar&gt;"]);
+    expect "text escaping" [`Text ["<foo&bar>"]] [S "&lt;foo&amp;bar&gt;"]);
 
   ("xml.writer.xml-declaration" >:: fun _ ->
     expect "version only"
@@ -81,7 +81,7 @@ let tests = [
       [S "<"; S "foo"; S "/>"];
 
     expect "element with text"
-      [`Start_element (("", "foo"), []); `Text "bar"; `End_element]
+      [`Start_element (("", "foo"), []); `Text ["bar"]; `End_element]
       [S "<"; S "foo"; S ">"; S "bar"; S "</"; S "foo"; S ">"];
 
     expect "nested elements"

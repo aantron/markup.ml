@@ -24,12 +24,12 @@ let tests = [
     expect "empty" [] []);
 
   ("html.writer.text" >:: fun _ ->
-    expect "text" [`Text "foo"] [S "foo"];
-    expect "adjacent text" [`Text "foo"; `Text "bar"] [S "foo"; S "bar"];
-    expect "empty text" [`Text ""] []);
+    expect "text" [`Text ["foo"]] [S "foo"];
+    expect "adjacent text" [`Text ["foo"]; `Text ["bar"]] [S "foo"; S "bar"];
+    expect "empty text" [`Text [""]] []);
 
   ("html.writer.text-escaping" >:: fun _ ->
-    expect "text escaping" [`Text "<foo&bar>\xc2\xa0baz"]
+    expect "text escaping" [`Text ["<foo&bar>\xc2\xa0baz"]]
       [S "&lt;foo&amp;bar&gt;&nbsp;baz"]);
 
   ("html.writer.doctype" >:: fun _ ->
@@ -71,7 +71,7 @@ let tests = [
   ("html.writer.pre" >:: fun _ ->
     expect "pre"
       [`Start_element ((html_ns, "pre"), []);
-       `Text ("\nfoo");
+       `Text ["\nfoo"];
        `End_element]
       [S "<"; S "pre"; S ">"; S "\n"; S "\nfoo"; S "</"; S "pre"; S ">"]);
 

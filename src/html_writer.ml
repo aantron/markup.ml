@@ -36,6 +36,12 @@ let _void_elements =
 
 let _prepend_newline_for = ["pre"; "textarea"; "listing"]
 
+let rec _starts_with_newline = function
+  | [] -> false
+  | s::more ->
+    if String.length s = 0 then _starts_with_newline more
+    else s.[0] = '\x0A'
+
 open Kstream
 
 let write signals =
@@ -96,7 +102,7 @@ let write signals =
 
           if ns = html_ns && List.mem name' _prepend_newline_for then
             peek_option signals throw (function
-              | Some (`Text s) when String.length s > 0 && s.[0] == '\x0A' ->
+              | Some (`Text ss) when _starts_with_newline ss ->
                 emit_list (tag @ ["\n"]) throw e k
               | Some (`Text _ | `Start_element _ | `End_element | `Comment _ |
                       `PI _ | `Doctype _ | `Xml _)
@@ -113,11 +119,11 @@ let write signals =
           emit_list ["</"; name; ">"] throw e k
         end
 
-      | `Text s ->
-        if String.length s > 0 then
-          emit_list [_escape_text s] throw e k
-        else
+      | `Text ss ->
+        if List.for_all (fun s -> String.length s = 0) ss then
           next_signal throw e k
+        else
+          emit_list (List.map _escape_text ss) throw e k
 
       | `Comment s ->
         emit_list ["<!--"; s; "-->"] throw e k

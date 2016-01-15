@@ -36,15 +36,15 @@ let tests = [
   ("utility.tree" >:: fun _ ->
     [start_element "a";
      `Comment "blah";
-     `Text "foo";
+     `Text ["foo"];
      start_element "b";
-     `Text "bar";
+     `Text ["bar"];
      `End_element;
-     `Text "baz";
+     `Text ["baz"];
      `End_element]
     |> of_list
     |> tree
-      ~text:(fun s -> Text s)
+      ~text:(fun ss -> Text (String.concat "" ss))
       ~element:(fun (_, name) _ children -> Element (name, children))
     |> assert_equal
       (Some
@@ -60,75 +60,85 @@ let tests = [
   ("utility.text" >:: fun _ ->
     [`Xml {Markup.version = "1.0"; encoding = None; standalone = None};
      `Comment "blah";
-     `Text "foo";
+     `Text ["foo"];
      start_element "a";
-     `Text "bar";
+     `Text ["bar"; "baz"];
      `End_element]
     |> of_list
     |> text
     |> to_string
-    |> assert_equal "foobar");
+    |> assert_equal "foobarbaz");
 
   ("utility.trim" >:: fun _ ->
-    [`Text "\n";
+    [`Text ["\n"];
      start_element "a";
-     `Text "\n  content\n  ";
+     `Text ["\n  content\n  "];
      `End_element;
-     `Text "\n\n"]
+     `Text ["\n\n"];
+     start_element "a";
+     `Text ["\n"; "\n"];
+     `End_element;
+     `Text [" "; "\n"; " more content "; "\n"; "\n"]]
     |> of_list
     |> trim
     |> to_list
     |> assert_equal [
       start_element "a";
-      `Text "content";
-      `End_element]);
+      `Text ["content"];
+      `End_element;
+      start_element "a";
+      `End_element;
+      `Text ["more content"]]);
 
   ("utility.normalize_text" >:: fun _ ->
-    [`Text "";
+    [`Text [""];
      start_element "a";
-     `Text "foo";
-     `Text "bar";
-     `End_element]
+     `Text ["foo"];
+     `Text ["bar"];
+     `End_element;
+     `Text ["foo"; "bar"];
+     `Text ["baz"; ""; "quux"]]
     |> of_list
     |> normalize_text
     |> to_list
     |> assert_equal [
       start_element "a";
-      `Text "foobar";
-      `End_element]);
+      `Text ["foo"; "bar"];
+      `End_element;
+      `Text ["foo"; "bar"; "baz"; "quux"]]);
 
   ("utility.pretty_print" >:: fun _ ->
-    [`Text "foo";
+    [`Text ["foo"];
      start_element "a";
-     `Text " bar ";
-     `Text " baz ";
+     `Text [" bar "];
+     `Text [" baz "];
      start_element "b";
-     `Text "quux";
+     `Text ["quux"];
      `End_element;
      `End_element]
     |> of_list
     |> pretty_print
     |> to_list
     |> assert_equal [
-      `Text "foo\n";
+      `Text ["foo"; "\n"];
       start_element "a";
-      `Text "\n  bar  baz\n  ";
+      `Text ["\n"; "  "; "bar "; " baz"; "\n"; "  "];
       start_element "b";
-      `Text "\n    quux\n  ";
+      `Text ["\n"; "    "; "quux"; "\n"; "  "];
       `End_element;
-      `Text "\n";
+      `Text ["\n"];
       `End_element;
-      `Text "\n"]);
+      `Text ["\n"]]);
 
   ("utility.drop_locations" >:: fun _ ->
     [(1, 1), start_element "a";
-     (1, 4), `Text "foo";
+     (1, 4), `Text ["foo"];
      (1, 7), `End_element]
     |> of_list
     |> drop_locations
     |> to_list
     |> assert_equal [
       start_element "a";
-      `Text "foo";
+      `Text ["foo"];
       `End_element])
 ]

@@ -497,7 +497,7 @@ let read_xml_encoding_declaration bytes (family : Encoding.t) throw k =
     Kstream.next tokens throw (fun () -> k None) begin function
       | _, `Xml {Common.encoding} -> k encoding
       | _, `Comment _ -> prescan ()
-      | _, `Chars s when is_whitespace_only s -> prescan ()
+      | _, `Chars s when List.for_all is_whitespace_only s -> prescan ()
       | _ -> k None
     end
   in

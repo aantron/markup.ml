@@ -35,31 +35,31 @@ let tests = [
   ("xml.parser.document" >:: fun _ ->
     expect "<root>foo</root>"
       [ 1,  1, S (start_element "root");
-        1,  7, S (`Text "foo");
+        1,  7, S (`Text ["foo"]);
         1, 10, S  `End_element];
 
     expect "  <root > foo </root >  "
       [ 1,  3, S (start_element "root");
-        1, 10, S (`Text " foo ");
+        1, 10, S (`Text [" foo "]);
         1, 15, S  `End_element];
 
     expect "<!DOCTYPE html><root>foo</root>"
       [ 1,  1, S (raw_doctype "html");
         1, 16, S (start_element "root");
-        1, 22, S (`Text "foo");
+        1, 22, S (`Text ["foo"]);
         1, 25, S  `End_element];
 
     expect "<?xml version='1.0'?><root>foo</root>"
       [ 1,  1, S (xml_decl "1.0" None None);
         1, 22, S (start_element "root");
-        1, 28, S (`Text "foo");
+        1, 28, S (`Text ["foo"]);
         1, 31, S  `End_element];
 
     expect "<?xml version='1.0'?>  <!DOCTYPE html>  <root>foo</root>"
       [ 1,  1, S (xml_decl "1.0" None None);
         1, 24, S (raw_doctype "html");
         1, 41, S (start_element "root");
-        1, 47, S (`Text "foo");
+        1, 47, S (`Text ["foo"]);
         1, 50, S  `End_element]);
 
   ("xml.parser.leading-comments" >:: fun _ ->
@@ -143,14 +143,14 @@ let tests = [
     expect "<root></root>foo"
       [ 1,  1, S (start_element "root");
         1,  7, S  `End_element;
-        1, 14, S (`Text "foo")];
+        1, 14, S (`Text ["foo"])];
 
     expect "<root></root> <foo></foo> <bar></bar>"
       [ 1,  1, S (start_element "root");
         1,  7, S  `End_element;
         1, 15, S (start_element "foo");
         1, 20, S  `End_element;
-        1, 26, S (`Text " ");
+        1, 26, S (`Text [" "]);
         1, 27, S (start_element "bar");
         1, 32, S  `End_element];
 
@@ -159,7 +159,7 @@ let tests = [
         1, 22, S (start_element "root");
         1, 22, S  `End_element;
         1, 29, E (`Bad_document "not allowed after root element");
-        1, 29, S (`Text "foo")]);
+        1, 29, S (`Text ["foo"])]);
 
   ("xml.parser.self-closing-root" >:: fun _ ->
     expect "<root/>"
@@ -169,21 +169,21 @@ let tests = [
   ("xml.parser.content" >:: fun _ ->
     expect "<root>foo<!--bar--><?baz quux?>&lt;<![CDATA[&gt;]]></root>"
       [ 1,  1, S (start_element "root");
-        1,  7, S (`Text "foo");
+        1,  7, S (`Text ["foo"]);
         1, 10, S (`Comment "bar");
         1, 20, S (`PI ("baz", "quux"));
-        1, 32, S (`Text "<&gt;");
+        1, 32, S (`Text ["<&gt;"]);
         1, 52, S  `End_element];
 
     expect "<root><nested><more>foo</more></nested><a>bar</a><blah/></root>"
       [ 1,  1, S (start_element "root");
         1,  7, S (start_element "nested");
         1, 15, S (start_element "more");
-        1, 21, S (`Text "foo");
+        1, 21, S (`Text ["foo"]);
         1, 24, S  `End_element;
         1, 31, S  `End_element;
         1, 40, S (start_element "a");
-        1, 43, S (`Text "bar");
+        1, 43, S (`Text ["bar"]);
         1, 46, S  `End_element;
         1, 50, S (start_element "blah");
         1, 50, S  `End_element;
@@ -238,22 +238,22 @@ let tests = [
 
   ("xml.parser.fragment" >:: fun _ ->
     expect "foo<bar/>"
-      [ 1,  1, S (`Text "foo");
+      [ 1,  1, S (`Text ["foo"]);
         1,  4, S (start_element "bar");
         1,  4, S  `End_element];
 
     expect " <!-- foo --> bar <baz></baz> <quux/>"
-      [ 1,  1, S (`Text " ");
+      [ 1,  1, S (`Text [" "]);
         1,  2, S (`Comment " foo ");
-        1, 14, S (`Text " bar ");
+        1, 14, S (`Text [" bar "]);
         1, 19, S (start_element "baz");
         1, 24, S  `End_element;
-        1, 30, S (`Text " ");
+        1, 30, S (`Text [" "]);
         1, 31, S (start_element "quux");
         1, 31, S  `End_element];
 
     expect "foo"
-      [ 1,  1, S (`Text "foo")]);
+      [ 1,  1, S (`Text ["foo"])]);
 
   ("xml.parser.namespaces" >:: fun _ ->
     expect

@@ -30,6 +30,16 @@ let strings_to_bytes strings =
   in
   make emit
 
+let _unwrap_lists ls =
+  let current_list = ref [] in
+
+  let rec emit throw e k =
+    match !current_list with
+    | v::l -> current_list := l; k v
+    | [] -> next ls throw e (fun l -> current_list := l; emit throw e k)
+  in
+  make emit
+
 let tree ~text ~element s throw k =
   let rec match_content acc throw k =
     next s throw (fun () -> k (List.rev acc)) begin function
@@ -118,39 +128,57 @@ let elements select s =
 let text s =
   let filter v _ k =
     match v with
-    | `Text s -> k (Some s)
+    | `Text ss -> k (Some ss)
     | `Start_element _ | `End_element | `Comment _ | `PI _ | `Doctype _
     | `Xml _ -> k None
   in
   filter_map filter s
+  |> _unwrap_lists
   |> strings_to_bytes
 
 let trim s =
+  let rec trim_string_list trim = function
+    | [] -> []
+    | s::more ->
+      match trim s with
+      | "" -> trim_string_list trim more
+      | s -> s::more
+  in
+
   s |> filter_map (fun v _ k ->
     match v with
-    | `Text s ->
-      begin match trim_string s with
-      | "" -> k None
-      | s -> k (Some (`Text s))
-      end
+    | `Text ss ->
+      ss
+      |> trim_string_list trim_string_left
+      |> List.rev
+      |> trim_string_list trim_string_right
+      |> List.rev
+      |> (function
+        | [] -> k None
+        | ss -> k (Some (`Text ss)))
     | _ -> k (Some v))
 
 let normalize_text s =
   let rec match_text acc throw e k =
     next_option s throw begin function
-      | Some (`Text s) ->
-        match_text (s::acc) throw e k
+      | Some (`Text ss) ->
+        match_text (ss::acc) throw e k
 
       | v ->
         push_option s v;
-        match String.concat "" (List.rev acc) with
-        | "" -> match_other throw e k
-        | s -> k (`Text s)
+        let ss =
+          List.rev acc
+          |> List.flatten
+          |> List.filter (fun s -> String.length s > 0)
+        in
+        match ss with
+        | [] -> match_other throw e k
+        | _ -> k (`Text ss)
     end
 
   and match_other throw e k =
     next s throw e (function
-      | `Text s -> match_text [s] throw e k
+      | `Text ss -> match_text [ss] throw e k
       | signal -> k signal)
 
   in
@@ -173,15 +201,15 @@ let pretty_print s =
     next s throw e begin fun v ->
       match v with
       | `Start_element _ ->
-        list [`Text (indent depth); v; `Text "\n"]
+        list [`Text [indent depth]; v; `Text ["\n"]]
           (row (depth + 1)) throw e k
 
       | `End_element ->
-        list [`Text (indent (depth - 1)); v; `Text "\n"]
+        list [`Text [indent (depth - 1)]; v; `Text ["\n"]]
           (row (depth - 1)) throw e k
 
       | _ ->
-        list [`Text (indent depth); v; `Text "\n"]
+        list [`Text [indent depth]; v; `Text ["\n"]]
           (row depth) throw e k
     end
 

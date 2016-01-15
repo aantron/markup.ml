@@ -8,7 +8,7 @@ type token =
   | `Doctype of doctype
   | `Start of Token_tag.t
   | `End of Token_tag.t
-  | `Chars of string
+  | `Chars of string list
   | `PI of string * string
   | `Comment of string
   | `EOF ]

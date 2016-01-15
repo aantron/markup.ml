@@ -48,7 +48,7 @@ type html = Text of string | Element of string * html list
 file "some_file"
 |> parse_html
 |> tree
-  ~text:(fun s -> Text s)
+  ~text:(fun ss -> Text (String.concat "" ss))
   ~element:(fun (_, name) _ children -> Element (name, children))
 ]}
 
@@ -244,7 +244,7 @@ type doctype =
 type signal =
   [ `Start_element of name * (name * string) list
   | `End_element
-  | `Text of string
+  | `Text of string list
   | `Doctype of doctype
   | `Xml of xml_declaration
   | `PI of string * string
@@ -277,18 +277,23 @@ content ::= `Text | element | `PI | `Comment
 {[
 `Xml {version = "1.0"; encoding = None; standalone = None};
 `Start_element (("", "root"), []);
-`Text "text"
+`Text ["text"]
 `Start_element (("", "nested"), []);
-`Text "more text"
+`Text ["more text"]
 `End_element
 `End_element
 ]}
- *)
+
+    The [`Text] signal carries a [string list] instead of a single [string]
+    because on 32-bit platforms, strings cannot be larger than 16MB. In case the
+    parsers encounter a very long sequence of text, one whose length exceeds
+    about [Sys.max_string_length / 2], they will emit a [`Text] signal with
+    several strings. *)
 
 type content_signal =
   [ `Start_element of name * (name * string) list
   | `End_element
-  | `Text of string ]
+  | `Text of string list ]
 (** A restriction of type {!signal} to only elements and text, i.e. no comments,
     processing instructions, or declarations. This can be useful for pattern
     matching in applications that only care about the content and element
@@ -497,7 +502,7 @@ val content :
     all signals besides [`Start_element], [`End_element], and [`Text]. *)
 
 val tree :
-  text:(string -> 'a) ->
+  text:(string list -> 'a) ->
   element:(name -> (name * string) list -> 'a list -> 'a) ->
   ([< signal ], sync) stream -> 'a option
 (** Assembles tree data structures from signal streams. This is done by first
@@ -528,7 +533,7 @@ type dom = Text of string | Element of name * dom list
 |> parse_html
 |> drop_locations
 |> tree
-  ~text:(fun s -> Text s)
+  ~text:(fun ss -> Text (String.concat "" ss))
   ~element:(fun (name, _) children -> Element (name, children))
 ]}
 
@@ -567,21 +572,27 @@ val drop_locations : (location * 'a, 's) stream -> ('a, 's) stream
 
 val text : ([< signal ], 's) stream -> (char, 's) stream
 (** Extracts all the text in a signal stream by discarding all markup, i.e. for
-    each [`Text s] signal, the result stream has the bytes of [s], and all other
-    signals are ignored. *)
+    each [`Text ss] signal, the result stream has the bytes of the strings [ss],
+    and all other signals are ignored. *)
 
-val trim : ([> `Text of string ] as 'a, 's) stream -> ('a, 's) stream
-(** Trims whitespace in a signal stream. For each signal [`Text s], applies
-    [String.trim] to [s], then eliminates all [`Text ""] signals. All signals
-    besides [`Text] are unaffected. *)
+val trim : ([> `Text of string list ] as 'a, 's) stream -> ('a, 's) stream
+(** Trims whitespace in a signal stream. For each signal [`Text ss], transforms
+    [ss] so that the result strings [ss'] satisfy
 
-val normalize_text : ([> `Text of string ] as 'a, 's) stream -> ('a, 's) stream
-(** Concatenates adjacent [`Text] signals, then eliminates all [`Text ""]
-    signals. Signals besides [`Text] are unaffected. Note that signal streams
-    emitted by the parsers already have normalized text. This function is useful
-    when you are inserting text into a signal stream after parsing, or
-    generating streams from scratch, and would like to clean up the [`Text]
-    signals. *)
+{[
+String.concat "" ss' = String.trim (String.concat "" ss)
+]}
+
+    All signals for which [String.concat "" ss' = ""] are then dropped. *)
+
+val normalize_text :
+  ([> `Text of string list ] as 'a, 's) stream -> ('a, 's) stream
+(** Concatenates adjacent [`Text] signals, then eliminates all empty strings,
+    then all [`Text []] signals. Signals besides [`Text] are unaffected. Note
+    that signal streams emitted by the parsers already have normalized text.
+    This function is useful when you are inserting text into a signal stream
+    after parsing, or generating streams from scratch, and would like to clean
+    up the [`Text] signals. *)
 
 val pretty_print : ([> content_signal ] as 'a, 's) stream -> ('a, 's) stream
 (** Adjusts the [`Text] signals in the given stream so that the output appears
@@ -719,7 +730,7 @@ sig
   (** {2 Utility} *)
 
   val tree :
-    text:(string -> 'a) ->
+    text:(string list -> 'a) ->
     element:(name -> (name * string) list -> 'a list -> 'a) ->
     ([< signal ], _) stream -> 'a option io
 end

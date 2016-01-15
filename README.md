@@ -23,13 +23,13 @@ string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
 
 |> parse_html           `Start_element "p"
                         `Start_element "em"
-                        `Text "Markup.ml"
+                        `Text ["Markup.ml"]
                         ~report (1, 4) (`Unmatched_start_tag "em")
                         `End_element                   (* /em: recovery *)
                         `End_element                   (* /p: not an error *)
                         `Start_element "p"
                         `Start_element "em"            (* recovery *)
-                        `Text "rocks!"
+                        `Text ["rocks!"]
                         `End_element                   (* /em *)
                         `End_element                   (* /p *)
 |> drop_locations
@@ -90,7 +90,7 @@ type html = Text of string | Element of string * html list
 file "some_file"
 |> parse_html
 |> tree
-  ~text:(fun s -> Text s)
+  ~text:(fun ss -> Text (String.concat "" ss))
   ~element:(fun (_, name) _ children -> Element (name, children))
 ```
 

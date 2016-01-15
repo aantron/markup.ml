@@ -8,7 +8,7 @@ type token =
   | `Doctype of doctype
   | `Start of Token_tag.t
   | `End of Token_tag.t
-  | `Chars of string
+  | `Chars of string list
   | `PI of string * string
   | `Comment of string
   | `EOF ]
@@ -518,45 +518,20 @@ let tokenize report resolve_reference (input, get_location) =
     target_start_state ()
   in
 
-  let character_data = Buffer.create 64 in
-  let character_data_start = ref None in
-
-  let note_character_location l =
-    match !character_data_start with
-    | None -> character_data_start := Some l
-    | _ -> ()
-  in
-
-  let add_character l c =
-    add_utf_8 character_data c;
-    note_character_location l
-  in
-
-  let add_string l s =
-    Buffer.add_string character_data s;
-    note_character_location l
-  in
+  let text = Text.prepare () in
+  let note_character_location = Text.note_location text in
+  let add_character = Text.add text in
+  let add_string = Text.add_string text in
 
   let rec current_state = ref initial_state
 
   and emit' l t s = current_state := s; !output (l, t)
 
   and emit_chars state =
-    if Buffer.length character_data > 0 then begin
-      let s = Buffer.contents character_data in
-      let l' =
-        match !character_data_start with
-        | None -> (1, 1)
-        | Some l' ->
-          character_data_start := None;
-          l'
-      in
-
-      Buffer.clear character_data;
-      emit' l' (`Chars s) state
-    end
-    else
-      state ()
+    match Text.emit text with
+    | None -> state ()
+    | Some (l, strings) ->
+      emit' l (`Chars strings) state
 
   and emit l t state =
     emit_chars (fun () ->

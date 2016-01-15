@@ -5,6 +5,8 @@ open Common
 
 val wrong_k : string -> _ cont
 
+val with_text_limit : int -> (unit -> unit) -> unit
+
 val expect_error :
   ?allow_recovery:int -> location -> Error.t -> (Error.parse_handler -> unit) ->
     unit
