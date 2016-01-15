@@ -3,22 +3,20 @@
 [version]:       https://img.shields.io/badge/version-0.6-blue.svg
 [license-img]:   https://img.shields.io/badge/license-BSD-blue.svg
 
-Markup.ml is a pair of parsers implementing the HTML5 and XML specifications.
-Usage is simple, because each parser is just a function from byte streams to
-parsing signal streams.
-
-HTML5 gives complicated rules for well-formed markup, error reporting, and
-recovery. Markup.ml encapsulates them. While the XML specification does not
-include error recovery, Markup.ml also recovers from XML errors, after reporting
-them. Thus, it provides best-effort parsing of both HTML and XML.
-
-Here is an example of Markup.ml correcting errors in a small HTML fragment, then
-pretty-printing it. The code is in the left column, and the center column shows
-the values produced.
+Markup.ml is a pair of best-effort parsers implementing the HTML5 and XML
+specifications. Usage is simple, because each parser is just a function from
+byte streams to parsing signal streams:
 
 ```ocaml
-open Markup;;
+open Markup
+string s |> parse_html |> signals |> pretty_print |> write_html |> to_string
+```
 
+The expression above does an error-correcting parse of HTML and pretty-prints
+the output. Here is a demonstration of how the expression acts on a small HTML
+fragment:
+
+```ocaml
 string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
 
 |> parse_html           `Start_element "p"
@@ -49,7 +47,8 @@ In addition to being error-correcting, the parsers are:
 - *streaming*: capable of parsing partial input while more input is still being
   received;
 - *lazy*: not parsing input unless it is needed to emit the next parsing signal,
-  so you can easily stop parsing partway through a document;
+  so you can easily stop parsing partway through a document – in the example,
+  no parsing happens until `to_string` is called;
 - *non-blocking*: they can be used with [Lwt][lwt], but still provide a
   straightforward synchronous interface for simple usage; and
 - *one-pass*: memory consumption is limited since the parsers don't build up a
