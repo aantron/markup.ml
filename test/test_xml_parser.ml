@@ -368,5 +368,3 @@ let tests = [
                    (xmlns_ns, "c"), "baz"]));
         1,  1, S  `End_element])
 ]
-
-(* TODO Test fragment argument. *)

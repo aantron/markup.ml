@@ -1,4 +1,5 @@
 LIB := markup
+VERSION := 0.5
 
 if_package = ! ocamlfind query $(1) > /dev/null 2> /dev/null || ( $(2) )
 
@@ -118,13 +119,7 @@ docs-odocl :
 PUBLISH := doc/publish
 
 .PHONY : publish-docs
-publish-docs : docs
-	@test $(OCAML_VERSION) -ne 402 \
-		|| (echo "\nocamldoc is broken in 4.02" && false)
-	@ocamlfind query lwt.unix > /dev/null 2> /dev/null \
-		|| (echo "\nLwt not installed" && false)
-	@ocamlfind query lambdasoup > /dev/null 2> /dev/null \
-		|| (echo "\nLambda Soup not installed" && false)
+publish-docs : check-doc-prereqs docs
 	rm -rf $(PUBLISH)
 	mkdir -p $(PUBLISH)
 	cd $(PUBLISH) \
@@ -134,6 +129,22 @@ publish-docs : docs
 		&& git add -A \
 		&& git commit -m 'Markup.ml documentation.' \
 		&& git push -uf github master:gh-pages
+
+DOC_ZIP := doc/$(LIB)-$(VERSION)-doc.zip
+
+.PHONY : package-docs
+package-docs : check-doc-prereqs docs
+	rm -f $(DOC_ZIP)
+	zip -9 $(DOC_ZIP) $(HTML)/*
+
+.PHONY : check-doc-prereqs
+check-doc-prereqs :
+	@test $(OCAML_VERSION) -ne 402 \
+		|| (echo "\nocamldoc is broken in 4.02" && false)
+	@ocamlfind query lwt.unix > /dev/null 2> /dev/null \
+		|| (echo "\nLwt not installed" && false)
+	@ocamlfind query lambdasoup > /dev/null 2> /dev/null \
+		|| (echo "\nLambda Soup not installed" && false)
 
 need_package = \
 	ocamlfind query $(1) > /dev/null 2> /dev/null \
@@ -193,5 +204,5 @@ uninstall :
 .PHONY : clean
 clean :
 	$(OCAMLBUILD) -clean
-	rm -rf bisect*.out $(COVERAGE) $(HTML) $(PUBLISH) opam
+	rm -rf bisect*.out $(COVERAGE) $(HTML) $(PUBLISH) $(DOC_ZIP) opam
 	cd $(DEP_TEST_DIR) && $(OCAMLBUILD) -clean

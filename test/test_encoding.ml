@@ -9,8 +9,6 @@ open Kstream
 open Stream_io
 open Encoding
 
-(* TODO Test exception pass-through. *)
-
 let ok = wrong_k "failed"
 
 let test_ucs_4 (f : Encoding.t) name s1 s2 bad_bytes =

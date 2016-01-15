@@ -82,13 +82,14 @@ let report =
     count := !count + 1;
     if !count >= 10 then raise_notrace Exit
 
-string "some xml" |> parse_xml ~report |> drain
+string "some xml" |> parse_xml ~report |> signals |> drain
 
 (* Load HTML into a custom document tree data type. *)
 type html = Text of string | Element of string * html list
 
 file "some_file"
 |> parse_html
+|> signals
 |> tree
   ~text:(fun ss -> Text (String.concat "" ss))
   ~element:(fun (_, name) _ children -> Element (name, children))
@@ -151,18 +152,11 @@ opam install lwt cohttp lambdasoup markup
 
 ## Installing
 
-Until Markup.ml is added to OPAM, the easiest way to install it is by cloning
-this repository, then running
+Simply
 
 ```sh
-make install
+opam install markup
 ```
-
-in the cloned directory. This will use OPAM to pin Markup.ml, install the
-dependency Uutf, then build and install Markup.ml. If you want to use the module
-`Markup_lwt`, check that Lwt is installed before installing Markup.ml.
-
-To remove the pin later, run `make uninstall`.
 
 ## Documentation
 

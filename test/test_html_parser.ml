@@ -114,7 +114,6 @@ let tests = [
         1, 31, S  `End_element;
         1, 31, S  `End_element]);
 
-  (* TODO Document deviation for non-iframe srcdoc documents. *)
   ("html.parser.no-doctype" >:: fun _ ->
     expect ~prefix:true "<title>foo</title>"
       [ 1,  1, S (start_element "html");
@@ -357,7 +356,6 @@ let tests = [
         1, 18, S  `End_element;
         1, 18, S  `End_element]);
 
-  (* TODO It is strange that the <plaintext> tag always causes a parse error. *)
   ("html.parser.plaintext" >:: fun _ ->
     expect "<p><plaintext>foo</plaintext></p>"
       [ 1,  1, S (start_element "html");
@@ -413,7 +411,6 @@ let tests = [
         1, 40, S  `End_element;
         1, 40, S  `End_element]);
 
-  (* TODO Test condition in EOF case, likewise HTML case. *)
   ("html.parser.truncated-body" >:: fun _ ->
     expect "<body>"
       [ 1,  1, S (start_element "html");
@@ -459,8 +456,6 @@ let tests = [
         1, 22, S  `End_element;
         1, 29, S  `End_element]);
 
-  (* TODO Don't double-report errors on the same start tag. *)
-  (* TODO Change the location of implied start tags? *)
   ("html.parser.reconstruct-active-formatting-elements" >:: fun _ ->
     expect "<p><em><strong>foo<p>bar"
       [ 1,  1, S (start_element "html");
@@ -533,7 +528,6 @@ let tests = [
       [ 1,  1, E (`Bad_token ("U+0000", "foreign content", "null"));
         1,  1, S (`Text ["\xef\xbf\xbdfoo"])];
 
-    (* TODO Throttle `Bad_content. *)
     expect ~context:(Some (`Fragment "body")) "<table>\x00foo</table>"
       [ 1,  1, S (start_element "table");
         1,  8, E (`Bad_token ("U+0000", "table", "null"));

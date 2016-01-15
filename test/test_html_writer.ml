@@ -5,10 +5,6 @@ open OUnit2
 open Test_support
 open Common
 
-(* TODO Test qnames for non-SVG,MathML,HTML elements. *)
-(* TODO Attribute qnames. *)
-(* TODO Test xmlns, xlink, and xml namespaces in the parser as well. *)
-
 let expect id signals strings =
   let _, iterate, ended = expect_strings id strings in
 
@@ -93,7 +89,6 @@ let tests = [
        S "id"; S "=\""; S "foo<>&quot;&amp;&nbsp;"; S "\""; S ">";
        S "</"; S "p"; S ">"]);
 
-  (* TODO Implement self-closing foreign elements. *)
   ("html.writer.foreign-element" >:: fun _ ->
     expect "foreign element"
       [`Start_element ((svg_ns, "use"), [(xlink_ns, "href"), "#foo"]);

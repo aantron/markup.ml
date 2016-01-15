@@ -5,4 +5,5 @@ test/coverage
 doc/markup.odocl
 doc/html
 doc/publish
+doc/*.zip
 opam

@@ -5,8 +5,6 @@ open OUnit2
 open Test_support
 open Common
 
-(* TODO Test exception pass-through in integration. *)
-
 let xml_decl version encoding standalone =
   `Xml {version; encoding; standalone}
 

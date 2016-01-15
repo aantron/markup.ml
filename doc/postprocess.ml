@@ -229,7 +229,8 @@ let clean_up_content soup =
   uncolor "constructor" "ASYNCHRONOUS";
   uncolor "constructor" "Pervasives";
   uncolor "constructor" "Lwt_io";
-  uncolor "keyword" "false"
+  uncolor "keyword" "false";
+  uncolor "keyword" "parser"
 
 let add_with_type soup type_name =
   let extra =

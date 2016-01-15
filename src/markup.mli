@@ -77,7 +77,9 @@ val write_xml  : signal stream -> char stream
     Markup.ml is developed on {{:https://github.com/aantron/markup.ml} GitHub}
     and distributed under the
     {{:https://github.com/aantron/markup.ml/blob/master/doc/LICENSE}
-    BSD license}. This documentation is for version 0.5 of the library. *)
+    BSD license}. This documentation is for version 0.5 of the library.
+    Documentation for older versions can be found on the
+    {{: https://github.com/aantron/markup.ml/releases} releases page}. *)
 
 
 
@@ -193,7 +195,7 @@ sig
   val decode :
     ?report:(location -> Error.t -> unit) -> t ->
     (char, 's) stream -> (int, 's) stream
-  (** Applies a decoder to byte stream. Illegal input byte sequences result in
+  (** Applies a decoder to a byte stream. Illegal input byte sequences result in
       calls to the error handler [~report] with error kind [`Decoding_error].
       The illegal bytes are then skipped, and zero or more U+FFFD replacement
       characters are emitted. The default handler ignores errors.
@@ -308,9 +310,9 @@ val signal_to_string : [< signal ] -> string
 (** {2 Parsers} *)
 
 type 's parser
-(** A ['s parser] is a thin wrapper around a [(signal, 's) stream] that supports
-    access to additional information that is not carried directly in the stream,
-    such as source locations. *)
+(** An ['s parser] is a thin wrapper around a [(signal, 's) stream] that
+    supports access to additional information that is not carried directly in
+    the stream, such as source locations. *)
 
 val signals : 's parser -> (signal, 's) stream
 (** Converts a parser to its underlying signal stream. *)
@@ -761,3 +763,66 @@ val kstream : ('a, _) stream -> 'a Kstream.t
 val of_kstream : 'a Kstream.t -> ('a, _) stream
 
 (**/**)
+
+
+
+(** {2 Conformance status}
+
+    The HTML parser seeks to implement section 8 of the HTML5 specification.
+    That section describes a parser, part of a full-blown user agent, that is
+    building up a DOM representation of an HTML document. Markup.ml is neither
+    inherently part of a user agent, nor does it build up a DOM representation.
+    With respect to section 8 of HTML5, Markup.ml is concerned with only the
+    syntax. When that section requires that the user agent perform an action,
+    Markup.ml emits enough information for a hypothetical user agent based on it
+    to be able to decide to perform this action. Likewise, Markup.ml seeks to
+    emit enough information for a hypothetical user agent to build up a
+    conforming DOM.
+
+    The XML parser seeks to be a non-validating implementation of the XML and
+    Namespaces in XML specifications.
+
+    This rest of this section lists known deviations from HTML5, XML, and
+    Namespaces in XML. Some of these deviations are meant to be corrected in
+    future versions of Markup.ml, while others will probably remain. The latter
+    satisfy some or all of the following properties:
+
+    - They require non-local adjustment, especially of past nodes. For example,
+      adjusting the start signal of the root node mid-way through the signal
+      stream is difficult for a one-pass parser.
+    - They are minor. Users implementing less than a conforming browser
+      typically don't care about them, and they typically have to do with
+      obscure error recovery.
+    - They can easily be corrected by code written over Markup.ml that builds up
+      a DOM or maintains other auxiliary data structures during parsing.
+
+    {3 To be corrected}
+
+    - XML: There is no attribute value normalization.
+    - HTML: The {e adoption agency algorithm} is not implemented, because it
+      requires non-local adjustments.
+    - HTML: {e foster parenting} is not implemented, because it requires
+      non-local adjustments.
+    - HTML: Quirks mode is not honored. This affects the interaction between
+      automatic closing of [p] elements and opening of [table] elements.
+    - HTML: The parser ignores the {e head element pointer}.
+    - HTML: The parser ignores the {e form element pointer}.
+    - HTML: The parser ignores interactions between [form] and [template].
+    - HTML: The form translation for [isindex] is completely ignored. [isindex]
+      is handled as an unknown element.
+
+    {3 To remain}
+
+    - HTML: Except when detecting encodings, the parser does not try to read
+      [<meta>] tags for encoding declarations. The user of Markup.ml should read
+      these, if necessary. They are part of the emitted signal stream.
+    - HTML: [noscript] elements are always parsed, as are [script] elements. For
+      conforming behavior, if the user of Markup.ml "supports scripts," the user
+      should serialize the content of [noscript] to a [`Text] signal using
+      [write_html].
+    - HTML: Elements such as [title] that belong in [head], but are found
+      between [head] and [body], are not moved into [head].
+    - HTML: [<html>] tags found in the body do not have their attributes added
+      to the [`Start_element "html"] signal emitted at the beginning of the
+      document.
+*)

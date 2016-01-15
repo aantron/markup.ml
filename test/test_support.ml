@@ -42,7 +42,6 @@ let expect_error :
     sprintf "no error\nexpected \"%s\"" (Error.to_string ~location:l error)
     |> assert_failure
 
-(* TODO Rename id to label. *)
 let expect_sequence ?(prefix = false) id to_string sequence =
   let assert_failure s = assert_failure (id ^ "\n" ^ s) in
 

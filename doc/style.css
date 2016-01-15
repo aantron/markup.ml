@@ -183,6 +183,12 @@ h2 {
     line-height: 1;
 }
 
+h3 {
+    font-size: 100%;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+}
+
 body > pre:first-of-type {
     margin-top: 1.5em;
 }

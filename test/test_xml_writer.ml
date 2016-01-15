@@ -150,7 +150,6 @@ let tests = [
          S "xmlns:a"; S "=\""; S "other_ns"; S "\""; S "/>";
          S "</"; S "foo"; S ">"];
 
-      (* TODO Do this test in both orders. *)
       expect "shadowing resolution"
         [`Start_element (("", "foo"),
           [(xmlns_ns, "a"), "some_ns";
@@ -185,5 +184,3 @@ let tests = [
          S "<"; S "foo"; S " ";
          S "xmlns:a"; S "=\""; S "other_ns"; S "\""; S "/>"])
 ]
-
-(* TODO Ill-formed signal sequences. *)
