@@ -1,26 +1,25 @@
 # Markup.ml &nbsp; [![version 0.6][version]][releases] [![(BSD license)][license-img]][license]
 
-[version]:       https://img.shields.io/badge/version-0.6-blue.svg
-[license-img]:   https://img.shields.io/badge/license-BSD-blue.svg
+[version]:     https://img.shields.io/badge/version-0.6-blue.svg
+[license-img]: https://img.shields.io/badge/license-BSD-blue.svg
 
 Markup.ml is a pair of best-effort parsers implementing the HTML5 and XML
 specifications. Usage is simple, because each parser is just a function from
 byte streams to parsing signal streams:
 
-```ocaml
-open Markup
-string s |> parse_html |> signals |> pretty_print |> write_html |> to_string
-```
+![Markup.ml usage example][sample]
 
-The expression above does an error-correcting parse of HTML and pretty-prints
-the output. Here is a demonstration of how the expression acts on a small HTML
-fragment:
+[sample]: https://raw.githubusercontent.com/aantron/markup.ml/master/doc/sample.gif
+
+Here is a breakdown of how the last expression above corrects errors in, and
+pretty-prints, the small HTML fragment `bad_html`:
 
 ```ocaml
-string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
+string bad_html         "<body><p><em>Markup.ml<p>rocks!"
 
-|> parse_html           `Start_element "p"
-|> signals              `Start_element "em"
+|> parse_html           `Start_element "body"
+|> signals              `Start_element "p"
+                        `Start_element "em"
                         `Text ["Markup.ml"]
                         ~report (1, 4) (`Unmatched_start_tag "em")
                         `End_element                   (* /em: recovery *)
@@ -30,16 +29,12 @@ string s                "<p><em>Markup.ml<p>rocks!"    (* malformed HTML *)
                         `Text ["rocks!"]
                         `End_element                   (* /em *)
                         `End_element                   (* /p *)
+                        `End_element                   (* /body *)
 
 |> pretty_print         (* adjusts the `Text signals *)
 
 |> write_html
-|> to_string;;          "<p>
-                           <em>Markup.ml</em>
-                         </p>
-                         <p>
-                           <em>rocks!</em>
-                         </p>"                         (* valid HTML *)
+|> to_channel stdout;;  "...shown above..."            (* valid HTML *)
 ```
 
 In addition to being error-correcting, the parsers are:
@@ -69,7 +64,7 @@ optional arguments for fine-tuning their behavior. The rest of the functions
 either input or output byte streams, or transform signal streams in some
 interesting way.
 
-Some examples:
+An example with an optional argument:
 
 ```ocaml
 (* Show up to 10 XML well-formedness errors to the user. Stop after
@@ -81,17 +76,7 @@ let report =
     count := !count + 1;
     if !count >= 10 then raise_notrace Exit
 
-string "some xml" |> parse_xml ~report |> signals |> drain
-
-(* Load HTML into a custom document tree data type. *)
-type html = Text of string | Element of string * html list
-
-file "some_file"
-|> parse_html
-|> signals
-|> tree
-  ~text:(fun ss -> Text (String.concat "" ss))
-  ~element:(fun (_, name) _ children -> Element (name, children))
+file "some.xml" |> parse_xml ~report |> signals |> drain
 ```
 
 ## Advanced: Cohttp + Markup.ml + Lambda Soup + Lwt
@@ -150,8 +135,6 @@ opam install lwt cohttp lambdasoup markup
 ```
 
 ## Installing
-
-Simply
 
 ```sh
 opam install markup
