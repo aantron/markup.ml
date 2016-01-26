@@ -1130,11 +1130,12 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `Start ({name = "textarea"} as t) ->
       frameset_ok := false;
       push_and_emit l t (fun () ->
+      set_tokenizer_state `RCDATA;
       next_expected tokens !throw (function
-        | _, `Char 0x000A -> parse_rcdata mode
+        | _, `Char 0x000A -> text_mode mode
         | v ->
           push tokens v;
-          parse_rcdata mode))
+          text_mode mode))
 
     | l, `Start {name = "xmp"} ->
       frameset_ok := false;

@@ -320,7 +320,14 @@ let tests = [
         2,  1, S (`Text ["\nfoo</p>"]);
         3,  8, S  `End_element;
         3, 19, S  `End_element;
-        3, 19, S  `End_element]);
+        3, 19, S  `End_element];
+
+    expect ~context:(Some (`Fragment "body")) "<textarea></textarea><p>foo</p>"
+      [ 1,  1, S (start_element "textarea");
+        1, 11, S  `End_element;
+        1, 22, S (start_element "p");
+        1, 25, S (`Text ["foo"]);
+        1, 28, S  `End_element]);
 
   ("html.parser.list" >:: fun _ ->
     expect "<ul><li>foo<li>bar</ul>"
