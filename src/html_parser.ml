@@ -613,6 +613,17 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     in
     reopen to_reopen
 
+  (* This is a temporary solution until the adoption agency algorithm (in
+     8.2.5.4.7) is implemented. *)
+  and remove_from_active_formatting_elements name =
+    let rec scan remaining = function
+      | [] -> List.rev remaining
+      | Element ({element_name = `HTML, name'}, _, _)::rest when name' = name ->
+        (List.rev remaining) @ rest
+      | v::rest -> scan (v::remaining) rest
+    in
+    active_formatting_elements := scan [] !active_formatting_elements
+
   (* 8.2.5. *)
   and dispatch tokens rules =
     next_expected tokens !throw begin fun ((_, t) as v) ->
@@ -1060,6 +1071,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `End {name =
         "a" | "b" | "big" | "code" | "em" | "font" | "i" | "nobr" | "s" |
         "small" | "strike" | "strong" | "tt" | "u" as name} ->
+      remove_from_active_formatting_elements name;
       close_element_with_implied name l mode
 
     | l, `Start ({name = "applet" | "marquee" | "object"} as t) ->

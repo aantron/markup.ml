@@ -482,6 +482,13 @@ let tests = [
         1, 25, S  `End_element;
         1, 25, S  `End_element]);
 
+  ("html.parser.close-formatting-elements" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) "<a>fo</a>o"
+      [ 1,  1, S (start_element "a");
+        1,  4, S (`Text ["fo"]);
+        1,  6, S  `End_element;
+        1, 10, S (`Text ["o"])]);
+
   ("html.parser.fragment" >:: fun _ ->
     expect ~context:(Some (`Fragment "title")) "</p>"
       [ 1,  1, S (`Text ["</p>"])];
