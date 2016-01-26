@@ -496,6 +496,13 @@ let tests = [
         1,  6, S  `End_element;
         1, 10, S (`Text ["o"])]);
 
+  ("html.parser.reset-mode" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) "<table></table><table></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S  `End_element;
+        1, 16, S (start_element "table");
+        1, 23, S  `End_element]);
+
   ("html.parser.fragment" >:: fun _ ->
     expect ~context:(Some (`Fragment "title")) "</p>"
       [ 1,  1, S (`Text ["</p>"])];

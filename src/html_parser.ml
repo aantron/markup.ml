@@ -771,7 +771,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       else begin
         clear_formatting_elements_until_marker ();
         pop_template_insertion_mode ();
-        close_element_with_implied "template" l (reset_mode ())
+        close_element_with_implied "template" l (fun () -> reset_mode () ())
       end
 
     | l, `Start {name = "head"} ->
@@ -1304,14 +1304,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       if not @@ stack_has "table" then mode ()
       else begin
         push tokens v;
-        close_element l "table" (reset_mode ())
+        close_element l "table" (fun () -> reset_mode () ())
       end)
 
     | l, `End {name = "table"} ->
       if not @@ element_in_table_scope "table" then
         report l (`Unmatched_end_tag "table") !throw mode
       else
-        close_element l "table" (reset_mode ())
+        close_element l "table" (fun () -> reset_mode () ())
 
     | l, `End {name =
       "body" | "caption" | "col" | "colgroup" | "html" | "tbody" | "td" |
@@ -1658,11 +1658,11 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       if not @@ element_in_select_scope "select" then
         report l (`Unmatched_end_tag "select") !throw mode
       else
-        close_element l "select" (reset_mode ())
+        close_element l "select" (fun () -> reset_mode () ())
 
     | l, `Start {name = "select"} ->
       report l (`Misnested_tag ("select", "select")) !throw (fun () ->
-      close_element l "select" (reset_mode ()))
+      close_element l "select" (fun () -> reset_mode () ()))
 
     | l, `Start {name = "input" | "keygen" | "textarea" as name} as v ->
       report l (`Misnested_tag (name, "select")) !throw (fun () ->
@@ -1670,7 +1670,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         mode ()
       else begin
         push tokens v;
-        close_element l "select" (reset_mode ())
+        close_element l "select" (fun () -> reset_mode () ())
       end)
 
     | _, (`Start {name = "script" | "template"} |
@@ -1691,7 +1691,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           "th" as name} as v ->
         report l (`Misnested_tag (name, "table")) !throw (fun () ->
         push tokens v;
-        close_element l "select" (reset_mode ()))
+        close_element l "select" (fun () -> reset_mode () ()))
 
       | l, `End {name =
           "caption" | "table" | "tbody" | "tfoot" | "thead" | "tr" | "td" |
@@ -1700,7 +1700,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         if not @@ element_in_table_scope name then in_select_in_table_mode ()
         else begin
           push tokens v;
-          close_element l "select" (reset_mode ())
+          close_element l "select" (fun () -> reset_mode () ())
         end)
 
       | v ->
@@ -1763,7 +1763,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         clear_formatting_elements_until_marker ();
         pop_template_insertion_mode ();
         push tokens v;
-        close_element l "template" (reset_mode ()))
+        close_element l "template" (fun () -> reset_mode () ()))
       end
 
   (* 8.2.5.4.19. *)
