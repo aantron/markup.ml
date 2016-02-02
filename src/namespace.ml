@@ -20,7 +20,7 @@ struct
 
   type context = _context_entry ref
 
-  let _parse qualified_name =
+  let parse qualified_name =
     try
       let colon_index = String.index qualified_name ':' in
       let prefix = String.sub qualified_name 0 colon_index in
@@ -43,7 +43,7 @@ struct
     ref entry
 
   let expand_element report context raw_element_name throw k =
-    let ns, name = _parse raw_element_name in
+    let ns, name = parse raw_element_name in
     match !context.f ns with
     | Some uri -> k (uri, name)
     | None ->
@@ -54,7 +54,7 @@ struct
 
   let push report context raw_element_name raw_attributes throw k =
     let parsed_attributes =
-      raw_attributes |> List.map (fun (name, value) -> _parse name, value) in
+      raw_attributes |> List.map (fun (name, value) -> parse name, value) in
 
     let f =
       parsed_attributes |> List.fold_left (fun f -> function

@@ -15,6 +15,8 @@ sig
         (name * (name * string) list) cps
   val pop : context -> unit
   val expand_element : unit Error.handler -> context -> string -> name cps
+
+  val parse : string -> string * string
 end
 
 module Writing :

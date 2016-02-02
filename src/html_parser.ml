@@ -5,253 +5,551 @@ open Common
 open Token_tag
 open Kstream
 
-let detect_context tokens throw k =
-  let tokens, restore = checkpoint tokens in
-  let k context = restore (); k context in
 
-  let rec scan () =
-    next_expected tokens throw begin function
-      | _, `Doctype _ -> k `Document
-      | _, `Char c when not @@ is_whitespace c -> k (`Fragment "body")
-      | _, `Char _ -> scan ()
-      | _, `EOF -> k (`Fragment "body")
-      | _, `Start {name = "html"} -> k `Document
-      | _, `Start {name = "head" | "body" | "frameset"} ->
-        k (`Fragment "html")
-      | _, `Start {name =
-          "base" | "basefont" | "bgsound" | "link" | "meta" | "noframes" |
-          "noscript" | "script" | "style" | "template" | "title"} ->
-        k (`Fragment "head")
-      | _, `Start {name = "frame"} -> k (`Fragment "frameset")
-      | _, `Start {name = "li"} -> k (`Fragment "ul")
-      | _, `Start {name =
-          "caption" | "col" | "colgroup" | "tbody" | "tfoot" | "thead"} ->
-        k (`Fragment "table")
-      | _, `Start {name = "tr"} -> k (`Fragment "tbody")
-      | _, `Start {name = "td" | "th"} -> k (`Fragment "tr")
-      | _, `Start {name = "optgroup" | "option"} -> k (`Fragment "select")
-      | _, `Start {name =
-          "altglyph" | "altglyphdef" | "altglyphitem" | "animate" |
-          "animatecolor" | "animatemotion" | "animatetransform" | "circle" |
-          "clippath" | "color-profile" | "cursor" | "defs" | "desc" |
-          "ellipse" | "feblend" | "fecolormatrix" | "fecomponenttransfer" |
-          "fecomposite" | "fediffuselighting" | "fedisplacementmap" |
-          "fedistantlight" | "feflood" | "fefunca" | "fefuncb" | "fefuncg" |
-          "fefuncr" | "fegaussianblur" | "feimage" | "femerge" |
-          "femergenode" | "femorphology" | "feoffset" | "fepointlight" |
-          "fespecularlighting" | "fespotlight" | "fetile" | "feturbulence" |
-          "filter" | "font-face" | "font-face-format" | "font-face-name" |
-          "font-face-src" | "font-face-uri" | "foreignobject" | "g" |
-          "glyph" | "glyphref" | "hkern" | "image" | "line" |
-          "lineargradient" | "marker" | "mask" | "metadata" |
-          "missing-glyph" | "mpath" | "path" | "pattern" | "polygon" |
-          "polyline" | "radialgradient" | "rect" | "set" | "stop" | "switch" |
-          "symbol" | "text" | "textpath" | "tref" | "tspan" | "use"} ->
-        k (`Fragment "svg")
-      | _, `Start {name =
-          "maction" | "maligngroup" | "malignmark" | "menclose" | "merror" |
-          "mfenced" | "mfrac" | "mglyph" | "mi" | "mlabeledtr" | "mlongdiv" |
-          "mmultiscripts" | "mn" | "mo" | "mover" | "mpadded" | "mphantom" |
-          "mroot" | "mrow" | "ms" | "mscarries" | "mscarry" | "msgroup" |
-          "msline" | "mspace" | "msqrt" | "msrow" | "mstack" | "mstyle" |
-          "msub" | "msup" | "msubsup" | "mtable" | "mtd" | "mtext" | "mtr" |
-          "munder" | "munderover" | "semantics" | "annotation" |
-          "annotation-xml"} ->
-        k (`Fragment "math")
-      | _, `Start _ -> k (`Fragment "body")
-      | _, (`End _ | `Comment _) -> scan ()
-    end
-  in
 
-  scan ()
+(* Namespaces for pattern matching. *)
+type _ns = [ `HTML | `MathML | `SVG | `Other of string ]
+type _qname = _ns * string
 
-type namespace = [ `HTML | `MathML | `SVG | `Other of string ]
+module Ns :
+sig
+  val to_string : _ns -> string
+end =
+struct
+  let to_string = function
+    | `HTML -> html_ns
+    | `MathML -> mathml_ns
+    | `SVG -> svg_ns
+    | `Other s -> s
+end
 
-let namespace_to_string = function
-  | `HTML -> html_ns
-  | `MathML -> mathml_ns
-  | `SVG -> svg_ns
-  | `Other s -> s
 
-type _element_state =
-  {element_name              : namespace * string;
+
+(* Elements. *)
+type _element =
+  {element_name              : _qname;
    location                  : location;
    is_html_integration_point : bool;
    suppress                  : bool;
    mutable is_open           : bool}
 
-type _active_formatting_element =
-  | Marker
-  | Element of _element_state * location * Token_tag.t
 
-let mathml_text_integration_points =
-  [`MathML, "mi"; `MathML, "mo"; `MathML, "mn"; `MathML, "ms";
-   `MathML, "mtext"]
 
-let adjust_mathml_attributes attributes =
-  attributes |> List.map (fun ((ns, name), value) ->
-    let name =
-      if ns = mathml_ns && name = "definitionurl" then "definitionURL"
-      else name
+(* Element helpers. *)
+module Element :
+sig
+  val is_special : _qname -> bool
+  val is_not_hidden : Token_tag.t -> bool
+end =
+struct
+  let is_special name =
+    List.mem name
+      [`HTML, "address"; `HTML, "applet"; `HTML, "area";
+       `HTML, "article"; `HTML, "aside"; `HTML, "base";
+       `HTML, "basefont"; `HTML, "bgsound"; `HTML, "blockquote";
+       `HTML, "body"; `HTML, "br"; `HTML, "button";
+       `HTML, "caption"; `HTML, "center"; `HTML, "col";
+       `HTML, "colgroup"; `HTML, "dd"; `HTML, "details";
+       `HTML, "dir"; `HTML, "div"; `HTML, "dl";
+       `HTML, "dt"; `HTML, "embed"; `HTML, "fieldset";
+       `HTML, "figcaption"; `HTML, "figure"; `HTML, "footer";
+       `HTML, "form"; `HTML, "frame"; `HTML, "frameset";
+       `HTML, "h1"; `HTML, "h2"; `HTML, "h3";
+       `HTML, "h4"; `HTML, "h5"; `HTML, "h6";
+       `HTML, "head"; `HTML, "header"; `HTML, "hgroup";
+       `HTML, "hr"; `HTML, "html"; `HTML, "iframe";
+       `HTML, "img"; `HTML, "input"; `HTML, "isindex";
+       `HTML, "li"; `HTML, "link"; `HTML, "listing";
+       `HTML, "main"; `HTML, "marquee"; `HTML, "meta";
+       `HTML, "nav"; `HTML, "noembed"; `HTML, "noframes";
+       `HTML, "noscript"; `HTML, "object"; `HTML, "ol";
+       `HTML, "p"; `HTML, "param"; `HTML, "plaintext";
+       `HTML, "pre"; `HTML, "script"; `HTML, "section";
+       `HTML, "select"; `HTML, "source"; `HTML, "style";
+       `HTML, "summary"; `HTML, "table"; `HTML, "tbody";
+       `HTML, "td"; `HTML, "template"; `HTML, "textarea";
+       `HTML, "tfoot"; `HTML, "th"; `HTML, "thead";
+       `HTML, "title"; `HTML, "tr"; `HTML, "track";
+       `HTML, "ul"; `HTML, "wbr"; `HTML, "xmp";
+       `MathML, "mi"; `MathML, "mo"; `MathML, "mn";
+       `MathML, "ms"; `MathML, "mtext"; `MathML, "annotation-xml";
+       `SVG, "foreignObject"; `SVG, "desc"; `SVG, "title"]
+
+  let is_not_hidden tag =
+    tag.Token_tag.attributes |> List.exists (fun (name, value) ->
+      name = "type" && value <> "hidden")
+end
+
+
+
+(* Context detection. *)
+type _simple_context = [ `Document | `Fragment of string ]
+type _context = [ `Document | `Fragment of _qname ]
+
+module Context :
+sig
+  type t
+
+  val uninitialized : unit -> t
+  val initialize :
+    (location * Html_tokenizer.token) Kstream.t ->
+    _simple_context option ->
+    t ->
+      unit cps
+
+  val the_context : t -> _context
+  val element : t -> _element option
+end =
+struct
+  let _detect tokens throw k =
+    let tokens, restore = checkpoint tokens in
+    let k context = restore (); k context in
+
+    let rec scan () =
+      next_expected tokens throw begin function
+        | _, `Doctype _ -> k `Document
+        | _, `Char c when not @@ is_whitespace c -> k (`Fragment "body")
+        | _, `Char _ -> scan ()
+        | _, `EOF -> k (`Fragment "body")
+        | _, `Start {name = "html"} -> k `Document
+        | _, `Start {name = "head" | "body" | "frameset"} ->
+          k (`Fragment "html")
+        | _, `Start {name =
+            "base" | "basefont" | "bgsound" | "link" | "meta" | "noframes" |
+            "noscript" | "script" | "style" | "template" | "title"} ->
+          k (`Fragment "head")
+        | _, `Start {name = "frame"} -> k (`Fragment "frameset")
+        | _, `Start {name = "li"} -> k (`Fragment "ul")
+        | _, `Start {name =
+            "caption" | "col" | "colgroup" | "tbody" | "tfoot" | "thead"} ->
+          k (`Fragment "table")
+        | _, `Start {name = "tr"} -> k (`Fragment "tbody")
+        | _, `Start {name = "td" | "th"} -> k (`Fragment "tr")
+        | _, `Start {name = "optgroup" | "option"} -> k (`Fragment "select")
+        | _, `Start {name =
+            "altglyph" | "altglyphdef" | "altglyphitem" | "animate" |
+            "animatecolor" | "animatemotion" | "animatetransform" | "circle" |
+            "clippath" | "color-profile" | "cursor" | "defs" | "desc" |
+            "ellipse" | "feblend" | "fecolormatrix" | "fecomponenttransfer" |
+            "fecomposite" | "fediffuselighting" | "fedisplacementmap" |
+            "fedistantlight" | "feflood" | "fefunca" | "fefuncb" | "fefuncg" |
+            "fefuncr" | "fegaussianblur" | "feimage" | "femerge" |
+            "femergenode" | "femorphology" | "feoffset" | "fepointlight" |
+            "fespecularlighting" | "fespotlight" | "fetile" | "feturbulence" |
+            "filter" | "font-face" | "font-face-format" | "font-face-name" |
+            "font-face-src" | "font-face-uri" | "foreignobject" | "g" |
+            "glyph" | "glyphref" | "hkern" | "image" | "line" |
+            "lineargradient" | "marker" | "mask" | "metadata" |
+            "missing-glyph" | "mpath" | "path" | "pattern" | "polygon" |
+            "polyline" | "radialgradient" | "rect" | "set" | "stop" | "switch" |
+            "symbol" | "text" | "textpath" | "tref" | "tspan" | "use"} ->
+          k (`Fragment "svg")
+        | _, `Start {name =
+            "maction" | "maligngroup" | "malignmark" | "menclose" | "merror" |
+            "mfenced" | "mfrac" | "mglyph" | "mi" | "mlabeledtr" | "mlongdiv" |
+            "mmultiscripts" | "mn" | "mo" | "mover" | "mpadded" | "mphantom" |
+            "mroot" | "mrow" | "ms" | "mscarries" | "mscarry" | "msgroup" |
+            "msline" | "mspace" | "msqrt" | "msrow" | "mstack" | "mstyle" |
+            "msub" | "msup" | "msubsup" | "mtable" | "mtd" | "mtext" | "mtr" |
+            "munder" | "munderover" | "semantics" | "annotation" |
+            "annotation-xml"} ->
+          k (`Fragment "math")
+        | _, `Start _ -> k (`Fragment "body")
+        | _, (`End _ | `Comment _) -> scan ()
+      end
     in
-    (ns, name), value)
 
-let adjust_svg_attributes attributes =
-  attributes |> List.map (fun ((ns, name), value) ->
-    if ns <> svg_ns then (ns, name), value
-    else
+    scan ()
+
+  type t = (_context * _element option) ref
+
+  let uninitialized () = ref (`Document, None)
+
+  let initialize tokens requested_context state throw k =
+    (fun k ->
+      match requested_context with
+      | Some c -> k c
+      | None -> _detect tokens throw k) (fun detected_context ->
+
+    let context =
+      match detected_context with
+      | `Document -> `Document
+      | `Fragment "math" -> `Fragment (`MathML, "math")
+      | `Fragment "svg" -> `Fragment (`SVG, "svg")
+      | `Fragment name -> `Fragment (`HTML, name)
+    in
+
+    let context_element =
+      match context with
+      | `Document -> None
+      | `Fragment name ->
+        let is_html_integration_point =
+          match name with
+          | `SVG, ("foreignObject" | "desc" | "title") -> true
+          | _ -> false
+        in
+
+        Some
+          {element_name = name;
+           location     = 1, 1;
+           is_html_integration_point;
+           suppress     = true;
+           is_open      = true}
+    in
+
+    state := context, context_element;
+
+    k ())
+
+  let the_context context = fst !context
+  let element context = snd !context
+end
+
+
+
+(* Heplers for foreign content. *)
+module Foreign :
+sig
+  val is_mathml_text_integration_point : _qname -> bool
+  val is_html_integration_point :
+    _ns -> string -> (string * string) list -> bool
+
+  val adjust_mathml_attributes :
+    ((string * string) * string) list -> ((string * string) * string) list
+  val adjust_svg_attributes :
+    ((string * string) * string) list -> ((string * string) * string) list
+  val adjust_svg_tag_name : string -> string
+end =
+struct
+  let is_mathml_text_integration_point qname =
+    List.mem qname
+      [`MathML, "mi"; `MathML, "mo"; `MathML, "mn"; `MathML, "ms";
+       `MathML, "mtext"]
+
+  let is_html_integration_point namespace tag_name attributes =
+    match namespace with
+    | `HTML | `Other _ -> false
+    | `MathML ->
+      tag_name = "annotation-xml" &&
+      attributes |> List.exists (function
+        | "encoding", "text/html" -> true
+        | "encoding", "application/xhtml+xml" -> true
+        | _ -> false)
+    | `SVG ->
+      List.mem tag_name ["foreignObject"; "desc"; "title"]
+
+  let adjust_mathml_attributes attributes =
+    attributes |> List.map (fun ((ns, name), value) ->
       let name =
-        match name with
-        | "attributename" -> "attributeName"
-        | "attributetype" -> "attributeType"
-        | "basefrequency" -> "baseFrequency"
-        | "baseprofile" -> "baseProfile"
-        | "calcmode" -> "calcMode"
-        | "clippathunits" -> "clipPathUnits"
-        | "contentscripttype" -> "contentScriptType"
-        | "contentstyletype" -> "contentStyleType"
-        | "diffuseconstant" -> "diffuseConstant"
-        | "edgemode" -> "edgeMode"
-        | "externalresourcesrequired" -> "externalResourcesRequired"
-        | "filterres" -> "filterRes"
-        | "filterunits" -> "filterUnits"
-        | "glyphref" -> "glyphRef"
-        | "gradienttransform" -> "gradientTransform"
-        | "gradientunits" -> "gradientUnits"
-        | "kernelmatrix" -> "kernelMatrix"
-        | "kernelunitlength" -> "kernelUnitLength"
-        | "keypoints" -> "keyPoints"
-        | "keysplines" -> "keySplines"
-        | "keytimes" -> "keyTimes"
-        | "lengthadjust" -> "lengthAdjust"
-        | "limitingconeangle" -> "limitingConeAngle"
-        | "markerheight" -> "markerHeight"
-        | "markerunits" -> "markerUnits"
-        | "markerwidth" -> "markerWidth"
-        | "maskcontentunits" -> "maskContentUnits"
-        | "maskunits" -> "maskUnits"
-        | "numoctaves" -> "numOctaves"
-        | "pathlength" -> "pathLength"
-        | "patterncontentunits" -> "patternContentUnits"
-        | "patterntransform" -> "patternTransform"
-        | "patternunits" -> "patternUnits"
-        | "pointsatx" -> "pointsAtX"
-        | "pointsaty" -> "pointsAtY"
-        | "pointsatz" -> "pointsAtZ"
-        | "preservealpha" -> "preserveAlpha"
-        | "preserveaspectratio" -> "preserveAspectRatio"
-        | "primitiveunits" -> "primitiveUnits"
-        | "refx" -> "refX"
-        | "refy" -> "refY"
-        | "repeatcount" -> "repeatCount"
-        | "repeatdur" -> "repeatDur"
-        | "requiredextensions" -> "requiredExtensions"
-        | "requiredfeatures" -> "requiredFeatures"
-        | "specularconstant" -> "specularConstant"
-        | "specularexponent" -> "specularExponent"
-        | "spreadmethod" -> "spreadMethod"
-        | "startoffset" -> "startOffset"
-        | "stddeviation" -> "stdDeviation"
-        | "stitchtiles" -> "stitchTiles"
-        | "surfacescale" -> "surfaceScale"
-        | "systemlanguage" -> "systemLanguage"
-        | "tablevalues" -> "tableValues"
-        | "targetx" -> "targetX"
-        | "targety" -> "targetY"
-        | "textlength" -> "textLength"
-        | "viewbox" -> "viewBox"
-        | "viewtarget" -> "viewTarget"
-        | "xchannelselector" -> "xChannelSelector"
-        | "ychannelselector" -> "yChannelSelector"
-        | "zoomandpan" -> "zoomAndPan"
-        | _ -> name
+        if ns = mathml_ns && name = "definitionurl" then "definitionURL"
+        else name
       in
       (ns, name), value)
 
-let adjust_svg_tag_name = function
-  | "altglyph" -> "altGlyph"
-  | "altglyphdef" -> "altGlyphDef"
-  | "altglyphitem" -> "altGlyphItem"
-  | "animatecolor" -> "animateColor"
-  | "animatemotion" -> "animateMotion"
-  | "animatetransform" -> "animateTransform"
-  | "clippath" -> "clipPath"
-  | "feblend" -> "feBlend"
-  | "fecolormatrix" -> "feColorMatrix"
-  | "fecomponenttransfer" -> "feComponentTransfer"
-  | "fecomposite" -> "feComposite"
-  | "feconvolvematrix" -> "feConvolveMatrix"
-  | "fediffuselighting" -> "feDiffuseLighting"
-  | "fedisplacementmap" -> "feDisplacementMap"
-  | "fedistantlight" -> "feDistantLight"
-  | "fedropshadow" -> "feDropShadow"
-  | "feflood" -> "feFlood"
-  | "fefunca" -> "feFuncA"
-  | "fefuncb" -> "feFuncB"
-  | "fefuncg" -> "feFuncG"
-  | "fefuncr" -> "feFuncR"
-  | "fegaussianblur" -> "feGaussianBlur"
-  | "feimage" -> "feImage"
-  | "femerge" -> "feMerge"
-  | "femergenode" -> "feMergeNode"
-  | "femorphology" -> "feMorphology"
-  | "feoffset" -> "feOffset"
-  | "fepointlight" -> "fePointLight"
-  | "fespecularlighting" -> "feSpecularLighting"
-  | "fespotlight" -> "feSpotLight"
-  | "fetile" -> "feTile"
-  | "feturbulence" -> "feTurbulence"
-  | "foreignobject" -> "foreignObject"
-  | "glyphref" -> "glyphRef"
-  | "lineargradient" -> "linearGradient"
-  | "radialgradient" -> "radialGradient"
-  | "textpath" -> "textPath"
-  | s -> s
+  let adjust_svg_attributes attributes =
+    attributes |> List.map (fun ((ns, name), value) ->
+      if ns <> svg_ns then (ns, name), value
+      else
+        let name =
+          match name with
+          | "attributename" -> "attributeName"
+          | "attributetype" -> "attributeType"
+          | "basefrequency" -> "baseFrequency"
+          | "baseprofile" -> "baseProfile"
+          | "calcmode" -> "calcMode"
+          | "clippathunits" -> "clipPathUnits"
+          | "contentscripttype" -> "contentScriptType"
+          | "contentstyletype" -> "contentStyleType"
+          | "diffuseconstant" -> "diffuseConstant"
+          | "edgemode" -> "edgeMode"
+          | "externalresourcesrequired" -> "externalResourcesRequired"
+          | "filterres" -> "filterRes"
+          | "filterunits" -> "filterUnits"
+          | "glyphref" -> "glyphRef"
+          | "gradienttransform" -> "gradientTransform"
+          | "gradientunits" -> "gradientUnits"
+          | "kernelmatrix" -> "kernelMatrix"
+          | "kernelunitlength" -> "kernelUnitLength"
+          | "keypoints" -> "keyPoints"
+          | "keysplines" -> "keySplines"
+          | "keytimes" -> "keyTimes"
+          | "lengthadjust" -> "lengthAdjust"
+          | "limitingconeangle" -> "limitingConeAngle"
+          | "markerheight" -> "markerHeight"
+          | "markerunits" -> "markerUnits"
+          | "markerwidth" -> "markerWidth"
+          | "maskcontentunits" -> "maskContentUnits"
+          | "maskunits" -> "maskUnits"
+          | "numoctaves" -> "numOctaves"
+          | "pathlength" -> "pathLength"
+          | "patterncontentunits" -> "patternContentUnits"
+          | "patterntransform" -> "patternTransform"
+          | "patternunits" -> "patternUnits"
+          | "pointsatx" -> "pointsAtX"
+          | "pointsaty" -> "pointsAtY"
+          | "pointsatz" -> "pointsAtZ"
+          | "preservealpha" -> "preserveAlpha"
+          | "preserveaspectratio" -> "preserveAspectRatio"
+          | "primitiveunits" -> "primitiveUnits"
+          | "refx" -> "refX"
+          | "refy" -> "refY"
+          | "repeatcount" -> "repeatCount"
+          | "repeatdur" -> "repeatDur"
+          | "requiredextensions" -> "requiredExtensions"
+          | "requiredfeatures" -> "requiredFeatures"
+          | "specularconstant" -> "specularConstant"
+          | "specularexponent" -> "specularExponent"
+          | "spreadmethod" -> "spreadMethod"
+          | "startoffset" -> "startOffset"
+          | "stddeviation" -> "stdDeviation"
+          | "stitchtiles" -> "stitchTiles"
+          | "surfacescale" -> "surfaceScale"
+          | "systemlanguage" -> "systemLanguage"
+          | "tablevalues" -> "tableValues"
+          | "targetx" -> "targetX"
+          | "targety" -> "targetY"
+          | "textlength" -> "textLength"
+          | "viewbox" -> "viewBox"
+          | "viewtarget" -> "viewTarget"
+          | "xchannelselector" -> "xChannelSelector"
+          | "ychannelselector" -> "yChannelSelector"
+          | "zoomandpan" -> "zoomAndPan"
+          | _ -> name
+        in
+        (ns, name), value)
 
-let special_category =
-  [`HTML, "address"; `HTML, "applet"; `HTML, "area";
-   `HTML, "article"; `HTML, "aside"; `HTML, "base";
-   `HTML, "basefont"; `HTML, "bgsound"; `HTML, "blockquote";
-   `HTML, "body"; `HTML, "br"; `HTML, "button";
-   `HTML, "caption"; `HTML, "center"; `HTML, "col";
-   `HTML, "colgroup"; `HTML, "dd"; `HTML, "details";
-   `HTML, "dir"; `HTML, "div"; `HTML, "dl";
-   `HTML, "dt"; `HTML, "embed"; `HTML, "fieldset";
-   `HTML, "figcaption"; `HTML, "figure"; `HTML, "footer";
-   `HTML, "form"; `HTML, "frame"; `HTML, "frameset";
-   `HTML, "h1"; `HTML, "h2"; `HTML, "h3";
-   `HTML, "h4"; `HTML, "h5"; `HTML, "h6";
-   `HTML, "head"; `HTML, "header"; `HTML, "hgroup";
-   `HTML, "hr"; `HTML, "html"; `HTML, "iframe";
-   `HTML, "img"; `HTML, "input"; `HTML, "isindex";
-   `HTML, "li"; `HTML, "link"; `HTML, "listing";
-   `HTML, "main"; `HTML, "marquee"; `HTML, "meta";
-   `HTML, "nav"; `HTML, "noembed"; `HTML, "noframes";
-   `HTML, "noscript"; `HTML, "object"; `HTML, "ol";
-   `HTML, "p"; `HTML, "param"; `HTML, "plaintext";
-   `HTML, "pre"; `HTML, "script"; `HTML, "section";
-   `HTML, "select"; `HTML, "source"; `HTML, "style";
-   `HTML, "summary"; `HTML, "table"; `HTML, "tbody";
-   `HTML, "td"; `HTML, "template"; `HTML, "textarea";
-   `HTML, "tfoot"; `HTML, "th"; `HTML, "thead";
-   `HTML, "title"; `HTML, "tr"; `HTML, "track";
-   `HTML, "ul"; `HTML, "wbr"; `HTML, "xmp";
-   `MathML, "mi"; `MathML, "mo"; `MathML, "mn";
-   `MathML, "ms"; `MathML, "mtext"; `MathML, "annotation-xml";
-   `SVG, "foreignObject"; `SVG, "desc"; `SVG, "title"]
+  let adjust_svg_tag_name = function
+    | "altglyph" -> "altGlyph"
+    | "altglyphdef" -> "altGlyphDef"
+    | "altglyphitem" -> "altGlyphItem"
+    | "animatecolor" -> "animateColor"
+    | "animatemotion" -> "animateMotion"
+    | "animatetransform" -> "animateTransform"
+    | "clippath" -> "clipPath"
+    | "feblend" -> "feBlend"
+    | "fecolormatrix" -> "feColorMatrix"
+    | "fecomponenttransfer" -> "feComponentTransfer"
+    | "fecomposite" -> "feComposite"
+    | "feconvolvematrix" -> "feConvolveMatrix"
+    | "fediffuselighting" -> "feDiffuseLighting"
+    | "fedisplacementmap" -> "feDisplacementMap"
+    | "fedistantlight" -> "feDistantLight"
+    | "fedropshadow" -> "feDropShadow"
+    | "feflood" -> "feFlood"
+    | "fefunca" -> "feFuncA"
+    | "fefuncb" -> "feFuncB"
+    | "fefuncg" -> "feFuncG"
+    | "fefuncr" -> "feFuncR"
+    | "fegaussianblur" -> "feGaussianBlur"
+    | "feimage" -> "feImage"
+    | "femerge" -> "feMerge"
+    | "femergenode" -> "feMergeNode"
+    | "femorphology" -> "feMorphology"
+    | "feoffset" -> "feOffset"
+    | "fepointlight" -> "fePointLight"
+    | "fespecularlighting" -> "feSpecularLighting"
+    | "fespotlight" -> "feSpotLight"
+    | "fetile" -> "feTile"
+    | "feturbulence" -> "feTurbulence"
+    | "foreignobject" -> "foreignObject"
+    | "glyphref" -> "glyphRef"
+    | "lineargradient" -> "linearGradient"
+    | "radialgradient" -> "radialGradient"
+    | "textpath" -> "textPath"
+    | s -> s
+end
 
-let parse_name default_namespace (name, value) =
-  try
-    let index = String.index name ':' in
-    (String.sub name 0 index,
-     String.sub name (index + 1) (String.length name - index - 1)),
-    value
 
-  with Not_found -> (default_namespace, name), value
+
+(* Stack of open elements. *)
+module Stack :
+sig
+  type t = _element list ref
+
+  val create : unit -> t
+
+  val current_element : t -> _element option
+  val adjusted_current_element : Context.t -> t -> _element option
+  val current_element_is : t -> string list -> bool
+  val current_element_is_foreign : Context.t -> t -> bool
+
+  val has : t -> string -> bool
+
+  val in_scope : t -> string -> bool
+  val in_button_scope : t -> string -> bool
+  val in_list_item_scope : t -> string -> bool
+  val in_table_scope : t -> string -> bool
+  val in_select_scope : t -> string -> bool
+  val one_in_scope : t -> string list -> bool
+  val one_in_table_scope : t -> string list -> bool
+end =
+struct
+  type t = _element list ref
+
+  let create () = ref []
+
+  let current_element open_elements =
+    match !open_elements with
+    | [] -> None
+    | element::_ -> Some element
+
+  let adjusted_current_element context open_elements =
+    match !open_elements, Context.element context with
+    | [_], Some element -> Some element
+    | [], _ -> None
+    | element::_, _ -> Some element
+
+  let current_element_is open_elements names =
+    match !open_elements with
+    | {element_name = `HTML, name}::_ -> List.mem name names
+    | _ -> false
+
+  let current_element_is_foreign context open_elements =
+    match adjusted_current_element context open_elements with
+    | Some {element_name = ns, _} when ns <> `HTML -> true
+    | _ -> false
+
+  let has open_elements name =
+    List.exists
+      (fun {element_name = ns, name'} ->
+        ns = `HTML && name' = name) !open_elements
+
+  let _in_scope scope_delimiters open_elements name' =
+    let rec scan = function
+      | [] -> false
+      | {element_name = ns, name'' as name}::more ->
+        if ns = `HTML && name'' = name' then true
+        else
+          if List.mem name scope_delimiters then false
+          else scan more
+    in
+    scan !open_elements
+
+  let _scope_delimiters =
+    [`HTML, "applet"; `HTML, "caption"; `HTML, "html";
+     `HTML, "table"; `HTML, "td"; `HTML, "th";
+     `HTML, "marquee"; `HTML, "object"; `HTML, "template";
+     `MathML, "mi"; `MathML, "mo"; `MathML, "mn";
+     `MathML, "ms"; `MathML, "mtext"; `MathML, "annotation-xml";
+     `SVG, "foreignObject"; `SVG, "desc"; `SVG, "title"]
+
+  let in_scope = _in_scope _scope_delimiters
+
+  let in_button_scope = _in_scope ((`HTML, "button")::_scope_delimiters)
+
+  let in_list_item_scope =
+    _in_scope ((`HTML, "ol")::(`HTML, "ul")::_scope_delimiters)
+
+  let in_table_scope =
+    _in_scope [`HTML, "html"; `HTML, "table"; `HTML, "template"]
+
+  let in_select_scope open_elements name =
+    let rec scan = function
+      | [] -> false
+      | {element_name = ns, name'}::more ->
+        if ns <> `HTML then false
+        else
+          if name' = name then true
+          else
+            if name' = "optgroup" || name' = "option" then scan more
+            else false
+    in
+    scan !open_elements
+
+  let one_in_scope open_elements names =
+    let rec scan = function
+      | [] -> false
+      | {element_name = ns, name' as name}::more ->
+        if ns = `HTML && List.mem name' names then true
+        else
+          if List.mem name _scope_delimiters then false
+          else scan more
+    in
+    scan !open_elements
+
+  let one_in_table_scope open_elements names =
+    let rec scan = function
+      | [] -> false
+      | {element_name = ns, name' as name}::more ->
+        if ns = `HTML && List.mem name' names then true
+        else
+          if List.mem name
+              [`HTML, "html"; `HTML, "table"; `HTML, "template"] then
+            false
+          else scan more
+    in
+    scan !open_elements
+end
+
+
+
+(* List of active formatting elements. *)
+module Active :
+sig
+  type entry =
+    | Marker
+    | Element of _element * location * Token_tag.t
+
+  type t = entry list ref
+
+  val create : unit -> t
+
+  val add_marker : t -> unit
+  val clear_until_marker : t -> unit
+end =
+struct
+  type entry =
+    | Marker
+    | Element of _element * location * Token_tag.t
+
+  type t = entry list ref
+
+  let create () = ref []
+
+  let add_marker active_formatting_elements =
+    active_formatting_elements := Marker::!active_formatting_elements
+
+  let clear_until_marker active_formatting_elements =
+    let rec iterate = function
+      | Marker::rest -> rest
+      | (Element _)::rest -> iterate rest
+      | [] -> []
+    in
+    active_formatting_elements := iterate !active_formatting_elements
+end
+
+
+
+type mode = unit -> unit
+
+(* Stack of template insertion modes. *)
+module Template :
+sig
+  type t = mode list ref
+
+  val create : unit -> t
+
+  val push : t -> mode -> unit
+  val pop : t -> unit
+end =
+struct
+  type t = (unit -> unit) list ref
+
+  let create () = ref []
+
+  let push template_insertion_modes mode =
+    template_insertion_modes := mode::!template_insertion_modes
+
+  let pop template_insertion_modes =
+    match !template_insertion_modes with
+    | [] -> ()
+    | _::rest -> template_insertion_modes := rest
+end
+
+
 
 let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
-  let context = ref `Document in
-  let context_element = ref None in
+  let context = Context.uninitialized () in
 
   let throw = ref (fun _ -> ()) in
   let ended = ref (fun _ -> ()) in
@@ -261,43 +559,16 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   let unmatched_end_tag l name k =
     report l (`Unmatched_end_tag name) !throw k in
 
-  let open_elements = ref [] in
-  let active_formatting_elements = ref [] in
+  let open_elements = Stack.create () in
+  let active_formatting_elements = Active.create () in
   let text = Text.prepare () in
-  let template_insertion_modes = ref [] in
+  let template_insertion_modes = Template.create () in
   let frameset_ok = ref true in
 
   let add_character = Text.add text in
 
-  let current_element () =
-    match !open_elements with
-    | [] -> None
-    | element::_ -> Some element
-  in
-
-  let adjusted_current_element () =
-    match !open_elements, !context_element with
-    | [_], Some element -> Some element
-    | [], _ -> None
-    | element::_, _ -> Some element
-  in
-
   set_foreign (fun () ->
-    match adjusted_current_element () with
-    | Some {element_name = ns, _} when ns <> `HTML -> true
-    | _ -> false);
-
-  let current_element_is names =
-    match !open_elements with
-    | {element_name = `HTML, name}::_ -> List.mem name names
-    | _ -> false
-  in
-
-  let stack_has name =
-    List.exists
-      (fun {element_name = ns, name'} ->
-        ns = `HTML && name' = name) !open_elements
-  in
+    Stack.current_element_is_foreign context open_elements);
 
   let report_if_stack_has_other_than names k =
     let rec iterate = function
@@ -310,109 +581,94 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     iterate !open_elements
   in
 
-  let default_scope_delimiters =
-    [`HTML, "applet"; `HTML, "caption"; `HTML, "html";
-     `HTML, "table"; `HTML, "td"; `HTML, "th";
-     `HTML, "marquee"; `HTML, "object"; `HTML, "template";
-     `MathML, "mi"; `MathML, "mo"; `MathML, "mn";
-     `MathML, "ms"; `MathML, "mtext"; `MathML, "annotation-xml";
-     `SVG, "foreignObject"; `SVG, "desc"; `SVG, "title"]
-  in
-
-  let element_in_scope ?(scope_delimiters = default_scope_delimiters) name' =
-    let rec scan = function
-      | [] -> false
-      | {element_name = ns, name'' as name}::more ->
-        if ns = `HTML && name'' = name' then true
-        else
-          if List.mem name scope_delimiters then false
-          else scan more
-    in
-    scan !open_elements
-  in
-
-  let element_in_button_scope =
-    element_in_scope ~scope_delimiters:
-      ((`HTML, "button")::default_scope_delimiters)
-  in
-
-  let element_in_list_item_scope =
-    element_in_scope ~scope_delimiters:
-      ((`HTML, "ol")::(`HTML, "ul")::default_scope_delimiters)
-  in
-
-  let element_in_table_scope =
-    element_in_scope ~scope_delimiters:
-      [`HTML, "html"; `HTML, "table"; `HTML, "template"]
-  in
-
-  let element_in_select_scope name =
-    let rec scan = function
-      | [] -> false
-      | {element_name = ns, name'}::more ->
-        if ns <> `HTML then false
-        else
-          if name' = name then true
-          else
-            if name' = "optgroup" || name' = "option" then scan more
-            else false
-    in
-    scan !open_elements
-  in
-
-  let one_of_elements_in_scope names =
-    let rec scan = function
-      | [] -> false
-      | {element_name = ns, name' as name}::more ->
-        if ns = `HTML && List.mem name' names then true
-        else
-          if List.mem name default_scope_delimiters then false
-          else scan more
-    in
-    scan !open_elements
-  in
-
-  let one_of_elements_in_table_scope names =
-    let rec scan = function
-      | [] -> false
-      | {element_name = ns, name' as name}::more ->
-        if ns = `HTML && List.mem name' names then true
-        else
-          if List.mem name
-              [`HTML, "html"; `HTML, "table"; `HTML, "template"] then
-            false
-          else scan more
-    in
-    scan !open_elements
-  in
-
-  let push_template_insertion_mode mode =
-    template_insertion_modes := mode::!template_insertion_modes in
-
-  let pop_template_insertion_mode () =
-    match !template_insertion_modes with
-    | [] -> ()
-    | _::rest -> template_insertion_modes := rest
-  in
-
-  let add_formatting_marker () =
-    active_formatting_elements := Marker::!active_formatting_elements in
-
-  let clear_formatting_elements_until_marker () =
-    let rec iterate = function
-      | Marker::rest -> rest
-      | (Element _)::rest -> iterate rest
-      | [] -> []
-    in
-    active_formatting_elements := iterate !active_formatting_elements
-  in
-
-  let is_not_hidden tag =
-    tag.Token_tag.attributes |> List.exists (fun (name, value) ->
-      name = "type" && value <> "hidden")
-  in
-
   let rec current_mode = ref initial_mode
+
+  and constructor throw_ k =
+    Context.initialize tokens requested_context context throw_ (fun () ->
+
+    let initial_tokenizer_state =
+      match Context.the_context context with
+      | `Fragment (`HTML, ("title" | "textarea")) -> `RCDATA
+      | `Fragment
+          (`HTML, ("style" | "xmp" | "iframe" | "noembed" | "noframes")) ->
+        `RAWTEXT
+      | `Fragment (`HTML, "script") -> `Script_data
+      | `Fragment (`HTML, "plaintext") -> `PLAINTEXT
+      | _ -> `Data
+    in
+
+    set_tokenizer_state initial_tokenizer_state;
+
+    begin match Context.the_context context with
+    | `Document -> ()
+    | `Fragment _ ->
+      let notional_root =
+        {element_name              = `HTML, "html";
+         location                  = 1, 1;
+         is_html_integration_point = false;
+         suppress                  = true;
+         is_open                   = true}
+      in
+      open_elements := [notional_root]
+    end;
+
+    begin match Context.the_context context with
+    | `Fragment (`HTML, "template") ->
+      Template.push template_insertion_modes in_template_mode
+    | _ -> ()
+    end;
+
+    current_mode :=
+      begin match Context.the_context context with
+      | `Fragment _ -> reset_mode ()
+      | `Document -> initial_mode
+      end;
+
+    (fun throw_ e k ->
+      throw := throw_;
+      ended := e;
+      output := k;
+      !current_mode ())
+    |> make
+    |> k)
+
+  (* 8.2.3.1. *)
+  and reset_mode () =
+    let rec iterate last = function
+      | [e] when not last && Context.the_context context <> `Document ->
+        begin match Context.the_context context with
+        | `Document -> failwith "impossible"
+        | `Fragment name -> iterate true [{e with element_name = name}]
+        end
+      | {element_name = _, "select"}::ancestors ->
+        let rec iterate' = function
+          | [] -> in_select_mode
+          | {element_name = _, "template"}::_ -> in_select_mode
+          | {element_name = _, "table"}::_ -> in_select_in_table_mode
+          | _::ancestors -> iterate' ancestors
+        in
+        iterate' ancestors
+      | {element_name = _, ("tr" | "th")}::_::_ -> in_cell_mode
+      | {element_name = _, "tr"}::_ -> in_row_mode
+      | {element_name = _, ("tbody" | "thead" | "tfoot")}::_ ->
+        in_table_body_mode
+      | {element_name = _, "caption"}::_ -> in_caption_mode
+      | {element_name = _, "colgroup"}::_ -> in_column_group_mode
+      | {element_name = _, "table"}::_ -> in_table_mode
+      | {element_name = _, "template"}::_ ->
+        begin match !template_insertion_modes with
+        | [] -> initial_mode (* This is an internal error, actually. *)
+        | mode::_ -> mode
+        end
+      | [{element_name = _, "head"}] -> in_body_mode
+      | {element_name = _, "head"}::_::_ -> in_head_mode
+      | {element_name = _, "body"}::_ -> in_body_mode
+      | {element_name = _, "frameset"}::_ -> in_frameset_mode
+      | {element_name = _, "html"}::_ -> after_head_mode
+      | _::rest -> iterate last rest
+      | [] -> in_body_mode
+    in
+    iterate false !open_elements
 
   and emit' l s m = current_mode := m; !output (l, s)
 
@@ -432,33 +688,24 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       `Bad_token ("/>", "tag", "should not be self-closing"))
       !throw (fun () ->
 
-    let namespace_string = namespace_to_string namespace in
+    let namespace_string = Ns.to_string namespace in
 
     let tag_name =
       match namespace with
-      | `SVG -> adjust_svg_tag_name name
+      | `SVG -> Foreign.adjust_svg_tag_name name
       | _ -> name
     in
 
     let is_html_integration_point =
-      match namespace with
-      | `HTML | `Other _ -> false
-      | `MathML ->
-        tag_name = "annotation-xml" &&
-        attributes |> List.exists (function
-          | "encoding", "text/html" -> true
-          | "encoding", "application/xhtml+xml" -> true
-          | _ -> false)
-      | `SVG ->
-        List.mem tag_name ["foreignObject"; "desc"; "title"]
-    in
+      Foreign.is_html_integration_point namespace tag_name attributes in
 
-    let attributes = List.map (parse_name namespace_string) attributes in
+    let attributes =
+      List.map (fun (n, v) -> Namespace.Parsing.parse n, v) attributes in
     let attributes =
       match namespace with
       | `HTML | `Other _ -> attributes
-      | `MathML -> adjust_mathml_attributes attributes
-      | `SVG -> adjust_svg_attributes attributes
+      | `MathML -> Foreign.adjust_mathml_attributes attributes
+      | `SVG -> Foreign.adjust_svg_attributes attributes
     in
 
     let element_entry =
@@ -472,7 +719,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     if formatting then
       active_formatting_elements :=
-        Element (element_entry, location, tag)::
+        Active.Element (element_entry, location, tag)::
           !active_formatting_elements;
 
     emit location
@@ -545,7 +792,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and close_element_with_implied name location mode =
     pop_implied ~except:name location (fun () ->
     let check_element k =
-      match current_element () with
+      match Stack.current_element open_elements with
       | Some {element_name = `HTML, name'} when name' = name -> k ()
       | Some {element_name = _, name; location} ->
         report location (`Unmatched_start_tag name) !throw k
@@ -558,7 +805,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and close_cell location mode =
     pop_implied location (fun () ->
     (fun mode ->
-      match current_element () with
+      match Stack.current_element open_elements with
       | Some {element_name = `HTML, ("td" | "th")} -> mode ()
       | Some {element_name = _, name} ->
         unmatched_end_tag location name mode
@@ -571,7 +818,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     pop location mode)))
 
   and close_current_p_element l mode =
-    if element_in_button_scope "p" then
+    if Stack.in_button_scope open_elements "p" then
       close_element_with_implied "p" l mode
     else mode ()
 
@@ -582,7 +829,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         if ns = `HTML && List.mem name names then
           close_element_with_implied name l mode
         else
-          if List.mem name' special_category &&
+          if Element.is_special name' &&
             not @@ List.mem name'
               [`HTML, "address"; `HTML, "div"; `HTML, "p"] then
             mode ()
@@ -599,9 +846,9 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and reconstruct_active_formatting_elements mode =
     let rec get_prefix prefix = function
       | [] -> prefix, []
-      | Marker::_ as l -> prefix, l
-      | Element ({is_open = true}, _, _)::_ as l -> prefix, l
-      | Element ({is_open = false}, l, tag)::more ->
+      | Active.Marker::_ as l -> prefix, l
+      | Active.Element ({is_open = true}, _, _)::_ as l -> prefix, l
+      | Active.Element ({is_open = false}, l, tag)::more ->
         get_prefix ((l, tag)::prefix) more
     in
     let to_reopen, remainder = get_prefix [] !active_formatting_elements in
@@ -619,7 +866,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and remove_from_active_formatting_elements name =
     let rec scan remaining = function
       | [] -> List.rev remaining
-      | Element ({element_name = `HTML, name'}, _, _)::rest when name' = name ->
+      | Active.Element ({element_name = `HTML, name'}, _, _)::rest
+          when name' = name ->
         (List.rev remaining) @ rest
       | v::rest -> scan (v::remaining) rest
     in
@@ -629,11 +877,11 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and dispatch tokens rules =
     next_expected tokens !throw begin fun ((_, t) as v) ->
       let foreign =
-        match adjusted_current_element (), t with
+        match Stack.adjusted_current_element context open_elements, t with
         | None, _ -> false
         | Some {element_name = `HTML, _}, _ -> false
         | Some {element_name}, `Start {name}
-            when List.mem element_name mathml_text_integration_points
+            when Foreign.is_mathml_text_integration_point element_name
             && name <> "mglyph" && name <> "malignmark" -> false
         | Some {element_name = `MathML, "annotation-xml"},
             `Start {name = "svg"} -> false
@@ -761,17 +1009,17 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       pop l after_head_mode
 
     | l, `Start ({name = "template"} as t) ->
-      add_formatting_marker ();
+      Active.add_marker active_formatting_elements;
       frameset_ok := false;
-      push_template_insertion_mode in_template_mode;
+      Template.push template_insertion_modes in_template_mode;
       push_and_emit l t in_template_mode
 
     | l, `End {name = "template"} ->
-      if not @@ stack_has "template" then
+      if not @@ Stack.has open_elements "template" then
         report l (`Unmatched_end_tag "template") !throw mode
       else begin
-        clear_formatting_elements_until_marker ();
-        pop_template_insertion_mode ();
+        Active.clear_until_marker active_formatting_elements;
+        Template.pop template_insertion_modes;
         close_element_with_implied "template" l (fun () -> reset_mode () ())
       end
 
@@ -922,7 +1170,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       | _ -> in_template_mode_rules mode v)
 
     | l, `End {name = "body"} ->
-      if not @@ element_in_scope "body" then
+      if not @@ Stack.in_scope open_elements "body" then
         report l (`Unmatched_end_tag "body") !throw mode
       else
         report_if_stack_has_other_than
@@ -932,7 +1180,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         close_element l "body" after_body_mode)
 
     | l, `End {name = "html"} as v ->
-      if not @@ element_in_scope "body" then
+      if not @@ Stack.in_scope open_elements "body" then
         report l (`Unmatched_end_tag "html") !throw mode
       else
         report_if_stack_has_other_than
@@ -954,7 +1202,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         "h1" | "h2" | "h3" | "h4" | "h5" | "h6" as name} as t) ->
       close_current_p_element l (fun () ->
       (fun mode' ->
-        match current_element () with
+        match Stack.current_element open_elements with
         | Some {element_name = `HTML,
             ("h1" | "h2" | "h3" | "h4" | "h5" | "h6" as name')} ->
           report l (`Misnested_tag (name, name')) !throw (fun () ->
@@ -995,7 +1243,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start ({name = "button"} as t) ->
       (fun mode' ->
-        if element_in_scope "button" then
+        if Stack.in_scope open_elements "button" then
           report l (`Misnested_tag ("button", "button")) !throw (fun () ->
           close_element_with_implied "button" l mode')
         else mode' ())
@@ -1010,7 +1258,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         "figcaption" | "figure" | "footer" | "header" | "hgroup" | "listing" |
         "main" | "nav" | "ol" | "pre" | "section" | "summary" | "ul"
         as name} ->
-      if not @@ element_in_scope name then
+      if not @@ Stack.in_scope open_elements name then
         report l (`Unmatched_end_tag name) !throw mode
       else
         close_element_with_implied name l mode
@@ -1020,32 +1268,32 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `End {name = "p"} ->
       (fun mode' ->
-        if not @@ element_in_button_scope "p" then
+        if not @@ Stack.in_button_scope open_elements "p" then
           report l (`Unmatched_end_tag "p") !throw (fun () ->
           push_implicit l "p" mode')
         else mode' ())
       (fun () -> close_element_with_implied "p" l mode)
 
     | l, `End {name = "li"} ->
-      if not @@ element_in_list_item_scope "li" then
+      if not @@ Stack.in_list_item_scope open_elements "li" then
         report l (`Unmatched_end_tag "li") !throw mode
       else
         close_element_with_implied "li" l mode
 
     | l, `End {name = "dd" | "dt" as name} ->
-      if not @@ element_in_scope name then
+      if not @@ Stack.in_scope open_elements name then
         report l (`Unmatched_end_tag name) !throw mode
       else
         close_element_with_implied name l mode
 
     | l, `End {name = "h1" | "h2" | "h3" | "h4" | "h5" | "h6" as name} ->
-      if not @@
-          one_of_elements_in_scope ["h1"; "h2"; "h3"; "h4"; "h5"; "h6"] then
+      if not @@ Stack.one_in_scope open_elements
+          ["h1"; "h2"; "h3"; "h4"; "h5"; "h6"] then
         report l (`Unmatched_end_tag name) !throw mode
       else
         pop_implied l (fun () ->
           (fun next ->
-            match current_element () with
+            match Stack.current_element open_elements with
             | Some {element_name = `HTML, name'}
                 when List.mem name' ["h1"; "h2"; "h3"; "h4"; "h5"; "h6"] ->
               next ()
@@ -1078,14 +1326,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `Start ({name = "applet" | "marquee" | "object"} as t) ->
       frameset_ok := false;
       reconstruct_active_formatting_elements (fun () ->
-      add_formatting_marker ();
+      Active.add_marker active_formatting_elements;
       push_and_emit l t mode)
 
     | l, `End {name = "applet" | "marquee" | "object" as name} ->
-      if not @@ element_in_scope name then
+      if not @@ Stack.in_scope open_elements name then
         report l (`Unmatched_end_tag name) !throw mode
       else begin
-        clear_formatting_elements_until_marker ();
+        Active.clear_until_marker active_formatting_elements;
         close_element_with_implied name l mode
       end
 
@@ -1107,7 +1355,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       pop l mode))
 
     | l, `Start ({name = "input"} as t) ->
-      if is_not_hidden t then frameset_ok := false;
+      if Element.is_not_hidden t then frameset_ok := false;
       reconstruct_active_formatting_elements (fun () ->
       push_and_emit ~acknowledge:true l t (fun () ->
       pop l mode))
@@ -1157,7 +1405,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start ({name = "optgroup" | "option"} as t) ->
       (fun mode' ->
-        if current_element_is ["option"] then
+        if Stack.current_element_is open_elements ["option"] then
           pop l mode'
         else mode' ())
       (fun () ->
@@ -1166,9 +1414,9 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start ({name = "rb" | "rp" | "rtc" as name} as t) ->
       (fun mode' ->
-        if element_in_scope "ruby" then
+        if Stack.in_scope open_elements "ruby" then
           pop_implied l (fun () ->
-          if current_element_is ["ruby"] then
+          if Stack.current_element_is open_elements ["ruby"] then
             mode' ()
           else
             report l (`Misnested_tag (name, context_name)) !throw mode'))
@@ -1177,9 +1425,9 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start ({name = "rt"} as t) ->
       (fun mode' ->
-        if element_in_scope "ruby" then
+        if Stack.in_scope open_elements "ruby" then
           pop_implied ~except:"rtc" l (fun () ->
-          if current_element_is ["ruby"; "rtc"] then
+          if Stack.current_element_is open_elements ["ruby"; "rtc"] then
             mode' ()
           else
             report l (`Misnested_tag ("rt", context_name)) !throw mode'))
@@ -1209,13 +1457,13 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `End {name} ->
       let rec close () =
-        match current_element () with
+        match Stack.current_element open_elements with
         | None -> mode ()
         | Some {element_name = (ns, name') as name''} ->
           if ns = `HTML && name' = name then
             pop_implied ~except:name l mode
           else
-            if List.mem name'' special_category then
+            if Element.is_special name'' then
               report l (`Unmatched_end_tag name) !throw mode
             else
               pop l close
@@ -1267,7 +1515,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   and in_table_mode_rules mode = function
     | _, `Char _ as v
-        when current_element_is ["table"; "tbody"; "tfoot"; "thead"; "tr"] ->
+        when Stack.current_element_is open_elements
+               ["table"; "tbody"; "tfoot"; "thead"; "tr"] ->
       push tokens v;
       in_table_text_mode true [] mode
 
@@ -1279,7 +1528,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start ({name = "caption"} as t) ->
       pop_to_table_context l (fun () ->
-      add_formatting_marker ();
+      Active.add_marker active_formatting_elements;
       push_and_emit l t in_caption_mode)
 
     | l, `Start ({name = "colgroup"} as t) ->
@@ -1302,14 +1551,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start {name = "table"} as v ->
       report l (`Misnested_tag ("table", "table")) !throw (fun () ->
-      if not @@ stack_has "table" then mode ()
+      if not @@ Stack.has open_elements "table" then mode ()
       else begin
         push tokens v;
         close_element l "table" (fun () -> reset_mode () ())
       end)
 
     | l, `End {name = "table"} ->
-      if not @@ element_in_table_scope "table" then
+      if not @@ Stack.in_table_scope open_elements "table" then
         report l (`Unmatched_end_tag "table") !throw mode
       else
         close_element l "table" (fun () -> reset_mode () ())
@@ -1323,7 +1572,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | _, `End {name = "template"} as v ->
       in_head_mode_rules mode v
 
-    | l, `Start ({name = "input"} as t) when is_not_hidden t ->
+    | l, `Start ({name = "input"} as t) when Element.is_not_hidden t ->
       report l (`Misnested_tag ("input", "table")) !throw (fun () ->
       push_and_emit ~acknowledge:true l t (fun () ->
       pop l mode))
@@ -1372,10 +1621,10 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and in_caption_mode () =
     dispatch tokens begin function
       | l, `End {name = "caption"} ->
-        if not @@ element_in_table_scope "caption" then
+        if not @@ Stack.in_table_scope open_elements "caption" then
           report l (`Unmatched_end_tag "caption") !throw in_caption_mode
         else begin
-          clear_formatting_elements_until_marker ();
+          Active.clear_until_marker active_formatting_elements;
           close_element_with_implied "caption" l in_table_mode
         end
 
@@ -1383,18 +1632,20 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           "caption" | "col" | "colgroup" | "tbody" | "td" | "tfoot" | "th" |
           "thead" | "tr" as name} as v ->
         report l (`Misnested_tag (name, "caption")) !throw (fun () ->
-        if not @@ element_in_table_scope "caption" then in_caption_mode ()
+        if not @@ Stack.in_table_scope open_elements "caption" then
+          in_caption_mode ()
         else begin
-          clear_formatting_elements_until_marker ();
+          Active.clear_until_marker active_formatting_elements;
           push tokens v;
           close_element l "caption" in_table_mode
         end)
 
       | l, `End {name = "table"} as v ->
         report l (`Unmatched_end_tag "table") !throw (fun () ->
-        if not @@ element_in_table_scope "caption" then in_caption_mode ()
+        if not @@ Stack.in_table_scope open_elements "caption" then
+          in_caption_mode ()
         else begin
-          clear_formatting_elements_until_marker ();
+          Active.clear_until_marker active_formatting_elements;
           push tokens v;
           close_element l "caption" in_table_mode
         end)
@@ -1433,7 +1684,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         pop l in_column_group_mode)
 
       | l, `End {name = "colgroup"} ->
-        if not @@ current_element_is ["colgroup"] then
+        if not @@ Stack.current_element_is open_elements ["colgroup"] then
           report l (`Unmatched_end_tag "colgroup") !throw in_column_group_mode
         else
           pop l in_table_mode
@@ -1449,7 +1700,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         in_body_mode_rules "colgroup" in_column_group_mode v
 
       | l, _ as v ->
-        if not @@ current_element_is ["colgroup"] then
+        if not @@ Stack.current_element_is open_elements ["colgroup"] then
           report l (`Bad_content "colgroup") !throw in_table_mode
         else begin
           push tokens v;
@@ -1471,7 +1722,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         push_implicit l "tr" in_row_mode))
 
       | l, `End {name = "tbody" | "tfoot" | "thead" as name} ->
-        if not @@ element_in_table_scope name then
+        if not @@ Stack.in_table_scope open_elements name then
           report l (`Unmatched_end_tag name) !throw in_table_body_mode
         else
           pop_to_table_body_context l (fun () ->
@@ -1480,7 +1731,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       | l, `Start {name =
           "caption" | "col" | "colgroup" | "tbody" | "tfoot" | "thead"
           as name} as v ->
-        if not @@ one_of_elements_in_table_scope
+        if not @@ Stack.one_in_table_scope open_elements
             ["tbody"; "thead"; "tfoot"] then
           report l (`Misnested_tag (name, "table")) !throw in_table_body_mode
         else begin
@@ -1490,7 +1741,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         end
 
       | l, `End {name = "table" as name} as v ->
-        if not @@ one_of_elements_in_table_scope
+        if not @@ Stack.one_in_table_scope open_elements
             ["tbody"; "thead"; "tfoot"] then
           report l (`Unmatched_end_tag name) !throw in_table_body_mode
         else begin
@@ -1512,12 +1763,12 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and in_row_mode () =
     dispatch tokens begin function
       | l, `Start ({name = "th" | "td"} as t) ->
-        add_formatting_marker ();
+        Active.add_marker active_formatting_elements;
         pop_to_table_row_context l (fun () ->
         push_and_emit l t in_cell_mode)
 
       | l, `End {name = "tr"} ->
-        if not @@ element_in_table_scope "tr" then
+        if not @@ Stack.in_table_scope open_elements "tr" then
           report l (`Unmatched_end_tag "tr") !throw in_row_mode
         else
           pop_to_table_row_context l (fun () ->
@@ -1527,7 +1778,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           ("caption" | "col" | "colgroup" | "tbody" | "tfoot" | "thead" |
            "tr")}
       | l, `End {name = "table"} as v ->
-        if not @@ element_in_table_scope "tr" then
+        if not @@ Stack.in_table_scope open_elements "tr" then
           match snd v with
           | `Start {name} ->
             report l (`Misnested_tag (name, "tr")) !throw in_row_mode
@@ -1539,10 +1790,10 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           pop l in_table_body_mode)
 
       | l, `End {name = "tbody" | "tfoot" | "thead" as name} as v ->
-        if not @@ element_in_table_scope name then
+        if not @@ Stack.in_table_scope open_elements name then
           report l (`Unmatched_end_tag name) !throw in_row_mode
         else
-          if not @@ element_in_table_scope "tr" then in_row_mode ()
+          if not @@ Stack.in_table_scope open_elements "tr" then in_row_mode ()
           else
             pop_to_table_row_context l (fun () ->
             push tokens v;
@@ -1561,21 +1812,21 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and in_cell_mode () =
     dispatch tokens begin function
       | l, `End {name = "td" | "th" as name} ->
-        if not @@ element_in_table_scope name then
+        if not @@ Stack.in_table_scope open_elements name then
           report l (`Unmatched_end_tag name) !throw in_cell_mode
         else
           close_element_with_implied name l (fun () ->
-          clear_formatting_elements_until_marker ();
+          Active.clear_until_marker active_formatting_elements;
           in_row_mode ())
 
       | l, `Start {name =
           "caption" | "col" | "colgroup" | "tbody" | "td" | "tfoot" | "th" |
           "thead" | "tr" as name} as v ->
-        if not @@ one_of_elements_in_table_scope ["td"; "th"] then
+        if not @@ Stack.one_in_table_scope open_elements ["td"; "th"] then
           report l (`Misnested_tag (name, "td/th")) !throw in_cell_mode
         else
           close_cell l (fun () ->
-          clear_formatting_elements_until_marker ();
+          Active.clear_until_marker active_formatting_elements;
           push tokens v;
           in_row_mode ())
 
@@ -1585,11 +1836,11 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
       | l, `End {name =
           "table" | "tbody" | "tfoot" | "thead" | "tr" as name} as v ->
-        if not @@ element_in_table_scope name then
+        if not @@ Stack.in_table_scope open_elements name then
           report l (`Unmatched_end_tag name) !throw in_cell_mode
         else
           close_cell l (fun () ->
-          clear_formatting_elements_until_marker ();
+          Active.clear_until_marker active_formatting_elements;
           push tokens v;
           in_row_mode ())
 
@@ -1623,16 +1874,16 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start ({name = "option"} as t) ->
       (fun mode' ->
-        if current_element_is ["option"] then pop l mode'
+        if Stack.current_element_is open_elements ["option"] then pop l mode'
         else mode' ())
       (fun () -> push_and_emit l t mode)
 
     | l, `Start ({name = "optgroup"} as t) ->
       (fun mode' ->
-        if current_element_is ["option"] then pop l mode'
+        if Stack.current_element_is open_elements ["option"] then pop l mode'
         else mode' ())
       @@ (fun mode' () ->
-        if current_element_is ["optgroup"] then pop l mode'
+        if Stack.current_element_is open_elements ["optgroup"] then pop l mode'
         else mode' ())
       @@ (fun () -> push_and_emit l t mode)
 
@@ -1644,19 +1895,19 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           pop l mode'
         | _ -> mode' ())
       (fun () ->
-        if current_element_is ["optgroup"] then
+        if Stack.current_element_is open_elements ["optgroup"] then
           pop l mode
         else
           report l (`Unmatched_end_tag "optgroup") !throw mode)
 
     | l, `End {name = "option"} ->
-      if current_element_is ["option"] then
+      if Stack.current_element_is open_elements ["option"] then
         pop l mode
       else
         report l (`Unmatched_end_tag "option") !throw mode
 
     | l, `End {name = "select"} ->
-      if not @@ element_in_select_scope "select" then
+      if not @@ Stack.in_select_scope open_elements "select" then
         report l (`Unmatched_end_tag "select") !throw mode
       else
         close_element l "select" (fun () -> reset_mode () ())
@@ -1667,7 +1918,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `Start {name = "input" | "keygen" | "textarea" as name} as v ->
       report l (`Misnested_tag (name, "select")) !throw (fun () ->
-      if not @@ element_in_select_scope "select" then
+      if not @@ Stack.in_select_scope open_elements "select" then
         mode ()
       else begin
         push tokens v;
@@ -1698,7 +1949,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           "caption" | "table" | "tbody" | "tfoot" | "thead" | "tr" | "td" |
           "th" as name} as v ->
         report l (`Unmatched_end_tag "name") !throw (fun () ->
-        if not @@ element_in_table_scope name then in_select_in_table_mode ()
+        if not @@ Stack.in_table_scope open_elements name then
+          in_select_in_table_mode ()
         else begin
           push tokens v;
           close_element l "select" (fun () -> reset_mode () ())
@@ -1725,32 +1977,32 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | _, `Start {name =
         "caption" | "colgroup" | "tbody" | "tfoot" | "thead"} as v ->
-      pop_template_insertion_mode ();
-      push_template_insertion_mode in_table_mode;
+      Template.pop template_insertion_modes;
+      Template.push template_insertion_modes in_table_mode;
       push tokens v;
       in_table_mode ()
 
     | _, `Start {name = "col"} as v ->
-      pop_template_insertion_mode ();
-      push_template_insertion_mode in_column_group_mode;
+      Template.pop template_insertion_modes;
+      Template.push template_insertion_modes in_column_group_mode;
       push tokens v;
       in_column_group_mode ()
 
     | _, `Start {name = "tr"} as v ->
-      pop_template_insertion_mode ();
-      push_template_insertion_mode in_table_body_mode;
+      Template.pop template_insertion_modes;
+      Template.push template_insertion_modes in_table_body_mode;
       push tokens v;
       in_table_body_mode ()
 
     | _, `Start {name = "td" | "th"} as v ->
-      pop_template_insertion_mode ();
-      push_template_insertion_mode in_row_mode;
+      Template.pop template_insertion_modes;
+      Template.push template_insertion_modes in_row_mode;
       push tokens v;
       in_row_mode ()
 
     | _, `Start _ as v ->
-      pop_template_insertion_mode ();
-      push_template_insertion_mode in_body_mode;
+      Template.pop template_insertion_modes;
+      Template.push template_insertion_modes in_body_mode;
       push tokens v;
       in_body_mode ()
 
@@ -1758,11 +2010,11 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       report l (`Unmatched_end_tag name) !throw mode
 
     | l, `EOF as v ->
-      if not @@ stack_has "template" then emit_end l
+      if not @@ Stack.has open_elements "template" then emit_end l
       else begin
         report l (`Unmatched_end_tag "template") !throw (fun () ->
-        clear_formatting_elements_until_marker ();
-        pop_template_insertion_mode ();
+        Active.clear_until_marker active_formatting_elements;
+        Template.pop template_insertion_modes;
         push tokens v;
         close_element l "template" (fun () -> reset_mode () ()))
       end
@@ -1817,12 +2069,13 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
       | l, `End {name = "frameset"} ->
         (fun mode' ->
-          if current_element_is ["html"] then
+          if Stack.current_element_is open_elements ["html"] then
             report l (`Unmatched_end_tag "frameset") !throw mode'
           else
             pop l mode')
         (fun () ->
-          if current_element_is ["frameset"] then in_frameset_mode ()
+          if Stack.current_element_is open_elements ["frameset"] then
+            in_frameset_mode ()
           else after_frameset_mode ())
 
       | l, `Start ({name = "frame"} as t) ->
@@ -1834,7 +2087,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
       | l, `EOF ->
         (fun mode' ->
-          if current_element_is ["html"] then
+          if Stack.current_element_is open_elements ["html"] then
             report l (`Unexpected_eoi "frameset") !throw mode'
           else mode' ())
         (fun () -> emit_end l)
@@ -1915,7 +2168,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   (* 8.2.5.5. *)
   and foreign_start_tag mode l tag =
     let namespace =
-      match adjusted_current_element () with
+      match Stack.adjusted_current_element context open_elements with
       | None -> `HTML
       | Some {element_name = ns, _} -> ns
     in
@@ -1969,7 +2222,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           | {element_name = `HTML, _} -> true
           | {is_html_integration_point = true} -> true
           | {element_name} ->
-            List.mem element_name mathml_text_integration_points)
+            Foreign.is_mathml_text_integration_point element_name)
           l mode))
 
     | l, `Start t ->
@@ -1977,14 +2230,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `End {name = "script"}
         when
-          match current_element () with
+          match Stack.current_element open_elements with
           | Some {element_name = `SVG, "script"} -> true
           | _ -> false ->
       pop l mode
 
     | l, `End {name} ->
       (fun mode' ->
-        match current_element () with
+        match Stack.current_element open_elements with
         | Some {element_name = _, name'} when String.lowercase name' = name ->
           mode' ()
         | _ ->
@@ -2003,123 +2256,6 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | _, `EOF -> force_html ()
 
-  (* 8.2.3.1. *)
-  and reset_mode () =
-    let rec iterate last = function
-      | [e] when not last && !context <> `Document ->
-        begin match !context with
-        | `Document -> failwith "impossible"
-        | `Fragment name -> iterate true [{e with element_name = name}]
-        end
-      | {element_name = _, "select"}::ancestors ->
-        let rec iterate' = function
-          | [] -> in_select_mode
-          | {element_name = _, "template"}::_ -> in_select_mode
-          | {element_name = _, "table"}::_ -> in_select_in_table_mode
-          | _::ancestors -> iterate' ancestors
-        in
-        iterate' ancestors
-      | {element_name = _, ("tr" | "th")}::_::_ -> in_cell_mode
-      | {element_name = _, "tr"}::_ -> in_row_mode
-      | {element_name = _, ("tbody" | "thead" | "tfoot")}::_ ->
-        in_table_body_mode
-      | {element_name = _, "caption"}::_ -> in_caption_mode
-      | {element_name = _, "colgroup"}::_ -> in_column_group_mode
-      | {element_name = _, "table"}::_ -> in_table_mode
-      | {element_name = _, "template"}::_ ->
-        begin match !template_insertion_modes with
-        | [] -> initial_mode (* This is an internal error, actually. *)
-        | mode::_ -> mode
-        end
-      | [{element_name = _, "head"}] -> in_body_mode
-      | {element_name = _, "head"}::_::_ -> in_head_mode
-      | {element_name = _, "body"}::_ -> in_body_mode
-      | {element_name = _, "frameset"}::_ -> in_frameset_mode
-      | {element_name = _, "html"}::_ -> after_head_mode
-      | _::rest -> iterate last rest
-      | [] -> in_body_mode
-    in
-    iterate false !open_elements
-
-  in
-
-  let constructor throw_ k =
-    (fun k ->
-      match requested_context with
-      | Some c -> k c
-      | None -> detect_context tokens throw_ k) (fun detected_context ->
-
-    context :=
-      begin match detected_context with
-      | `Document -> `Document
-      | `Fragment "math" -> `Fragment (`MathML, "math")
-      | `Fragment "svg" -> `Fragment (`SVG, "svg")
-      | `Fragment name -> `Fragment (`HTML, name)
-      end;
-
-    context_element :=
-      begin match !context with
-      | `Document -> None
-      | `Fragment name ->
-        let is_html_integration_point =
-          match name with
-          | `SVG, ("foreignObject" | "desc" | "title") -> true
-          | _ -> false
-        in
-
-        Some
-          {element_name = name;
-           location     = 1, 1;
-           is_html_integration_point;
-           suppress     = true;
-           is_open      = true}
-      end;
-
-    let initial_tokenizer_state =
-      match !context with
-      | `Fragment (`HTML, ("title" | "textarea")) -> `RCDATA
-      | `Fragment
-          (`HTML, ("style" | "xmp" | "iframe" | "noembed" | "noframes")) ->
-        `RAWTEXT
-      | `Fragment (`HTML, "script") -> `Script_data
-      | `Fragment (`HTML, "plaintext") -> `PLAINTEXT
-      | _ -> `Data
-    in
-
-    set_tokenizer_state initial_tokenizer_state;
-
-    begin match !context with
-    | `Document -> ()
-    | `Fragment _ ->
-      let notional_root =
-        {element_name              = `HTML, "html";
-         location                  = 1, 1;
-         is_html_integration_point = false;
-         suppress                  = true;
-         is_open                   = true}
-      in
-      open_elements := [notional_root]
-    end;
-
-    begin match !context with
-    | `Fragment (`HTML, "template") ->
-      push_template_insertion_mode in_template_mode
-    | _ -> ()
-    end;
-
-    current_mode :=
-      begin match !context with
-      | `Fragment _ -> reset_mode ()
-      | `Document -> initial_mode
-      end;
-
-    (fun throw_ e k ->
-      throw := throw_;
-      ended := e;
-      output := k;
-      !current_mode ())
-    |> make
-    |> k)
   in
 
   construct constructor
