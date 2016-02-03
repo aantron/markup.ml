@@ -31,6 +31,7 @@ type _element =
    location                  : location;
    is_html_integration_point : bool;
    suppress                  : bool;
+   mutable buffering         : bool;
    mutable is_open           : bool}
 
 
@@ -194,6 +195,7 @@ struct
            location     = 1, 1;
            is_html_integration_point;
            suppress     = true;
+           buffering    = false;
            is_open      = true}
     in
 
@@ -548,6 +550,115 @@ end
 
 
 
+(* Subtree buffers. HTML specifies the "adoption agency algorithm" for
+   recovering from certain kinds of errors. This algorithm is (apparently)
+   incompatible with a parser that does not maintain a DOM. So, when the parser
+   encounters a situation in which it may be necessary to later run this
+   algorithm, it buffers its signal output, using the signals to construct a DOM
+   subtree. The algorithm, if run, is run on this subtree. Whenever the parser
+   can "prove" that the tree can no longer be involved in the adoption agency
+   algorithm, it serializes that branch into the signal stream. *)
+module Subtree :
+sig
+  type t
+
+  val create : unit -> t
+
+  val accumulate : t -> location -> signal -> bool
+
+  val enable : t -> unit
+  val disable : t -> (location * signal) list
+  val is_enabled : t -> bool
+end =
+struct
+  type element =
+    {name                 : name;
+     attributes           : (name * string) list;
+     mutable end_location : location;
+     mutable children     : annotated_node list}
+
+  and node =
+    | Element of element
+    | Text of string list
+    | PI of string * string
+    | Comment of string
+
+  and annotated_node = location * node
+
+  type t =
+    {mutable top         : annotated_node list;
+     mutable enabled     : bool;
+     mutable stack       : (annotated_node -> unit) list;
+     mutable end_element : (location -> unit) list}
+
+  let create () =
+    let rec subtree_buffer =
+      {top         = [];
+       enabled     = false;
+       stack       = [fun n -> subtree_buffer.top <- n::subtree_buffer.top];
+       end_element = [ignore]}
+    in
+    subtree_buffer
+
+  let accumulate subtree_buffer l s =
+    if not subtree_buffer.enabled then true
+    else
+      let insert = List.hd subtree_buffer.stack in
+
+      begin match s with
+      | `Start_element (name, attributes) ->
+        let element =
+          {name; attributes; end_location = (1, 1); children = []} in
+        insert (l, Element element);
+
+        subtree_buffer.stack <-
+          (fun n -> element.children <-
+            n::element.children)::subtree_buffer.stack;
+        subtree_buffer.end_element <-
+          (fun l -> element.end_location <- l)::subtree_buffer.end_element
+
+      | `End_element ->
+        (List.hd subtree_buffer.end_element) l;
+
+        subtree_buffer.stack <- List.tl subtree_buffer.stack;
+        subtree_buffer.end_element <- List.tl subtree_buffer.end_element
+
+      | `Text ss -> insert (l, Text ss)
+      | `PI (t, s) -> insert (l, PI (t, s))
+      | `Comment s -> insert (l, Comment s)
+
+      | `Xml _ | `Doctype _ -> ()
+
+      end;
+
+      false
+
+  let enable subtree_buffer = subtree_buffer.enabled <- true
+
+  let disable subtree_buffer =
+    let rec traverse acc = function
+      | l, Element {name; attributes; end_location; children} ->
+        let start_signal = l, `Start_element (name, attributes) in
+        let end_signal = end_location, `End_element in
+        start_signal::(List.fold_left traverse (end_signal::acc) children)
+
+      | l, Text ss -> (l, `Text ss)::acc
+      | l, PI (t, s) -> (l, `PI (t, s))::acc
+      | l, Comment s -> (l, `Comment s)::acc
+    in
+
+    let result = List.fold_left traverse [] subtree_buffer.top in
+
+    subtree_buffer.top <- [];
+    subtree_buffer.enabled <- false;
+
+    result
+
+  let is_enabled subtree_buffer = subtree_buffer.enabled
+end
+
+
+
 let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   let context = Context.uninitialized () in
 
@@ -561,11 +672,22 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   let open_elements = Stack.create () in
   let active_formatting_elements = Active.create () in
+  let subtree_buffer = Subtree.create () in
   let text = Text.prepare () in
   let template_insertion_modes = Template.create () in
   let frameset_ok = ref true in
 
   let add_character = Text.add text in
+
+  let start_buffering () =
+    if not @@ Subtree.is_enabled subtree_buffer then begin
+      begin match Stack.current_element open_elements with
+      | Some e -> e.buffering <- true;
+      | None -> ()
+      end;
+      Subtree.enable subtree_buffer
+    end
+  in
 
   set_foreign (fun () ->
     Stack.current_element_is_foreign context open_elements);
@@ -607,6 +729,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
          location                  = 1, 1;
          is_html_integration_point = false;
          suppress                  = true;
+         buffering                 = false;
          is_open                   = true}
       in
       open_elements := [notional_root]
@@ -670,7 +793,17 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     in
     iterate false !open_elements
 
-  and emit' l s m = current_mode := m; !output (l, s)
+  and emit' l s m =
+    if Subtree.accumulate subtree_buffer l s then begin
+      current_mode := m;
+      !output (l, s)
+    end
+    else m ()
+
+  and emit_list ss m =
+    match ss with
+    | [] -> m ()
+    | (l, s)::more -> emit' l s (fun () -> emit_list more m)
 
   and emit_text m =
     match Text.emit text with
@@ -713,6 +846,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
        location;
        is_html_integration_point;
        suppress     = false;
+       buffering    = false;
        is_open      = true}
     in
     open_elements := element_entry::!open_elements;
@@ -733,10 +867,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     match !open_elements with
     | [] -> mode ()
     | element::more ->
-      open_elements := more;
-      element.is_open <- false;
-      if element.suppress then mode ()
-      else emit location `End_element mode
+      (fun k ->
+        if not element.buffering then k ()
+        else emit_list (Subtree.disable subtree_buffer) k)
+      (fun () ->
+        open_elements := more;
+        element.is_open <- false;
+        if element.suppress then mode ()
+        else emit location `End_element mode)
 
   and pop_until condition location mode =
     let rec iterate () =
