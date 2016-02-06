@@ -15,6 +15,7 @@ let detect_context tokens throw k =
       | _, `Char c when not @@ is_whitespace c -> k (`Fragment "body")
       | _, `Char _ -> scan ()
       | _, `EOF -> k (`Fragment "body")
+      | _, `Start {name = "html"} -> k `Document
       | _, `Start {name = "head" | "body" | "frameset"} ->
         k (`Fragment "html")
       | _, `Start {name =

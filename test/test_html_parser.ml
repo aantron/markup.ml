@@ -519,6 +519,14 @@ let tests = [
     expect ~context:None "<p>foo</p>"
       [ 1,  1, S (start_element "p");
         1,  4, S (`Text ["foo"]);
+        1,  7, S  `End_element];
+
+    expect ~context:None "<html></html>"
+      [ 1,  1, S (start_element "html");
+        1,  7, S (start_element "head");
+        1,  7, S  `End_element;
+        1,  7, S (start_element "body");
+        1,  7, S  `End_element;
         1,  7, S  `End_element]);
 
   ("html.parser.foreign-context" >:: fun _ ->
