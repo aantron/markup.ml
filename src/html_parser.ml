@@ -32,17 +32,43 @@ type _element =
    is_html_integration_point : bool;
    suppress                  : bool;
    mutable buffering         : bool;
-   mutable is_open           : bool}
+   mutable is_open           : bool;
+   mutable _attributes       : (name * string) list;
+   mutable end_location      : location;
+   mutable children          : _annotated_node list}
+
+and _node =
+  | Element of _element
+  | Text of string list
+  | PI of string * string
+  | Comment of string
+
+and _annotated_node = location * _node
 
 
 
 (* Element helpers. *)
 module Element :
 sig
+  val create :
+    ?is_html_integration_point:bool -> ?suppress:bool -> _qname -> location ->
+      _element
   val is_special : _qname -> bool
   val is_not_hidden : Token_tag.t -> bool
 end =
 struct
+  let create
+      ?(is_html_integration_point = false) ?(suppress = false) name location =
+    {element_name = name;
+     location;
+     is_html_integration_point;
+     suppress;
+     buffering    = false;
+     is_open      = true;
+     _attributes  = [];
+     end_location = 1, 1;
+     children     = []}
+
   let is_special name =
     List.mem name
       [`HTML, "address"; `HTML, "applet"; `HTML, "area";
@@ -191,12 +217,7 @@ struct
         in
 
         Some
-          {element_name = name;
-           location     = 1, 1;
-           is_html_integration_point;
-           suppress     = true;
-           buffering    = false;
-           is_open      = true}
+          (Element.create ~is_html_integration_point ~suppress:true name (1, 1))
     in
 
     state := context, context_element;
@@ -371,6 +392,7 @@ sig
   val create : unit -> t
 
   val current_element : t -> _element option
+  val require_current_element : t -> _element
   val adjusted_current_element : Context.t -> t -> _element option
   val current_element_is : t -> string list -> bool
   val current_element_is_foreign : Context.t -> t -> bool
@@ -394,6 +416,11 @@ struct
     match !open_elements with
     | [] -> None
     | element::_ -> Some element
+
+  let require_current_element open_elements =
+    match current_element open_elements with
+    | None -> failwith "require_current_element: None"
+    | Some element -> element
 
   let adjusted_current_element context open_elements =
     match !open_elements, Context.element context with
@@ -562,83 +589,76 @@ module Subtree :
 sig
   type t
 
-  val create : unit -> t
+  val create : Stack.t -> t
 
   val accumulate : t -> location -> signal -> bool
 
   val enable : t -> unit
   val disable : t -> (location * signal) list
-  val is_enabled : t -> bool
 end =
 struct
-  type element =
-    {name                 : name;
-     attributes           : (name * string) list;
-     mutable end_location : location;
-     mutable children     : annotated_node list}
-
-  and node =
-    | Element of element
-    | Text of string list
-    | PI of string * string
-    | Comment of string
-
-  and annotated_node = location * node
-
   type t =
-    {mutable top         : annotated_node list;
-     mutable enabled     : bool;
-     mutable stack       : (annotated_node -> unit) list;
-     mutable end_element : (location -> unit) list}
+    {open_elements    : Stack.t;
+     mutable enabled  : bool;
+     mutable position : _element}
 
-  let create () =
-    let rec subtree_buffer =
-      {top         = [];
-       enabled     = false;
-       stack       = [fun n -> subtree_buffer.top <- n::subtree_buffer.top];
-       end_element = [ignore]}
-    in
-    subtree_buffer
+  let create open_elements =
+    {open_elements;
+     enabled  = false;
+     position = Element.create (`HTML, "dummy") (1, 1)}
 
   let accumulate subtree_buffer l s =
     if not subtree_buffer.enabled then true
-    else
-      let insert = List.hd subtree_buffer.stack in
-
+    else begin
       begin match s with
-      | `Start_element (name, attributes) ->
-        let element =
-          {name; attributes; end_location = (1, 1); children = []} in
-        insert (l, Element element);
+      | `Start_element (_, attributes) ->
+        let parent = subtree_buffer.position in
+        let child =
+          Stack.require_current_element subtree_buffer.open_elements in
 
-        subtree_buffer.stack <-
-          (fun n -> element.children <-
-            n::element.children)::subtree_buffer.stack;
-        subtree_buffer.end_element <-
-          (fun l -> element.end_location <- l)::subtree_buffer.end_element
+        child._attributes <- attributes;
+        parent.children <- (l, Element child)::parent.children;
+
+        subtree_buffer.position <- child
 
       | `End_element ->
-        (List.hd subtree_buffer.end_element) l;
+        subtree_buffer.position.end_location <- l;
+        subtree_buffer.position <-
+          Stack.require_current_element subtree_buffer.open_elements
 
-        subtree_buffer.stack <- List.tl subtree_buffer.stack;
-        subtree_buffer.end_element <- List.tl subtree_buffer.end_element
+      | `Text ss ->
+        subtree_buffer.position.children <-
+          (l, Text ss)::subtree_buffer.position.children
 
-      | `Text ss -> insert (l, Text ss)
-      | `PI (t, s) -> insert (l, PI (t, s))
-      | `Comment s -> insert (l, Comment s)
+      | `PI (t, s) ->
+        subtree_buffer.position.children <-
+          (l, PI (t, s))::subtree_buffer.position.children
+
+      | `Comment s ->
+        subtree_buffer.position.children <-
+          (l, Comment s)::subtree_buffer.position.children
 
       | `Xml _ | `Doctype _ -> ()
-
       end;
 
       false
+    end
 
-  let enable subtree_buffer = subtree_buffer.enabled <- true
+  let enable subtree_buffer =
+    if subtree_buffer.enabled then ()
+    else
+      match Stack.current_element subtree_buffer.open_elements with
+      | None -> ()
+      | Some element ->
+        element.buffering <- true;
+        subtree_buffer.position <- element;
+        subtree_buffer.enabled <- true
 
   let disable subtree_buffer =
     let rec traverse acc = function
-      | l, Element {name; attributes; end_location; children} ->
-        let start_signal = l, `Start_element (name, attributes) in
+      | l, Element {element_name; _attributes; end_location; children} ->
+        let name = Ns.to_string (fst element_name), snd element_name in
+        let start_signal = l, `Start_element (name, _attributes) in
         let end_signal = end_location, `End_element in
         start_signal::(List.fold_left traverse (end_signal::acc) children)
 
@@ -647,14 +667,14 @@ struct
       | l, Comment s -> (l, `Comment s)::acc
     in
 
-    let result = List.fold_left traverse [] subtree_buffer.top in
+    let result =
+      List.fold_left traverse []
+        (Stack.require_current_element subtree_buffer.open_elements).children
+    in
 
-    subtree_buffer.top <- [];
     subtree_buffer.enabled <- false;
 
     result
-
-  let is_enabled subtree_buffer = subtree_buffer.enabled
 end
 
 
@@ -672,22 +692,12 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   let open_elements = Stack.create () in
   let active_formatting_elements = Active.create () in
-  let subtree_buffer = Subtree.create () in
+  let subtree_buffer = Subtree.create open_elements in
   let text = Text.prepare () in
   let template_insertion_modes = Template.create () in
   let frameset_ok = ref true in
 
   let add_character = Text.add text in
-
-  let start_buffering () =
-    if not @@ Subtree.is_enabled subtree_buffer then begin
-      begin match Stack.current_element open_elements with
-      | Some e -> e.buffering <- true;
-      | None -> ()
-      end;
-      Subtree.enable subtree_buffer
-    end
-  in
 
   set_foreign (fun () ->
     Stack.current_element_is_foreign context open_elements);
@@ -725,13 +735,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | `Document -> ()
     | `Fragment _ ->
       let notional_root =
-        {element_name              = `HTML, "html";
-         location                  = 1, 1;
-         is_html_integration_point = false;
-         suppress                  = true;
-         buffering                 = false;
-         is_open                   = true}
-      in
+        Element.create ~suppress:true (`HTML, "html") (1, 1) in
       open_elements := [notional_root]
     end;
 
@@ -842,12 +846,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     in
 
     let element_entry =
-      {element_name = namespace, tag_name;
-       location;
-       is_html_integration_point;
-       suppress     = false;
-       buffering    = false;
-       is_open      = true}
+      Element.create ~is_html_integration_point (namespace, tag_name) location
     in
     open_elements := element_entry::!open_elements;
 
