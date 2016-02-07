@@ -60,9 +60,32 @@ let tests = [
 
   ("html.writer.void-element" >:: fun _ ->
     expect "void element"
-      [`Start_element ((html_ns, "meta"), []);
+      [`Start_element ((html_ns, "head"), []);
+       `Start_element ((html_ns, "meta"), []);
+       `End_element;
+       `Start_element ((html_ns, "meta"), []);
+       `End_element;
        `End_element]
-      [S "<"; S "meta"; S ">"]);
+      [S "<"; S "head"; S ">";
+       S "<"; S "meta"; S ">";
+       S "<"; S "meta"; S ">";
+       S "</"; S "head"; S ">"]);
+
+  ("html.writer.void-element-with-content" >:: fun _ ->
+    expect "void element with content"
+      [`Start_element ((html_ns, "head"), []);
+       `Start_element ((html_ns, "meta"), []);
+       `Text ["foo"];
+       `End_element;
+       `Start_element ((html_ns, "meta"), []);
+       `End_element;
+       `End_element]
+      [S "<"; S "head"; S ">";
+       S "<"; S "meta"; S ">";
+       S "foo";
+       S "</"; S "meta"; S ">";
+       S "<"; S "meta"; S ">";
+       S "</"; S "head"; S ">"]);
 
   ("html.writer.pre" >:: fun _ ->
     expect "pre"

@@ -96,7 +96,14 @@ let write signals =
         let is_void = ns = html_ns && List.mem name' _void_elements in
 
         if is_void then
-          emit_list tag throw e k
+          peek signals throw (fun () -> emit_list tag throw e k) (function
+            | `End_element ->
+              next_option signals throw (fun _ ->
+              emit_list tag throw e k)
+            | `Start_element _ | `Text _ | `Comment _ | `PI _ | `Xml _
+            | `Doctype _ ->
+              open_elements := tag_name::!open_elements;
+              emit_list tag throw e k)
         else begin
           open_elements := tag_name::!open_elements;
 
