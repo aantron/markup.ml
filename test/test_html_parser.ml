@@ -690,5 +690,409 @@ let tests = [
         1, 16, S (start_element "em");
         1, 27, S (`Text ["quux"]);
         1, 31, S  `End_element;
-        1, 31, S  `End_element])
+        1, 31, S  `End_element]);
+
+  ("html.parser.noscript" >:: fun _ ->
+    expect ~context:None "<head><noscript><meta></noscript></head>"
+      [ 1,  1, S (start_element "head");
+        1,  7, S (start_element "noscript");
+        1, 17, S (start_element "meta");
+        1, 17, S  `End_element;
+        1, 23, S  `End_element;
+        1, 34, S  `End_element]);
+
+  ("html.parser.noscript.bad" >:: fun _ ->
+    expect ~context:None
+      "<head><noscript><!DOCTYPE html><html><head><noscript></head></noscript>"
+      [ 1,  1, S (start_element "head");
+        1,  7, S (start_element "noscript");
+        1, 17, E (`Bad_document "doctype should be first");
+        1, 32, E (`Misnested_tag ("html", "noscript"));
+        1, 38, E (`Misnested_tag ("head", "noscript"));
+        1, 44, E (`Misnested_tag ("noscript", "noscript"));
+        1, 54, E (`Unmatched_end_tag "head");
+        1, 61, S  `End_element;
+        1, 72, S  `End_element]);
+
+  ("html.parser.noscript.content" >:: fun _ ->
+    expect ~context:None "<noscript> \t\n<!--foo--> foo</noscript>"
+      [ 1,  1, S (start_element "noscript");
+        1, 11, S (`Text [" \t\n"]);
+        2,  1, S (`Comment "foo");
+        2, 12, E (`Bad_content "noscript");
+        2, 11, S (`Text [" "]);
+        2, 12, S  `End_element;
+        2, 12, S (start_element "body");
+        2, 15, E (`Unmatched_end_tag "noscript");
+        2, 12, S (`Text ["foo"]);
+        2, 26, S  `End_element]);
+
+  ("html.parser.head.fragment" >:: fun _ ->
+    expect ~context:None "<base>"
+      [ 1,  1, S (start_element "base");
+        1,  1, S  `End_element];
+
+    expect ~context:None "<basefont>"
+      [ 1,  1, S (start_element "basefont");
+        1,  1, S  `End_element];
+
+    expect ~context:None "<bgsound>"
+      [ 1,  1, S (start_element "bgsound");
+        1,  1, S  `End_element];
+
+    expect ~context:None "<link>"
+      [ 1,  1, S (start_element "link");
+        1,  1, S  `End_element];
+
+    expect ~context:None "<meta>"
+      [ 1,  1, S (start_element "meta");
+        1,  1, S  `End_element];
+
+    expect ~context:None "<noframes></noframes>"
+      [ 1,  1, S (start_element "noframes");
+        1, 11, S  `End_element];
+
+    expect ~context:None "<style></style>"
+      [ 1,  1, S (start_element "style");
+        1,  8, S  `End_element]);
+
+  ("html.parser.body.fragment" >:: fun _ ->
+    expect ~context:None "<body></body>"
+      [ 1,  1, S (start_element "body");
+        1,  7, S  `End_element]);
+
+  ("html.parser.body.content-truncated" >:: fun _ ->
+    expect ~context:None "<p></body></html>foo"
+      [ 1,  1, S (start_element "p");
+        1,  4, E (`Unmatched_end_tag "body");
+        1, 11, E (`Unmatched_end_tag "html");
+        1, 18, S (`Text ["foo"]);
+        1, 21, S  `End_element]);
+
+  ("html.parser.nested-button" >:: fun _ ->
+    expect ~context:None "<button><button>submit</button></button>"
+      [ 1,  1, S (start_element "button");
+        1,  9, E (`Misnested_tag ("button", "button"));
+        1,  9, S  `End_element;
+        1,  9, S (start_element "button");
+        1, 17, S (`Text ["submit"]);
+        1, 23, S  `End_element;
+        1, 32, E (`Unmatched_end_tag "button")]);
+
+  ("html.parser.nested-list" >:: fun _ ->
+    expect ~context:None "<ul><li><ul></li></ul></li></ul>"
+      [ 1,  1, S (start_element "ul");
+        1,  5, S (start_element "li");
+        1,  9, S (start_element "ul");
+        1, 13, E (`Unmatched_end_tag "li");
+        1, 18, S  `End_element;
+        1, 23, S  `End_element;
+        1, 28, S  `End_element]);
+
+  ("html.parser.definitions" >:: fun _ ->
+    expect ~context:None "</dd><dd></dd>"
+      [ 1,  1, E (`Unmatched_end_tag "dd");
+        1,  6, S (start_element "dd");
+        1, 10, S  `End_element]);
+
+  ("html.parser.nested-achor" >:: fun _ ->
+    expect ~context:None "<a><a></a></a>"
+      [ 1,  4, E (`Misnested_tag ("a", "a"));
+        1, 11, E (`Unmatched_end_tag "a");
+        1,  1, S (start_element "a");
+        1,  4, S  `End_element;
+        1,  4, S (start_element "a");
+        1,  7, S  `End_element]);
+
+  ("html.parser.nested-anchor.reconstruct" >:: fun _ ->
+    expect ~context:None "<p><a>foo<a>bar<p>baz"
+      [ 1,  1, S (start_element "p");
+        1, 10, E (`Misnested_tag ("a", "a"));
+        1, 10, E (`Unmatched_start_tag "a");
+        1,  4, S (start_element "a");
+        1,  7, S (`Text ["foo"]);
+        1, 10, S  `End_element;
+        1, 10, S (start_element "a");
+        1, 13, S (`Text ["bar"]);
+        1, 16, S  `End_element;
+        1, 16, S  `End_element;
+        1, 16, S (start_element "p");
+        1, 10, E (`Unmatched_start_tag "a");
+        1, 10, S (start_element "a");
+        1, 19, S (`Text ["baz"]);
+        1, 22, S  `End_element;
+        1, 22, S  `End_element]);
+
+  ("html.parser.nested-nobr" >:: fun _ ->
+    expect ~context:None "foo<nobr>bar<nobr>baz</nobr>quux</nobr>blah"
+      [ 1, 13, E (`Misnested_tag ("nobr", "nobr"));
+        1, 33, E (`Unmatched_end_tag "nobr");
+        1,  1, S (`Text ["foo"]);
+        1,  4, S (start_element "nobr");
+        1, 10, S (`Text ["bar"]);
+        1, 13, S  `End_element;
+        1, 13, S (start_element "nobr");
+        1, 19, S (`Text ["baz"]);
+        1, 22, S  `End_element;
+        1, 29, S (`Text ["quux"; "blah"])]);
+
+  ("html.parser.end-br" >:: fun _ ->
+    expect ~context:None "<br></br>"
+      [ 1,  1, S (start_element "br");
+        1,  1, S  `End_element;
+        1,  5, E (`Unmatched_end_tag "br");
+        1,  5, S (start_element "br");
+        1,  5, S  `End_element]);
+
+  ("html.parser.hr" >:: fun _ ->
+    expect ~context:None "<p><hr>"
+      [ 1,  1, S (start_element "p");
+        1,  4, S  `End_element;
+        1,  4, S (start_element "hr");
+        1,  4, S  `End_element]);
+
+  ("html.parser.input" >:: fun _ ->
+    expect ~context:None "<input type='text'>"
+      [ 1,  1, S (`Start_element ((html_ns, "input"), [("", "type"), "text"]));
+        1,  1, S  `End_element]);
+
+  ("html.parser.iframe" >:: fun _ ->
+    expect ~context:None "<iframe><p>foo&amp;</p></iframe>"
+      [ 1,  1, S (start_element "iframe");
+        1,  9, S (`Text ["<p>foo&amp;</p>"]);
+        1, 24, S  `End_element]);
+
+  ("html.parser.noembed" >:: fun _ ->
+    expect ~context:None "<noembed><p>foo&amp;</p></noembed>"
+      [ 1,  1, S (start_element "noembed");
+        1, 10, S (`Text ["<p>foo&amp;</p>"]);
+        1, 25, S  `End_element]);
+
+  ("html.parser.generic-tag" >:: fun _ ->
+    expect ~context:None "<foo></foo>"
+      [ 1,  1, S (start_element "foo");
+        1,  6, S  `End_element]);
+
+  ("html.parser.option.body" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) "<option><optgroup></optgroup>"
+      [ 1,  1, S (start_element "option");
+        1,  9, S  `End_element;
+        1,  9, S (start_element "optgroup");
+        1, 19, S  `End_element]);
+
+  ("html.parser.table-content-in-body" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body"))
+      "<caption><col><colgroup><tbody><td><tfoot><th><thead><tr>"
+      [ 1,  1, E (`Misnested_tag ("caption", "body"));
+        1, 10, E (`Misnested_tag ("col", "body"));
+        1, 15, E (`Misnested_tag ("colgroup", "body"));
+        1, 25, E (`Misnested_tag ("tbody", "body"));
+        1, 32, E (`Misnested_tag ("td", "body"));
+        1, 36, E (`Misnested_tag ("tfoot", "body"));
+        1, 43, E (`Misnested_tag ("th", "body"));
+        1, 47, E (`Misnested_tag ("thead", "body"));
+        1, 54, E (`Misnested_tag ("tr", "body"))]);
+
+  ("html.parser.caption" >:: fun _ ->
+    expect ~context:None "<table><caption>foo<p>bar</caption></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S (start_element "caption");
+        1, 17, S (`Text ["foo"]);
+        1, 20, S (start_element "p");
+        1, 23, S (`Text ["bar"]);
+        1, 26, S  `End_element;
+        1, 26, S  `End_element;
+        1, 36, S  `End_element]);
+
+  ("html.parser.colgroup" >:: fun _ ->
+    expect ~context:None "<table><colgroup><col></colgroup></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S (start_element "colgroup");
+        1, 18, S (start_element "col");
+        1, 18, S  `End_element;
+        1, 23, S  `End_element;
+        1, 34, S  `End_element]);
+
+  ("html.parser.colgroup.implicit" >:: fun _ ->
+    expect ~context:None "<table><col></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S (start_element "colgroup");
+        1,  8, S (start_element "col");
+        1,  8, S  `End_element;
+        1, 13, S  `End_element;
+        1, 13, S  `End_element]);
+
+  ("html.parser.td.direct" >:: fun _ ->
+    expect ~context:None "<table><td></td></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S (start_element "tbody");
+        1,  8, E (`Misnested_tag ("td", "table"));
+        1,  8, S (start_element "tr");
+        1,  8, S (start_element "td");
+        1, 12, S  `End_element;
+        1, 17, S  `End_element;
+        1, 17, S  `End_element;
+        1, 17, S  `End_element]);
+
+  ("html.parser.tbody" >:: fun _ ->
+    expect ~context:None "<table><tbody></tbody></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S (start_element "tbody");
+        1, 15, S  `End_element;
+        1, 23, S  `End_element]);
+
+  ("html.parser.nested-table" >:: fun _ ->
+    expect ~context:None "<table><table></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, E (`Misnested_tag ("table", "table"));
+        1,  8, S  `End_element;
+        1,  8, S (start_element "table");
+        1, 15, S  `End_element]);
+
+  ("html.parser.nested-caption" >:: fun _ ->
+    expect ~context:None "<table><caption><caption></caption></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S (start_element "caption");
+        1, 17, E (`Misnested_tag ("caption", "caption"));
+        1, 17, S  `End_element;
+        1, 17, S (start_element "caption");
+        1, 26, S  `End_element;
+        1, 36, S  `End_element]);
+
+  ("html.parser.truncated-caption" >:: fun _ ->
+    expect ~context:None "<table><caption></table>"
+      [ 1,  1, S (start_element "table");
+        1,  8, S (start_element "caption");
+        1, 17, E (`Unmatched_end_tag "table");
+        1, 17, S  `End_element;
+        1, 17, S  `End_element]);
+
+  ("html.parser.nested-tbody" >:: fun _ ->
+    expect ~context:None "<tbody><tbody></tbody>"
+      [ 1,  1, S (start_element "tbody");
+        1,  8, S  `End_element;
+        1,  8, S (start_element "tbody");
+        1, 15, S  `End_element]);
+
+  ("html.parser.option" >:: fun _ ->
+    expect ~context:None "<option></option>"
+      [ 1,  1, S (start_element "option");
+        1,  9, S  `End_element]);
+
+  ("html.parser.optgroup" >:: fun _ ->
+    expect ~context:None
+      "<select><optgroup><option><optgroup><option></optgroup></select>"
+      [ 1,  1, S (start_element "select");
+        1,  9, S (start_element "optgroup");
+        1, 19, S (start_element "option");
+        1, 27, S  `End_element;
+        1, 27, S  `End_element;
+        1, 27, S (start_element "optgroup");
+        1, 37, S (start_element "option");
+        1, 45, S  `End_element;
+        1, 45, S  `End_element;
+        1, 56, S  `End_element]);
+
+  ("html.parser.noframes" >:: fun _ ->
+    expect ~context:None "<noframes>foo&amp;bar</a></noframes>"
+      [ 1,  1, S (start_element "noframes");
+        1, 11, S (`Text ["foo&amp;bar</a>"]);
+        1, 26, S  `End_element]);
+
+  ("html.parser.frameset" >:: fun _ ->
+    expect "<frameset><frame></frameset>"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "frameset");
+        1, 11, S (start_element "frame");
+        1, 11, S  `End_element;
+        1, 18, S  `End_element;
+        1, 29, S  `End_element]);
+
+  ("html.parser.frameset.fragment" >:: fun _ ->
+    expect ~context:None "<frameset></frameset>"
+      [ 1,  1, S (start_element "frameset");
+        1, 11, S  `End_element];
+
+    expect ~context:None "<frame>"
+      [ 1,  1, S (start_element "frame");
+        1,  1, S  `End_element]);
+
+  ("html.parser.frameset.content" >:: fun _ ->
+    expect ~context:None
+      ("<frameset> \t\n<!--foo--><noframes></noframes><frameset></frameset>" ^
+       "</frameset>")
+      [ 1,  1, S (start_element "frameset");
+        1, 11, S (`Text [" \t\n"]);
+        2,  1, S (`Comment "foo");
+        2, 11, S (start_element "noframes");
+        2, 21, S  `End_element;
+        2, 32, S (start_element "frameset");
+        2, 42, S  `End_element;
+        2, 53, S  `End_element]);
+
+  ("html.parser.frameset.bad" >:: fun _ ->
+    expect ~context:None "<frameset><!DOCTYPE html><html>f"
+      [ 1,  1, S (start_element "frameset");
+        1, 11, E (`Bad_document "doctype should be first");
+        1, 26, E (`Misnested_tag ("html", "frameset"));
+        1, 32, E (`Bad_content "frameset");
+        1, 33, E (`Unexpected_eoi "frameset");
+        1, 33, S  `End_element]);
+
+  ("html.parser.after-frameset.content" >:: fun _ ->
+    expect ~context:None
+      "<frameset></frameset> \t\n<!--foo--><noframes></noframes></html>"
+      [ 1,  1, S (start_element "frameset");
+        1, 11, S  `End_element;
+        1, 22, S (`Text [" \t\n"]);
+        2,  1, S (`Comment "foo");
+        2, 11, S (start_element "noframes");
+        2, 21, S  `End_element]);
+
+  ("html.parser.after-frameset.bad" >:: fun _ ->
+    expect ~context:None "<frameset></frameset><!DOCTYPE html><html>f"
+      [ 1,  1, S (start_element "frameset");
+        1, 11, S  `End_element;
+        1, 22, E (`Bad_document "doctype should be first");
+        1, 37, E (`Misnested_tag ("html", "html"));
+        1, 43, E (`Bad_content "html")]);
+
+  ("html.parser.frameset-in-body" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) "<frameset><p>"
+      [ 1,  1, E (`Misnested_tag ("frameset", "body"));
+        1, 11, S (start_element "p");
+        1, 14, S  `End_element];
+
+    expect ~context:None "<body><p><frameset><p></body>"
+      [ 1,  1, S (start_element "body");
+        1,  7, S (start_element "p");
+        1, 10, E (`Misnested_tag ("frameset", "body"));
+        1, 20, S  `End_element;
+        1, 20, S (start_element "p");
+        1, 23, S  `End_element;
+        1, 23, S  `End_element];
+
+    expect ~context:None "<p><frameset><p>"
+      [ 1,  1, S (start_element "p");
+        1,  4, E (`Misnested_tag ("frameset", "body"));
+        1, 14, S  `End_element;
+        1, 14, S (start_element "p");
+        1, 17, S  `End_element];
+
+    expect "<p><frameset><frame></frameset>"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "body");
+        1,  1, S (start_element "p");
+        1,  4, E (`Misnested_tag ("frameset", "body"));
+        1,  4, S  `End_element;
+        1,  4, S  `End_element;
+        1,  4, S (start_element "frameset");
+        1, 14, S (start_element "frame");
+        1, 14, S  `End_element;
+        1, 21, S  `End_element;
+        1, 32, S  `End_element])
 ]

@@ -43,14 +43,20 @@ run_test = \
 	ulimit -s 256 && \
 	_build/test/$(1)
 
-.PHONY : test
-test :
+.PHONY : unit-tests
+unit-tests :
 	@rm -f bisect*.out
 	@$(call run_test,test.native)
 	@echo
 	@$(call if_package,lwt,$(call run_test,test_lwt.native) -runner sequential)
-	@which bisect-ppx-report > /dev/null 2> /dev/null && make bisect-report \
-		|| true
+
+.PHONY : test
+test :
+	@make unit-tests ; \
+	RESULT=$$? ; \
+	which bisect-ppx-report > /dev/null 2> /dev/null && make bisect-report \
+		|| true ; \
+	exit $$RESULT
 
 .PHONY : bisect-report
 bisect-report :

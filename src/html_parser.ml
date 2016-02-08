@@ -142,14 +142,26 @@ sig
 
   val the_context : t -> _context
   val element : t -> _element option
+  val token : t -> string option
 end =
 struct
   let _detect tokens throw k =
     let tokens, restore = checkpoint tokens in
-    let k context = restore (); k context in
+
+    let last_name = ref None in
+    let next_token k =
+      next_expected tokens throw (fun token ->
+        begin match token with
+        | _, `Start {name} -> last_name := Some name
+        | _ -> ()
+        end;
+        k token)
+    in
+
+    let k context = restore (); k (context, !last_name) in
 
     let rec scan () =
-      next_expected tokens throw begin function
+      next_token begin function
         | _, `Doctype _ -> k `Document
         | _, `Char c when not @@ is_whitespace c -> k (`Fragment "body")
         | _, `Char _ -> scan ()
@@ -204,44 +216,46 @@ struct
 
     scan ()
 
-  type t = (_context * _element option) ref
+  type t = (_context * _element option * string option) ref
 
-  let uninitialized () = ref (`Document, None)
+  let uninitialized () = ref (`Document, None, None)
 
   let initialize tokens requested_context state throw k =
     (fun k ->
       match requested_context with
-      | Some c -> k c
-      | None -> _detect tokens throw k) (fun detected_context ->
+      | Some c -> k (c, None)
+      | None -> _detect tokens throw k)
+    (fun (detected_context, deciding_token) ->
 
-    let context =
-      match detected_context with
-      | `Document -> `Document
-      | `Fragment "math" -> `Fragment (`MathML, "math")
-      | `Fragment "svg" -> `Fragment (`SVG, "svg")
-      | `Fragment name -> `Fragment (`HTML, name)
-    in
+      let context =
+        match detected_context with
+        | `Document -> `Document
+        | `Fragment "math" -> `Fragment (`MathML, "math")
+        | `Fragment "svg" -> `Fragment (`SVG, "svg")
+        | `Fragment name -> `Fragment (`HTML, name)
+      in
 
-    let context_element =
-      match context with
-      | `Document -> None
-      | `Fragment name ->
-        let is_html_integration_point =
-          match name with
-          | `SVG, ("foreignObject" | "desc" | "title") -> true
-          | _ -> false
-        in
+      let context_element =
+        match context with
+        | `Document -> None
+        | `Fragment name ->
+          let is_html_integration_point =
+            match name with
+            | `SVG, ("foreignObject" | "desc" | "title") -> true
+            | _ -> false
+          in
 
-        Some
-          (Element.create ~is_html_integration_point ~suppress:true name (1, 1))
-    in
+          Some (Element.create
+            ~is_html_integration_point ~suppress:true name (1, 1))
+      in
 
-    state := context, context_element;
+      state := context, context_element, deciding_token;
 
-    k ())
+      k ())
 
-  let the_context context = fst !context
-  let element context = snd !context
+  let the_context {contents = (c, _, _)} = c
+  let element {contents = (_, e, _)} = e
+  let token {contents = (_, _, t)} = t
 end
 
 
@@ -1000,6 +1014,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   let text = Text.prepare () in
   let template_insertion_modes = Template.create () in
   let frameset_ok = ref true in
+  let head_seen = ref false in
 
   let add_character = Text.add text in
 
@@ -1049,6 +1064,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | _ -> ()
     end;
 
+    (* The following is a deviation from conformance. The goal is to avoid
+       insertion of a <head> element into a fragment beginning with a <body> or
+       <frameset> element. *)
+    begin match Context.token context with
+    | Some ("body" | "frameset") -> head_seen := true
+    | _ -> ()
+    end;
+
     current_mode :=
       begin match Context.the_context context with
       | `Fragment _ -> reset_mode ()
@@ -1091,11 +1114,17 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         | [] -> initial_mode (* This is an internal error, actually. *)
         | mode::_ -> mode
         end
-      | [{element_name = _, "head"}] -> in_body_mode
-      | {element_name = _, "head"}::_::_ -> in_head_mode
+      (* The next case corresponds to item 12 of "Resetting the insertion mode
+         appropriately." It is commented out as deliberate deviation from the
+         specification, because that makes parsing of fragments intended for
+         <head> elements more intuitive. For conformance, the pattern in the
+         following case would have to end with ::_::_, not ::_. *)
+      (* | [{element_name = _, "head"}] -> in_body_mode *)
+      | {element_name = _, "head"}::_ -> in_head_mode
       | {element_name = _, "body"}::_ -> in_body_mode
       | {element_name = _, "frameset"}::_ -> in_frameset_mode
-      | {element_name = _, "html"}::_ -> after_head_mode
+      | {element_name = _, "html"}::_ ->
+        if !head_seen then after_head_mode else before_head_mode
       | _::rest -> iterate last rest
       | [] -> in_body_mode
     in
@@ -1389,6 +1418,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         in_body_mode_rules "html" before_head_mode v
 
       | l, `Start ({name = "head"} as t) ->
+        head_seen := true;
         push_and_emit l t in_head_mode
 
       | l, `End {name}
@@ -1396,6 +1426,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         report l (`Unmatched_end_tag name) !throw before_head_mode
 
       | l, _ as v ->
+        head_seen := true;
         push tokens v;
         push_implicit l "head" in_head_mode
     end
@@ -1541,6 +1572,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       | l, `End {name} when not @@ List.mem name ["body"; "html"; "br"] ->
         report l (`Unmatched_end_tag name) !throw after_head_mode
 
+      (* This case is not found in the specification. It is a deliberate
+         deviation from conformance, so that fragments "<head>...</head>" don't
+         get an implicit <body> element generated after the <head> element. *)
+      | l, `EOF
+          when (Context.the_context context = `Fragment (`HTML, "html")
+             || Context.the_context context = `Fragment (`HTML, "head")) ->
+        emit_end l
+
       | l, _ as t ->
         push tokens t;
         push_implicit l "body" in_body_mode
@@ -1587,14 +1626,23 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `Start ({name = "frameset"} as t) ->
       report l (`Misnested_tag ("frameset", context_name)) !throw (fun () ->
       match !open_elements with
-      | {element_name = `HTML, "body"}::_::_ ->
-        if not !frameset_ok then mode ()
+      | [_] -> mode ()
+      | _ ->
+        let rec second_is_body = function
+          | [{element_name = `HTML, "body"}; _] -> true
+          | [] -> false
+          | _::more -> second_is_body more
+        in
+        if not @@ second_is_body !open_elements then mode ()
         else
-          pop_until
-            (fun _ -> match !open_elements with [_] -> true | _ -> false)
-            l (fun () ->
-          push_and_emit l t in_frameset_mode)
-      | _ -> mode ())
+          if not !frameset_ok then mode ()
+          else
+            (* There is a deviation here due to the nature of the parser: if a
+               body element has been emitted, it can't be suppressed. *)
+            pop_until
+              (fun _ -> match !open_elements with [_] -> true | _ -> false)
+              l (fun () ->
+            push_and_emit l t in_frameset_mode))
 
     | l, `EOF as v ->
       report_if_stack_has_other_than
@@ -1845,12 +1893,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       reconstruct_active_formatting_elements (fun () ->
       parse_rawtext mode))
 
-    | _, `Start {name = "iframe"} ->
+    | l, `Start ({name = "iframe"} as t) ->
       frameset_ok := false;
-      parse_rawtext mode
+      push_and_emit l t (fun () ->
+      parse_rawtext mode)
 
-    | _, `Start {name = "noembed"} ->
-      parse_rawtext mode
+    | l, `Start ({name = "noembed"} as t) ->
+      push_and_emit l t (fun () ->
+      parse_rawtext mode)
 
     | l, `Start ({name = "select"} as t) ->
       frameset_ok := false;
@@ -1917,7 +1967,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       | [] -> mode ()
       | {element_name = (ns, name') as name''}::rest ->
         if ns = `HTML && name' = name then
-          pop_implied ~except:name l mode
+          pop_implied ~except:name l (fun () ->
+          pop l mode)
         else
           if Element.is_special name'' then
             report l (`Unmatched_end_tag name) !throw mode
@@ -2560,7 +2611,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
       | l, `EOF ->
         (fun mode' ->
-          if Stack.current_element_is open_elements ["html"] then
+          if not @@ Stack.current_element_is open_elements ["html"] then
             report l (`Unexpected_eoi "frameset") !throw mode'
           else mode' ())
         (fun () -> emit_end l)
