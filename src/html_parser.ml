@@ -35,7 +35,8 @@ type _element =
    mutable is_open           : bool;
    mutable _attributes       : (name * string) list;
    mutable end_location      : location;
-   mutable children          : _annotated_node list}
+   mutable children          : _annotated_node list;
+   mutable parent            : _element}
 
 and _node =
   | Element of _element
@@ -53,10 +54,24 @@ sig
   val create :
     ?is_html_integration_point:bool -> ?suppress:bool -> _qname -> location ->
       _element
+  val dummy : _element
+
   val is_special : _qname -> bool
   val is_not_hidden : Token_tag.t -> bool
 end =
 struct
+  let rec dummy =
+    {element_name              = `HTML, "dummy";
+     location                  = 1, 1;
+     is_html_integration_point = false;
+     suppress                  = true;
+     buffering                 = false;
+     is_open                   = false;
+     _attributes               = [];
+     end_location              = 1, 1;
+     children                  = [];
+     parent                    = dummy}
+
   let create
       ?(is_html_integration_point = false) ?(suppress = false) name location =
     {element_name = name;
@@ -67,7 +82,8 @@ struct
      is_open      = true;
      _attributes  = [];
      end_location = 1, 1;
-     children     = []}
+     children     = [];
+     parent       = dummy}
 
   let is_special name =
     List.mem name
@@ -406,6 +422,11 @@ sig
   val in_select_scope : t -> string -> bool
   val one_in_scope : t -> string list -> bool
   val one_in_table_scope : t -> string list -> bool
+  val target_in_scope : t -> _element -> bool
+
+  val remove : t -> _element -> unit
+  val replace : t -> old:_element -> new_:_element -> unit
+  val insert_below : t -> anchor:_element -> new_:_element -> unit
 end =
 struct
   type t = _element list ref
@@ -508,6 +529,34 @@ struct
           else scan more
     in
     scan !open_elements
+
+  let target_in_scope open_elements node =
+    let rec scan = function
+      | [] -> false
+      | e::more ->
+        if e == node then true
+        else
+          if List.mem node.element_name _scope_delimiters then false
+          else scan more
+    in
+    scan !open_elements
+
+  let remove open_elements element =
+    open_elements := List.filter ((!=) element) !open_elements;
+    element.is_open <- false
+
+  let replace open_elements ~old ~new_ =
+    open_elements :=
+      List.map (fun e ->
+        if e == old then (e.is_open <- false; new_) else e) !open_elements
+
+  let insert_below open_elements ~anchor ~new_ =
+    let rec insert prefix = function
+      | [] -> List.rev prefix
+      | e::more when e == anchor -> (List.rev prefix) @ (new_::e::more)
+      | e::more -> insert (e::prefix) more
+    in
+    open_elements := insert [] !open_elements
 end
 
 
@@ -517,7 +566,7 @@ module Active :
 sig
   type entry =
     | Marker
-    | Element of _element * location * Token_tag.t
+    | Element_ of _element * location * Token_tag.t
 
   type t = entry list ref
 
@@ -525,11 +574,18 @@ sig
 
   val add_marker : t -> unit
   val clear_until_marker : t -> unit
+
+  val has : t -> _element -> bool
+  val remove : t -> _element -> unit
+  val replace : t -> old:_element -> new_:_element -> unit
+  val insert_after : t -> anchor:_element -> new_:_element -> unit
+
+  val has_before_marker : t -> string -> _element option
 end =
 struct
   type entry =
     | Marker
-    | Element of _element * location * Token_tag.t
+    | Element_ of _element * location * Token_tag.t
 
   type t = entry list ref
 
@@ -541,10 +597,45 @@ struct
   let clear_until_marker active_formatting_elements =
     let rec iterate = function
       | Marker::rest -> rest
-      | (Element _)::rest -> iterate rest
+      | (Element_ _)::rest -> iterate rest
       | [] -> []
     in
     active_formatting_elements := iterate !active_formatting_elements
+
+  let has active_formatting_elements element =
+    !active_formatting_elements |> List.exists (function
+      | Element_ (e, _, _) when e == element -> true
+      | _ -> false)
+
+  let remove active_formatting_elements element =
+    active_formatting_elements :=
+      !active_formatting_elements |> List.filter (function
+        | Element_ (e, _, _) when e == element -> false
+        | _ -> true)
+
+  let replace active_formatting_elements ~old ~new_ =
+    active_formatting_elements :=
+      !active_formatting_elements |> List.map (function
+        | Element_ (e, l, t) when e == old -> Element_ (new_, l, t)
+        | e -> e)
+
+  let insert_after active_formatting_elements ~anchor ~new_ =
+    let rec insert prefix = function
+      | [] -> List.rev prefix
+      | (Element_ (e, l, t) as v)::more when e == anchor ->
+        let new_entry = Element_ (new_, l, t) in
+        (List.rev prefix) @ (v::new_entry::more)
+      | v::more -> insert (v::prefix) more
+    in
+    active_formatting_elements := insert [] !active_formatting_elements
+
+  let has_before_marker active_formatting_elements name =
+    let rec scan = function
+      | [] | Marker::_ -> None
+      | Element_ (n, _, _)::_ when n.element_name = (`HTML, name) -> Some n
+      | _::more -> scan more
+    in
+    scan !active_formatting_elements
 end
 
 
@@ -579,12 +670,16 @@ end
 
 (* Subtree buffers. HTML specifies the "adoption agency algorithm" for
    recovering from certain kinds of errors. This algorithm is (apparently)
-   incompatible with a parser that does not maintain a DOM. So, when the parser
-   encounters a situation in which it may be necessary to later run this
-   algorithm, it buffers its signal output, using the signals to construct a DOM
-   subtree. The algorithm, if run, is run on this subtree. Whenever the parser
-   can "prove" that the tree can no longer be involved in the adoption agency
-   algorithm, it serializes that branch into the signal stream. *)
+   incompatible with streaming parsers that do not maintain a DOM - such as
+   Markup.ml. So, when the Markup.ml parser encounters a situation in which it
+   may be necessary to later run the adoption agency algorithm, it buffers its
+   signal output. Instead of being emitted, the signals are used to construct a
+   DOM subtree. If the algorithm is run, it is run on this subtree. Whenever the
+   parser can "prove" that the subtree can no longer be involved in the adoption
+   agency algorithm, it serializes the subtree into the signal stream. In
+   practice, this means that buffering begins when a formatting element is
+   encountered, and ends when the parent of the formatting element is popped off
+   the open element stack. *)
 module Subtree :
 sig
   type t
@@ -595,6 +690,9 @@ sig
 
   val enable : t -> unit
   val disable : t -> (location * signal) list
+
+  val adoption_agency_algorithm :
+    t -> Active.t -> location -> string -> bool * (location * Error.t) list
 end =
 struct
   type t =
@@ -605,7 +703,7 @@ struct
   let create open_elements =
     {open_elements;
      enabled  = false;
-     position = Element.create (`HTML, "dummy") (1, 1)}
+     position = Element.dummy}
 
   let accumulate subtree_buffer l s =
     if not subtree_buffer.enabled then true
@@ -617,6 +715,7 @@ struct
           Stack.require_current_element subtree_buffer.open_elements in
 
         child._attributes <- attributes;
+        child.parent <- parent;
         parent.children <- (l, Element child)::parent.children;
 
         subtree_buffer.position <- child
@@ -662,7 +761,12 @@ struct
         let end_signal = end_location, `End_element in
         start_signal::(List.fold_left traverse (end_signal::acc) children)
 
-      | l, Text ss -> (l, `Text ss)::acc
+      | l, Text ss ->
+        begin match acc with
+        | (_, `Text ss')::rest -> (l, `Text (ss @ ss'))::rest
+        | _ -> (l, `Text ss)::acc
+        end
+
       | l, PI (t, s) -> (l, `PI (t, s))::acc
       | l, Comment s -> (l, `Comment s)::acc
     in
@@ -675,6 +779,206 @@ struct
     subtree_buffer.enabled <- false;
 
     result
+
+  (* Part of 8.2.5.4.7. *)
+  let adoption_agency_algorithm
+      subtree_buffer active_formatting_elements l subject =
+
+    let open_elements = subtree_buffer.open_elements in
+
+    let above_removed_nodes = ref [] in
+
+    let rec above_in_stack node = function
+      | e::e'::_ when e == node -> e'
+      | _::more -> above_in_stack node more
+      | [] -> failwith "above_in_stack: not found"
+    in
+
+    let above_node node =
+      if node.is_open then above_in_stack node !open_elements
+      else
+        try List.find (fun (e, _) -> e == node) !above_removed_nodes |> snd
+        with Not_found -> failwith "above_node: not found"
+    in
+
+    let remove_node node =
+      above_removed_nodes :=
+        (node, above_in_stack node !open_elements)::!above_removed_nodes;
+      Stack.remove open_elements node
+    in
+
+    let reparent node new_parent =
+      let old_parent = node.parent in
+
+      let entry, filtered_children =
+        let rec remove prefix = function
+          | (_, Element e as entry)::rest when e == node ->
+            entry, (List.rev prefix) @ rest
+          | e::rest -> remove (e::prefix) rest
+          | [] -> (node.location, Element node), old_parent.children
+        in
+        remove [] old_parent.children
+      in
+
+      old_parent.children <- filtered_children;
+      new_parent.children <- entry::new_parent.children;
+      node.parent <- new_parent
+    in
+
+    let inner_loop formatting_element furthest_block =
+      let rec repeat inner_loop_counter node last_node bookmark =
+        let node = above_node node in
+
+        if node == formatting_element then last_node, bookmark
+        else begin
+          if inner_loop_counter > 3 then
+            Active.remove active_formatting_elements node;
+
+          if not @@ Active.has active_formatting_elements node then begin
+            remove_node node;
+            repeat (inner_loop_counter + 1) node last_node bookmark
+          end
+          else begin
+            let new_node =
+              {node with is_open = true; children = []; parent = Element.dummy}
+            in
+
+            node.end_location <- l;
+
+            Stack.replace open_elements ~old:node ~new_:new_node;
+            Active.replace active_formatting_elements ~old:node ~new_:new_node;
+
+            reparent last_node new_node;
+
+            repeat (inner_loop_counter + 1) new_node new_node
+              (if last_node == furthest_block then Some new_node else bookmark)
+          end
+        end
+
+      in
+      repeat 1 furthest_block furthest_block None
+    in
+
+    let find_formatting_element () =
+      let rec scan = function
+        | [] -> None
+        | Active.Marker::_ -> None
+        | (Active.Element_ ({element_name = `HTML, n} as e, _, _))::_
+            when n = subject -> Some e
+        | _::rest -> scan rest
+      in
+      scan !active_formatting_elements
+    in
+
+    let find_furthest_block formatting_element =
+      let rec scan furthest = function
+        | [] -> furthest
+        | e::_ when e == formatting_element -> furthest
+        | e::more when Element.is_special e.element_name -> scan (Some e) more
+        | _::more -> scan furthest more
+      in
+      scan None !open_elements
+    in
+
+    let pop_to_formatting_element formatting_element =
+      let rec pop () =
+        match !open_elements with
+        | [] -> ()
+        | e::more ->
+          open_elements := more;
+          e.is_open <- false;
+          e.end_location <- l;
+          if e != formatting_element then pop ()
+      in
+      pop ();
+      subtree_buffer.position <- Stack.require_current_element open_elements
+    in
+
+    let rec outer_loop outer_loop_counter errors =
+      let outer_loop_counter = outer_loop_counter + 1 in
+
+      if outer_loop_counter >= 8 then true, List.rev errors
+      else begin
+        match find_formatting_element () with
+        | None -> false, List.rev errors
+        | Some formatting_element ->
+          if not formatting_element.is_open then begin
+            Active.remove active_formatting_elements formatting_element;
+            true, List.rev ((l, `Unmatched_end_tag subject)::errors)
+          end
+          else begin
+            if not @@ Stack.target_in_scope open_elements
+                        formatting_element then begin
+              true, List.rev ((l, `Unmatched_end_tag subject)::errors)
+            end
+            else begin
+              let errors =
+                if Stack.require_current_element open_elements ==
+                   formatting_element then
+                  errors
+                else (l, `Unmatched_end_tag subject)::errors
+              in
+
+              match find_furthest_block formatting_element with
+              | None ->
+                pop_to_formatting_element formatting_element;
+                Active.remove active_formatting_elements formatting_element;
+                true, List.rev errors
+
+              | Some furthest_block ->
+                formatting_element.end_location <- l;
+
+                let common_ancestor =
+                  above_in_stack formatting_element !open_elements in
+
+                let last_node, bookmark =
+                  inner_loop formatting_element furthest_block in
+
+                reparent last_node common_ancestor;
+
+                let new_node =
+                  {formatting_element with
+                    is_open = true; children = []; parent = Element.dummy}
+                in
+
+                new_node.children <- furthest_block.children;
+                furthest_block.children <- [];
+                new_node.children |> List.iter (function
+                  | _, Element child -> child.parent <- new_node
+                  | _ -> ());
+
+                reparent new_node furthest_block;
+
+                begin match bookmark with
+                | None ->
+                  Active.replace active_formatting_elements
+                    ~old:formatting_element ~new_:new_node
+                | Some node ->
+                  Active.remove active_formatting_elements formatting_element;
+                  Active.insert_after
+                    active_formatting_elements ~anchor:node ~new_:new_node
+                end;
+
+                Stack.remove open_elements formatting_element;
+                Stack.insert_below
+                  open_elements ~anchor:furthest_block ~new_:new_node;
+
+                outer_loop outer_loop_counter errors
+            end
+          end
+      end
+    in
+
+    let current_node = Stack.require_current_element open_elements in
+    if current_node.element_name = (`HTML, subject) then begin
+      open_elements := List.tl !open_elements;
+      current_node.is_open <- false;
+      current_node.end_location <- l;
+      subtree_buffer.position <- Stack.require_current_element open_elements;
+      Active.remove active_formatting_elements current_node;
+      true, []
+    end
+    else outer_loop 0 []
 end
 
 
@@ -852,7 +1156,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     if formatting then
       active_formatting_elements :=
-        Active.Element (element_entry, location, tag)::
+        Active.Element_ (element_entry, location, tag)::
           !active_formatting_elements;
 
     emit location
@@ -866,6 +1170,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     match !open_elements with
     | [] -> mode ()
     | element::more ->
+      emit_text (fun () ->
       (fun k ->
         if not element.buffering then k ()
         else emit_list (Subtree.disable subtree_buffer) k)
@@ -873,7 +1178,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         open_elements := more;
         element.is_open <- false;
         if element.suppress then mode ()
-        else emit location `End_element mode)
+        else emit' location `End_element mode))
 
   and pop_until condition location mode =
     let rec iterate () =
@@ -984,31 +1289,24 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     let rec get_prefix prefix = function
       | [] -> prefix, []
       | Active.Marker::_ as l -> prefix, l
-      | Active.Element ({is_open = true}, _, _)::_ as l -> prefix, l
-      | Active.Element ({is_open = false}, l, tag)::more ->
+      | Active.Element_ ({is_open = true}, _, _)::_ as l -> prefix, l
+      | Active.Element_ ({is_open = false}, l, tag)::more ->
         get_prefix ((l, tag)::prefix) more
     in
     let to_reopen, remainder = get_prefix [] !active_formatting_elements in
     active_formatting_elements := remainder;
 
+    begin match to_reopen with
+    | [] -> ()
+    | _::_ -> Subtree.enable subtree_buffer
+    end;
+
     let rec reopen = function
       | [] -> mode ()
       | (l, tag)::more ->
-        push_and_emit l tag (fun () -> reopen more)
+        push_and_emit ~formatting:true l tag (fun () -> reopen more)
     in
     reopen to_reopen
-
-  (* This is a temporary solution until the adoption agency algorithm (in
-     8.2.5.4.7) is implemented. *)
-  and remove_from_active_formatting_elements name =
-    let rec scan remaining = function
-      | [] -> List.rev remaining
-      | Active.Element ({element_name = `HTML, name'}, _, _)::rest
-          when name' = name ->
-        (List.rev remaining) @ rest
-      | v::rest -> scan (v::remaining) rest
-    in
-    active_formatting_elements := scan [] !active_formatting_elements
 
   (* 8.2.5. *)
   and dispatch tokens rules =
@@ -1441,24 +1739,42 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
               ["h1"; "h2"; "h3"; "h4"; "h5"; "h6"] l mode))
 
     | l, `Start ({name = "a"} as t) ->
-      reconstruct_active_formatting_elements (fun () ->
-      push_and_emit ~formatting:true l t mode)
+      (fun k ->
+        match Active.has_before_marker active_formatting_elements "a" with
+        | None -> k ()
+        | Some existing ->
+          report l (`Misnested_tag ("a", "a")) !throw (fun () ->
+          adoption_agency_algorithm l "a" (fun () ->
+          Stack.remove open_elements existing;
+          Active.remove active_formatting_elements existing;
+          k ())))
+      (fun () ->
+        Subtree.enable subtree_buffer;
+        reconstruct_active_formatting_elements (fun () ->
+        push_and_emit ~formatting:true l t mode))
 
     | l, `Start ({name =
         "b" | "big" | "code" | "em" | "font" | "i" | "s" | "small" |
         "strike" | "strong" | "tt" | "u"} as t) ->
+      Subtree.enable subtree_buffer;
       reconstruct_active_formatting_elements (fun () ->
       push_and_emit ~formatting:true l t mode)
 
     | l, `Start ({name = "nobr"} as t) ->
+      Subtree.enable subtree_buffer;
       reconstruct_active_formatting_elements (fun () ->
-      push_and_emit ~formatting:true l t mode)
+      (fun k ->
+        if not @@ Stack.in_scope open_elements "nobr" then k ()
+        else
+          report l (`Misnested_tag ("nobr", "nobr")) !throw (fun () ->
+          adoption_agency_algorithm l "nobr" (fun () ->
+          reconstruct_active_formatting_elements k)))
+      (fun () -> push_and_emit ~formatting:true l t mode))
 
     | l, `End {name =
         "a" | "b" | "big" | "code" | "em" | "font" | "i" | "nobr" | "s" |
         "small" | "strike" | "strong" | "tt" | "u" as name} ->
-      remove_from_active_formatting_elements name;
-      close_element_with_implied name l mode
+      adoption_agency_algorithm l name mode
 
     | l, `Start ({name = "applet" | "marquee" | "object"} as t) ->
       frameset_ok := false;
@@ -1593,19 +1909,39 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       push_and_emit l t mode)
 
     | l, `End {name} ->
-      let rec close () =
-        match Stack.current_element open_elements with
-        | None -> mode ()
-        | Some {element_name = (ns, name') as name''} ->
-          if ns = `HTML && name' = name then
-            pop_implied ~except:name l mode
-          else
-            if Element.is_special name'' then
-              report l (`Unmatched_end_tag name) !throw mode
-            else
-              pop l close
-      in
-      close ()
+      any_other_end_tag_in_body l name mode
+
+  (* Part of 8.2.5.4.7. *)
+  and any_other_end_tag_in_body l name mode =
+    let rec close = function
+      | [] -> mode ()
+      | {element_name = (ns, name') as name''}::rest ->
+        if ns = `HTML && name' = name then
+          pop_implied ~except:name l mode
+        else
+          if Element.is_special name'' then
+            report l (`Unmatched_end_tag name) !throw mode
+          else close rest
+    in
+    close !open_elements
+
+  (* Part of 8.2.5.4.7. *)
+  and adoption_agency_algorithm l name mode =
+    Subtree.enable subtree_buffer;
+    emit_text (fun () ->
+    let handled, errors =
+      Subtree.adoption_agency_algorithm
+        subtree_buffer active_formatting_elements l name
+    in
+    let rec report_all errors k =
+      match errors with
+      | [] -> k ()
+      | (l, error)::more ->
+        report l error !throw (fun () -> report_all more k)
+    in
+    report_all errors (fun () ->
+    if not handled then any_other_end_tag_in_body l name mode
+    else mode ()))
 
   (* Part of 8.2.5.4.7. *)
   and select_in_body l t next_mode =

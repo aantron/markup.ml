@@ -470,18 +470,18 @@ let tests = [
         1,  1, S  `End_element;
         1,  1, S (start_element "body");
         1,  1, S (start_element "p");
+        1,  8, E (`Unmatched_start_tag "strong");
         1,  4, S (start_element "em");
         1,  8, S (start_element "strong");
-        1,  8, E (`Unmatched_start_tag "strong");
         1, 16, S (`Text ["foo"]);
         1, 19, S  `End_element;
         1, 19, S  `End_element;
         1, 19, S  `End_element;
         1, 19, S (start_element "p");
-        1,  4, S (start_element "em");
-        1,  8, S (start_element "strong");
         1,  8, E (`Unmatched_start_tag "strong");
         1,  4, E (`Unmatched_start_tag "em");
+        1,  4, S (start_element "em");
+        1,  8, S (start_element "strong");
         1, 22, S (`Text ["bar"]);
         1, 25, S  `End_element;
         1, 25, S  `End_element;
@@ -580,5 +580,115 @@ let tests = [
     with_text_limit 8 begin fun () ->
       expect ~context:None "foobar" [ 1,  1, S (`Text ["foobar"])];
       expect ~context:None "foobarbaz" [ 1,  1, S (`Text ["foobarba"; "z"])]
-    end)
+    end);
+
+  ("html.parser.adoption-agency.simple" >:: fun _ ->
+    expect ~context:None "foo<b>bar</b>baz"
+      [ 1,  1, S (`Text ["foo"]);
+        1,  4, S (start_element "b");
+        1,  7, S (`Text ["bar"]);
+        1, 10, S  `End_element;
+        1, 14, S (`Text ["baz"])]);
+
+  ("html.parser.adoption-agency.stray" >:: fun _ ->
+    expect ~context:None "foo</b>bar"
+      [ 1,  4, E (`Unmatched_end_tag "b");
+        1,  1, S (`Text ["foo"; "bar"])]);
+
+  ("html.parser.adoption-agency.nested" >:: fun _ ->
+    expect ~context:None "foo<b>bar<em>baz</em>quux</b>lulz"
+      [ 1,  1, S (`Text ["foo"]);
+        1,  4, S (start_element "b");
+        1,  7, S (`Text ["bar"]);
+        1, 10, S (start_element "em");
+        1, 14, S (`Text ["baz"]);
+        1, 17, S  `End_element;
+        1, 22, S (`Text ["quux"]);
+        1, 26, S  `End_element;
+        1, 30, S (`Text ["lulz"])]);
+
+  ("html.parser.adoption-agency.nested.stray" >:: fun _ ->
+    expect ~context:None "foo<b>bar</em>baz</b>quux"
+      [ 1, 10, E (`Unmatched_end_tag "em");
+        1,  1, S (`Text ["foo"]);
+        1,  4, S (start_element "b");
+        1,  7, S (`Text ["bar"; "baz"]);
+        1, 18, S  `End_element;
+        1, 22, S (`Text ["quux"])]);
+
+  ("html.parser.adoption-agency.interleaved" >:: fun _ ->
+    expect ~context:None "foo<b>bar<em>baz</b>quux</em>"
+      [ 1, 17, E (`Unmatched_end_tag "b");
+        1,  1, S (`Text ["foo"]);
+        1,  4, S (start_element "b");
+        1,  7, S (`Text ["bar"]);
+        1, 10, S (start_element "em");
+        1, 14, S (`Text ["baz"]);
+        1, 17, S  `End_element;
+        1, 17, S  `End_element;
+        1, 10, S (start_element "em");
+        1, 21, S (`Text ["quux"]);
+        1, 25, S  `End_element]);
+
+  ("html.parser.adoption-agency.block" >:: fun _ ->
+    expect ~context:None "foo<b>bar<p>baz</b>quux"
+      [ 1, 16, E (`Unmatched_end_tag "b");
+        1,  1, S (`Text ["foo"]);
+        1,  4, S (start_element "b");
+        1,  7, S (`Text ["bar"]);
+        1, 16, S  `End_element;
+        1, 10, S (start_element "p");
+        1,  4, S (start_element "b");
+        1, 13, S (`Text ["baz"]);
+        1, 16, S  `End_element;
+        1, 20, S (`Text ["quux"]);
+        1, 24, S  `End_element]);
+
+  ("html.parser.adoption-agency.block.nested" >:: fun _ ->
+    expect ~context:None "foo<b>bar<em>baz<strong>quux<p>blah</b>lulz"
+      [ 1, 36, E (`Unmatched_end_tag "b");
+        1, 17, E (`Unmatched_start_tag "strong");
+        1, 10, E (`Unmatched_start_tag "em");
+        1,  1, S (`Text ["foo"]);
+        1,  4, S (start_element "b");
+        1,  7, S (`Text ["bar"]);
+        1, 10, S (start_element "em");
+        1, 14, S (`Text ["baz"]);
+        1, 17, S (start_element "strong");
+        1, 25, S (`Text ["quux"]);
+        1, 36, S  `End_element;
+        1, 36, S  `End_element;
+        1, 36, S  `End_element;
+        1, 10, S (start_element "em");
+        1, 17, S (start_element "strong");
+        1, 29, S (start_element "p");
+        1,  4, S (start_element "b");
+        1, 32, S (`Text ["blah"]);
+        1, 36, S  `End_element;
+        1, 40, S (`Text ["lulz"]);
+        1, 44, S  `End_element;
+        1, 44, S  `End_element;
+        1, 44, S  `End_element]);
+
+  ("html.parser.adoption-agency.reconstructed" >:: fun _ ->
+    expect ~context:None "<p><b>foo<p>bar<em>baz</b>quux"
+      [ 1,  1, S (start_element "p");
+        1,  4, E (`Unmatched_start_tag "b");
+        1,  4, S (start_element "b");
+        1,  7, S (`Text ["foo"]);
+        1, 10, S  `End_element;
+        1, 10, S  `End_element;
+        1, 10, S (start_element "p");
+        1, 23, E (`Unmatched_end_tag "b");
+        1, 16, E (`Unmatched_start_tag "em");
+        1,  4, S (start_element "b");
+        1, 13, S (`Text ["bar"]);
+        1, 16, S (start_element "em");
+        1, 20, S (`Text ["baz"]);
+        1, 23, S  `End_element;
+        1, 23, S  `End_element;
+        1, 16, S (start_element "em");
+        1, 27, S (`Text ["quux"]);
+        1, 31, S  `End_element;
+        1, 31, S  `End_element])
 ]
