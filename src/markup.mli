@@ -1,7 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-(** Error-recovering functional HTML and XML parsers and writers.
+(** Error-recovering streaming HTML and XML parsers and writers.
 
     Markup.ml is an HTML and XML parsing and serialization library. It:
 
@@ -799,13 +799,10 @@ val of_kstream : 'a Kstream.t -> ('a, _) stream
     {3 To be corrected}
 
     - XML: There is no attribute value normalization.
-    - HTML: The {e adoption agency algorithm} is not implemented, because it
-      requires non-local adjustments.
     - HTML: {e foster parenting} is not implemented, because it requires
       non-local adjustments.
     - HTML: Quirks mode is not honored. This affects the interaction between
       automatic closing of [p] elements and opening of [table] elements.
-    - HTML: The parser ignores the {e head element pointer}.
     - HTML: The parser ignores the {e form element pointer}.
     - HTML: The parser ignores interactions between [form] and [template].
     - HTML: The form translation for [isindex] is completely ignored. [isindex]

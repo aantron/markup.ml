@@ -1,18 +1,50 @@
-# Markup.ml &nbsp; [![version 0.6][version]][releases] [![(BSD license)][license-img]][license]
+# Markup.ml &nbsp; [![version 0.6][version]][releases] [![Documentation][docs-img]][Markup] [![BSD license][license-img]][license] [![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
 
-[version]:     https://img.shields.io/badge/version-0.6-blue.svg
-[license-img]: https://img.shields.io/badge/license-BSD-blue.svg
+[version]:       https://img.shields.io/badge/version-0.6-blue.svg
+[docs-img]:      https://img.shields.io/badge/docs-online-blue.svg
+[license-img]:   https://img.shields.io/badge/license-BSD-blue.svg
+[travis]:        https://travis-ci.org/aantron/markup.ml/branches
+[travis-img]:    https://img.shields.io/travis/aantron/markup.ml/master.svg
+[coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
+[coveralls-img]: https://img.shields.io/coveralls/aantron/markup.ml/master.svg
 
 Markup.ml is a pair of best-effort parsers implementing the HTML5 and XML
 specifications. Usage is simple, because each parser is just a function from
 byte streams to parsing signal streams:
 
-![Markup.ml usage example][sample]
+```ocaml
+# let bad_html = "<body><p><em>Markup.ml<p>rocks!";;
 
-[sample]: https://raw.githubusercontent.com/aantron/markup.ml/master/doc/sample.gif
+# type my_dom = Text of string | Element of string * my_dom list;;
+
+
+# string bad_html |> parse_html |> signals;;
+val it : (signal, sync) stream = <abstr>
+
+# it |> tree
+    ~text:(fun ss -> Text (String.concat "" ss))
+    ~element:(fun (_, name) _ children -> Element (name, children));;
+val it : my_dom option =
+  Some
+    (Element ("body"
+      [Element ("p", [Element "em", [Text "Markup.ml"])]);
+       Element ("p", [Element "em", [Text "Markup.ml"])])]))
+
+
+# string bad_html |> parse_html |> signals
+  |> pretty_print |> write_html |> to_channel stdout;;
+<body>
+  <p>
+    <em>Markup.ml</em>
+  </p>
+  <p>
+    <em>rocks!</em>
+  </p>
+</body>
+```
 
 Here is a breakdown of how the last expression above corrects errors in, and
-pretty-prints, the small HTML fragment `bad_html`:
+pretty-prints, `bad_html`:
 
 ```ocaml
 string bad_html         "<body><p><em>Markup.ml<p>rocks!"
@@ -39,32 +71,34 @@ string bad_html         "<body><p><em>Markup.ml<p>rocks!"
 
 In addition to being error-correcting, the parsers are:
 
-- *streaming*: capable of parsing partial input while more input is still being
-  received;
-- *lazy*: not parsing input unless it is needed to emit the next parsing signal,
-  so you can easily stop parsing partway through a document – in the example,
-  no parsing happens until `to_string` is called;
-- *non-blocking*: they can be used with [Lwt][lwt], but still provide a
+- **streaming**: capable of parsing partial input and emitting signals while
+  more input is still being received;
+- **lazy**: not parsing input unless it is needed to emit the next parsing
+  signal, so you can easily stop parsing partway through a document;
+- **non-blocking**: they can be used with [Lwt][lwt], but still provide a
   straightforward synchronous interface for simple usage; and
-- *one-pass*: memory consumption is limited since the parsers don't build up a
+- **one-pass**: memory consumption is limited since the parsers don't build up a
   document representation, nor buffer input beyond a small amount of lookahead.
 
 The parsers detect character encodings automatically. Strings emitted are in
 UTF-8.
 
-The parsers are subjected to fairly thorough [testing][tests], with more tests
-to be added in the future.
+The parsers are subjected to fairly thorough [testing][tests].
 
-## Interface and simple usage
+For a higher-level parser, see [Lambda Soup][lambdasoup], which is based on
+Markup.ml, but can search documents using CSS selectors, and perform various
+manipulations.
+
+## Overview and basic usage
 
 The interface is centered around four functions between byte streams and signal
 streams: [`parse_html`][parse_html], [`write_html`][write_html],
 [`parse_xml`][parse_xml], and [`write_xml`][write_xml]. These have several
 optional arguments for fine-tuning their behavior. The rest of the functions
-either input or output byte streams, or transform signal streams in some
-interesting way.
+either [input][input] or [output][output] byte streams, or
+[transform][transform] signal streams in some interesting way.
 
-An example with an optional argument:
+Here is an example with an optional argument:
 
 ```ocaml
 (* Show up to 10 XML well-formedness errors to the user. Stop after
@@ -79,7 +113,11 @@ let report =
 file "some.xml" |> parse_xml ~report |> signals |> drain
 ```
 
-## Advanced: Cohttp + Markup.ml + Lambda Soup + Lwt
+[input]: http://aantron.github.io/markup.ml/#2_Inputsources
+[output]: http://aantron.github.io/markup.ml/#2_Outputdestinations
+[transform]: http://aantron.github.io/markup.ml/#2_Utility
+
+## Advanced: [Cohttp][cohttp] + Markup.ml + [Lambda Soup][lambdasoup] + [Lwt][lwt]
 
 The code below is a complete program that requests a Google search, then
 performs a streaming scrape of result titles. The first GitHub link is printed,
@@ -142,9 +180,12 @@ opam install markup
 
 ## Documentation
 
-The interface of Markup.ml is three modules [`Markup`][Markup],
+The interface of Markup.ml is three modules: [`Markup`][Markup],
 [`Markup_lwt`][Markup_lwt], and [`Markup_lwt_unix`][Markup_lwt_unix]. The last
-two are available only if you have Lwt installed.
+two are available only if you have [Lwt][lwt] installed.
+
+The documentation includes a summary of the [conformance status][conformance] of
+Markup.ml.
 
 ## Help wanted
 
@@ -159,25 +200,15 @@ would be appreciated.
 I have much more experience with Lwt than Async, so if you would like to create
 an Async interface, it would be very welcome.
 
-Please see the [CONTRIBUTING][contributing] file.
-
-Feel free to open any issues on GitHub, or send me an email at
-[antonbachin@yahoo.com][email].
-
-[![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
-
-[travis]:        https://travis-ci.org/aantron/markup.ml/branches
-[travis-img]:    https://img.shields.io/travis/aantron/markup.ml/master.svg
-[coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
-[coveralls-img]: https://img.shields.io/coveralls/aantron/markup.ml/master.svg
+Please see the [`CONTRIBUTING`][contributing] file. Feel free to open issues on
+GitHub, or send me an email at [antonbachin@yahoo.com][email].
 
 ## License
 
-Markup.ml is distributed under the BSD license. See [LICENSE][license].
-
-The Markup.ml source distribution includes a copy of the HTML5 entity list,
-which is distributed under the W3C document license. The copyright notices and
-text of this license are also found in [LICENSE][license].
+Markup.ml is distributed under the [BSD license][license]. The Markup.ml source
+distribution includes a copy of the HTML5 entity list, which is distributed
+under the W3C document license. The copyright notices and text of this license
+are found in [`LICENSE`][license].
 
 [releases]:        https://github.com/aantron/markup.ml/releases
 [parse_html]:      http://aantron.github.io/markup.ml/#VALparse_html
@@ -189,9 +220,12 @@ text of this license are also found in [LICENSE][license].
 [tests]:           https://github.com/aantron/markup.ml/tree/master/test
 [signal]:          http://aantron.github.io/markup.ml/#TYPEsignal
 [lwt]:             http://ocsigen.org/lwt/
+[lambdasoup]:      https://github.com/aantron/lambda-soup
+[cohttp]:          https://github.com/mirage/ocaml-cohttp
 [license]:         https://github.com/aantron/markup.ml/blob/master/doc/LICENSE
 [contributing]:    https://github.com/aantron/markup.ml/blob/master/doc/CONTRIBUTING.md
 [email]:           mailto:antonbachin@yahoo.com
 [Markup]:          http://aantron.github.io/markup.ml
 [Markup_lwt]:      http://aantron.github.io/markup.ml/Markup_lwt.html
 [Markup_lwt_unix]: http://aantron.github.io/markup.ml/Markup_lwt_unix.html
+[conformance]:     http://aantron.github.io/markup.ml/#2_Conformancestatus
