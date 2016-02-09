@@ -1339,7 +1339,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   (* 8.2.5. *)
   and dispatch tokens rules =
-    next_expected tokens !throw begin fun ((_, t) as v) ->
+    next tokens !throw (fun () -> !ended ()) begin fun ((_, t) as v) ->
       let foreign =
         match Stack.adjusted_current_element context open_elements, t with
         | None, _ -> false

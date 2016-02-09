@@ -60,5 +60,14 @@ let tests = [
     parser |> signals |> next |> ignore;
     assert_equal (location parser) (1, 10);
     parser |> signals |> next |> ignore;
-    assert_equal (location parser) (1, 10))
+    assert_equal (location parser) (1, 10));
+
+  ("integration.reread-html-tree" >:: fun _ ->
+    let stream = "<p></p>" |> string |> parse_html |> signals in
+
+    let assemble () =
+      stream |> tree ~text:(fun _ -> ()) ~element:(fun _ _ _ -> ()) in
+
+    assert_equal ~msg:"fi" (assemble ()) (Some ());
+    assert_equal ~msg:"fi" (assemble ()) None)
 ]

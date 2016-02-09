@@ -993,6 +993,11 @@ let tests = [
         1, 45, S  `End_element;
         1, 56, S  `End_element]);
 
+  ("html.parser.form" >:: fun _ ->
+    expect ~context:None "<form></form>"
+      [ 1,  1, S (start_element "form");
+        1,  7, S  `End_element]);
+
   ("html.parser.noframes" >:: fun _ ->
     expect ~context:None "<noframes>foo&amp;bar</a></noframes>"
       [ 1,  1, S (start_element "noframes");
