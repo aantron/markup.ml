@@ -60,11 +60,17 @@ let tree ~text ~element s throw k =
     match_content [] throw (fun ts ->
     k (element name attributes ts))
 
+  and match_root () =
+    next s throw (fun () -> k None) begin function
+      | `Start_element e -> match_element e throw (fun t -> k (Some t))
+      | `Text s -> k (Some (text s))
+      | `End_element -> k None
+      | `Doctype _ | `Xml _ | `PI _ | `Comment _ -> match_root ()
+    end
+
   in
 
-  match_content [] throw (function
-    | [] -> k None
-    | t::_ -> k (Some t))
+  match_root ()
 
 let elements select s =
   let depth = ref 0 in

@@ -57,6 +57,19 @@ let tests = [
     |> tree ~text:ignore ~element:(fun _ _ _ -> ())
     |> assert_equal None);
 
+  ("utility.tree.reread" >:: fun _ ->
+    let signals =
+      [start_element "p";
+       `End_element;
+       start_element "p";
+       `End_element]
+      |> of_list
+    in
+
+    tree signals ~text:ignore ~element:(fun _ _ _ -> ()) |> ignore;
+
+    signals |> to_list |> List.length |> assert_equal 2);
+
   ("utility.text" >:: fun _ ->
     [`Xml {Markup.version = "1.0"; encoding = None; standalone = None};
      `Comment "blah";
