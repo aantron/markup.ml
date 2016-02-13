@@ -525,27 +525,28 @@ val content : ([< signal ], 's) stream -> (content_signal, 's) stream
 (** Converts a {!signal} stream into a {!content_signal} stream by filtering out
     all signals besides [`Start_element], [`End_element], and [`Text]. *)
 
-val tree :
-  text:(string list -> 'a) ->
-  element:(name -> (name * string) list -> 'a list -> 'a) ->
-  ([< signal ], sync) stream -> 'a option
-(** Assembles tree data structures from signal streams. This is done by first
-    ignoring all signals except [`Text], [`Start_element], and [`End_element].
-    The remaining signals are then parsed according to the following grammar:
+val trees :
+  ?text:(string list -> 'a) ->
+  ?element:(name -> (name * string) list -> 'a list -> 'a) ->
+  ?comment:(string -> 'a) ->
+  ?pi:(string -> string -> 'a) ->
+  ?xml:(xml_declaration -> 'a) ->
+  ?doctype:(doctype -> 'a) ->
+  ([< signal ], 's) stream -> ('a, 's) stream
+(** Assembles tree data structures of type ['a] from signal streams. Streams are
+    parsed according to the following grammar:
 
 {[
-tree    ::= text | element
-text    ::= `Text
-element ::= `Start_element tree* `End_element
+stream  ::= node*
+node    ::= element | `Text | `Comment | `PI | `Xml | `Doctype
+element ::= `Start_element node* `End_element
 ]}
 
-    Each time the function matches [text], it calls [~text] to convert it into
-    your tree type ['a]. Each time the function matches [element], it calls
-    [~element] with the element's name, attributes, and list of nested subtrees,
-    for the same purpose. The result of the whole call is the tree representing
-    the top-level [text] or [element] found. If the signal stream has multiple
-    top-level trees (if it is a sequence of top-level text and elements), only
-    the first one is matched.
+    Each time [trees] matches [node], it calls the corresponding function to
+    convert the node into your tree type ['a]. For example, when [trees] matches
+    [`Text ss], it calls [~text ss], if [~text] is supplied. Similarly, when
+    [trees] matches [element], it calls [~element name attributes children], if
+    [~element] is supplied.
 
     For example,
 
@@ -569,7 +570,20 @@ Element ("p" [
   Element ("em", [Text "easy"]);
   Text " to parse"])
 ]}
- *)
+
+    emitted on the stream resulting from [trees]. If there are multiple
+    top-level nodes, they are emitted on the result stream in sequence. *)
+
+val tree :
+  ?text:(string list -> 'a) ->
+  ?element:(name -> (name * string) list -> 'a list -> 'a) ->
+  ?comment:(string -> 'a) ->
+  ?pi:(string -> string -> 'a) ->
+  ?xml:(xml_declaration -> 'a) ->
+  ?doctype:(doctype -> 'a) ->
+  ([< signal ], sync) stream -> 'a option
+(** Calls [trees] with its arguments, and evaluates to the first tree emitted,
+    if any. *)
 
 val elements :
   (name -> (name * string) list -> bool) ->
@@ -750,8 +764,12 @@ sig
   (** {2 Utility} *)
 
   val tree :
-    text:(string list -> 'a) ->
-    element:(name -> (name * string) list -> 'a list -> 'a) ->
+    ?text:(string list -> 'a) ->
+    ?element:(name -> (name * string) list -> 'a list -> 'a) ->
+    ?comment:(string -> 'a) ->
+    ?pi:(string -> string -> 'a) ->
+    ?xml:(xml_declaration -> 'a) ->
+    ?doctype:(doctype -> 'a) ->
     ([< signal ], _) stream -> 'a option io
 end
 

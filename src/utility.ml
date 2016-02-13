@@ -39,38 +39,60 @@ let _unwrap_lists ls =
   in
   make emit
 
-let tree ~text ~element s throw k =
-  let rec match_content acc throw k =
-    next s throw (fun () -> k (List.rev acc)) begin function
-      | `Start_element e ->
-        match_element e throw (fun t ->
-        match_content (t::acc) throw k)
+let trees ?text ?element ?comment ?pi ?xml ?doctype s =
+  let rec match_node throw k none =
+    next s throw none begin function
+      | `Start_element (name, attributes) ->
+        match_content [] throw (fun children ->
+        match element with
+        | None -> match_node throw k none
+        | Some element -> k (element name attributes children))
 
-      | `Text s ->
-        match_content ((text s)::acc) throw k
+      | `End_element -> none ()
 
-      | `End_element ->
-        k (List.rev acc)
+      | `Text ss ->
+        begin match text with
+        | None -> match_node throw k none
+        | Some text -> k (text ss)
+        end
 
-      | `Doctype _ | `Xml _ | `PI _ | `Comment _ ->
-        match_content acc throw k
+      | `Doctype d ->
+        begin match doctype with
+        | None -> match_node throw k none
+        | Some doctype -> k (doctype d)
+        end
+
+      | `Xml x ->
+        begin match xml with
+        | None -> match_node throw k none
+        | Some xml -> k (xml x)
+        end
+
+      | `PI (t, s) ->
+        begin match pi with
+        | None -> match_node throw k none
+        | Some pi -> k (pi t s)
+        end
+
+      | `Comment s ->
+        begin match comment with
+        | None -> match_node throw k none
+        | Some comment -> k (comment s)
+        end
     end
 
-  and match_element (name, attributes) throw k =
-    match_content [] throw (fun ts ->
-    k (element name attributes ts))
-
-  and match_root () =
-    next s throw (fun () -> k None) begin function
-      | `Start_element e -> match_element e throw (fun t -> k (Some t))
-      | `Text s -> k (Some (text s))
-      | `End_element -> k None
-      | `Doctype _ | `Xml _ | `PI _ | `Comment _ -> match_root ()
-    end
+  and match_content acc throw k =
+    match_node throw
+      (fun n -> match_content (n::acc) throw k)
+      (fun () -> k (List.rev acc))
 
   in
 
-  match_root ()
+  (fun throw e k -> match_node throw k e) |> make
+
+let tree ?text ?element ?comment ?pi ?xml ?doctype s throw k =
+  let s' = trees ?text ?element ?comment ?pi ?xml ?doctype s in
+  next s' throw (fun () -> k None) (fun t -> k (Some t))
 
 let elements select s =
   let depth = ref 0 in

@@ -213,8 +213,12 @@ sig
   val to_list : ('a, _) stream -> 'a list io
 
   val tree :
-    text:(string list -> 'a) ->
-    element:(name -> (name * string) list -> 'a list -> 'a) ->
+    ?text:(string list -> 'a) ->
+    ?element:(name -> (name * string) list -> 'a list -> 'a) ->
+    ?comment:(string -> 'a) ->
+    ?pi:(string -> string -> 'a) ->
+    ?xml:(xml_declaration -> 'a) ->
+    ?doctype:(doctype -> 'a) ->
     ([< signal ], _) stream -> 'a option io
 end
 
@@ -291,7 +295,8 @@ struct
 
   let to_list s = Kstream.to_list s |> IO.of_cps
 
-  let tree ~text ~element s = Utility.tree ~text ~element s |> IO.of_cps
+  let tree ?text ?element ?comment ?pi ?xml ?doctype s =
+    Utility.tree ?text ?element ?comment ?pi ?xml ?doctype s |> IO.of_cps
 end
 
 include Asynchronous (Synchronous)
