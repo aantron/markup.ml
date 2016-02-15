@@ -7,7 +7,7 @@ and email at [antonbachin@yahoo.com][email].
 
 A development version of Markup.ml can be installed in two ways. The easiest is
 
-```sh
+```
 opam source --dev-repo --pin markup
 ```
 

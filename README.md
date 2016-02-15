@@ -12,62 +12,9 @@ Markup.ml is a pair of best-effort parsers implementing the HTML5 and XML
 specifications. Usage is simple, because each parser is just a function from
 byte streams to parsing signal streams:
 
-```ocaml
-# let bad_html = "<body><p><em>Markup.ml<p>rocks!";;
+![Usage example][sample]
 
-# type my_dom = Text of string | Element of string * my_dom list;;
-
-
-# string bad_html |> parse_html |> signals;;
-val it : (signal, sync) stream = <abstr>
-
-# it |> tree
-    ~text:(fun ss -> Text (String.concat "" ss))
-    ~element:(fun (_, name) _ children -> Element (name, children));;
-val it : my_dom option =
-  Some
-    (Element ("body"
-      [Element ("p", [Element "em", [Text "Markup.ml"])]);
-       Element ("p", [Element "em", [Text "Markup.ml"])])]))
-
-
-# string bad_html |> parse_html |> signals
-  |> pretty_print |> write_html |> to_channel stdout;;
-<body>
-  <p>
-    <em>Markup.ml</em>
-  </p>
-  <p>
-    <em>rocks!</em>
-  </p>
-</body>
-```
-
-Here is a breakdown of how the last expression above corrects errors in, and
-pretty-prints, `bad_html`:
-
-```ocaml
-string bad_html         "<body><p><em>Markup.ml<p>rocks!"
-
-|> parse_html           `Start_element "body"
-|> signals              `Start_element "p"
-                        `Start_element "em"
-                        `Text ["Markup.ml"]
-                        ~report (1, 4) (`Unmatched_start_tag "em")
-                        `End_element                   (* /em: recovery *)
-                        `End_element                   (* /p: not an error *)
-                        `Start_element "p"
-                        `Start_element "em"            (* recovery *)
-                        `Text ["rocks!"]
-                        `End_element                   (* /em *)
-                        `End_element                   (* /p *)
-                        `End_element                   (* /body *)
-
-|> pretty_print         (* adjusts the `Text signals *)
-
-|> write_html
-|> to_channel stdout;;  "...shown above..."            (* valid HTML *)
-```
+[sample]: https://github.com/aantron/markup.ml/blob/master/doc/sample.png
 
 In addition to being error-correcting, the parsers are:
 
@@ -83,7 +30,33 @@ In addition to being error-correcting, the parsers are:
 The parsers detect character encodings automatically. Strings emitted are in
 UTF-8.
 
-The parsers are subjected to fairly thorough [testing][tests].
+Here is a breakdown showing the signal stream and errors emitted during the
+parsing and pretty-printing of `bad_html`:
+
+```ocaml
+string bad_html         "<body><p><em>Markup.ml<p>rocks!"
+
+|> parse_html           `Start_element "body"
+|> signals              `Start_element "p"
+                        `Start_element "em"
+                        `Text ["Markup.ml"]
+                        ~report (1, 10) (`Unmatched_start_tag "em")
+                        `End_element                   (* /em: recovery *)
+                        `End_element                   (* /p: not an error *)
+                        `Start_element "p"
+                        `Start_element "em"            (* recovery *)
+                        `Text ["rocks!"]
+                        `End_element                   (* /em *)
+                        `End_element                   (* /p *)
+                        `End_element                   (* /body *)
+
+|> pretty_print         (* adjusts the `Text signals *)
+
+|> write_html
+|> to_channel stdout;;  "...shown above..."            (* valid HTML *)
+```
+
+The parsers are subjected to thorough [testing][tests].
 
 For a higher-level parser, see [Lambda Soup][lambdasoup], which is based on
 Markup.ml, but can search documents using CSS selectors, and perform various
