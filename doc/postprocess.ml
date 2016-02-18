@@ -26,6 +26,9 @@ let transforms =
    "Markup.Encoding.html",
      [UpTo "index.html"; Meta ("Encoding - Markup.ml", None)];
 
+   "Markup.Ns.html",
+     [UpTo "index.html"; Meta ("Ns - Markup.ml", None)];
+
    "Markup.ASYNCHRONOUS.html",
      [UpTo "index.html"; Class "asynchronous";
       Meta ("ASYNCHRONOUS - Markup.ml", None)];

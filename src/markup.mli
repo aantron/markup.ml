@@ -656,6 +656,32 @@ val strings_to_bytes : (string, 's) stream -> (char, 's) stream
 
 
 
+(** {2 Namespaces} *)
+
+(** Common namespace URIs. *)
+module Ns :
+sig
+  val html : string
+  (** [http://www.w3.org/1999/xhtml]. Use for HTML and XHTML. *)
+
+  val svg : string
+  (** [http://www.w3.org/2000/svg]. *)
+
+  val mathml : string
+  (** [http://www.w3.org/1998/Math/MathML]. *)
+
+  val xml : string
+  (** [http://www.w3.org/XML/1998/namespace]. *)
+
+  val xmlns : string
+  (** [http://www.w3.org/2000/xmlns/]. *)
+
+  val xlink : string
+  (** [http://www.w3.org/1999/xlink]. *)
+end
+
+
+
 (** {2 Asynchronous interface} *)
 
 (**/**)

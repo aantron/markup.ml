@@ -159,6 +159,18 @@ include Utility
 
 
 
+module Ns =
+struct
+  let html = Common.html_ns
+  let svg = Common.svg_ns
+  let mathml = Common.mathml_ns
+  let xml = Common.xml_ns
+  let xmlns = Common.xmlns_ns
+  let xlink = Common.xlink_ns
+end
+
+
+
 module type ASYNCHRONOUS =
 sig
   type 'a io
