@@ -117,9 +117,9 @@ let () =
     >|= Markup.elements (fun name _ -> snd name = "h3")
     >>= Markup_lwt.iter begin fun h3_subtree ->
       h3_subtree
-      |> Markup.write_html
-      |> Markup_lwt.to_string
-      >|= Soup.parse
+      |> Markup_lwt.to_list
+      >|= Markup.of_list
+      >|= Soup.from_signals
       >|= fun soup ->
         let open Soup in
         match soup $? "a[href*=github]" with
@@ -142,7 +142,7 @@ ocamlfind opt -linkpkg -package lwt.unix -package cohttp.lwt \
 You can get all the necessary packages by
 
 ```sh
-opam install lwt cohttp lambdasoup markup
+opam install lwt ssl cohttp lambdasoup markup
 ```
 
 ## Installing
