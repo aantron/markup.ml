@@ -20,14 +20,14 @@ In addition to being error-correcting, the parsers are:
 
 - **streaming**: capable of parsing partial input and emitting signals while
   more input is still being received;
-- **lazy**: not parsing input unless it is needed to emit the next parsing
-  signal, so you can easily stop parsing partway through a document;
+- **lazy**: not parsing input unless you have requested the next parsing signal,
+  so you can easily stop parsing partway through a document;
 - **non-blocking**: they can be used with [Lwt][lwt], but still provide a
   straightforward synchronous interface for simple usage; and
 - **one-pass**: memory consumption is limited since the parsers don't build up a
   document representation, nor buffer input beyond a small amount of lookahead.
 
-The parsers detect character encodings automatically. Strings emitted are in
+The parsers detect character encodings automatically, and emit everything in
 UTF-8.
 
 Here is a breakdown showing the signal stream and errors emitted during the
@@ -56,7 +56,7 @@ string bad_html         "<body><p><em>Markup.ml<p>rocks!"
 |> to_channel stdout;;  "...shown above..."            (* valid HTML *)
 ```
 
-The parsers are subjected to thorough [testing][tests].
+The parsers are [tested][tests] thoroughly.
 
 For a higher-level parser, see [Lambda Soup][lambdasoup], which is based on
 Markup.ml, but can search documents using CSS selectors, and perform various
