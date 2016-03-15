@@ -96,7 +96,7 @@ struct
       |> encoding ~report
       |> Input.preprocess Common.is_valid_xml_char report
       |> Xml_tokenizer.tokenize report entity
-      |> Xml_parser.parse context namespace report
+      |> Markup__xml_parser.parse context namespace report
       |> k
     in
 

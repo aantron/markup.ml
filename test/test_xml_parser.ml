@@ -23,7 +23,7 @@ let expect ?context ?(namespace = no_top_level_namespaces) text signals =
   |> Encoding.utf_8
   |> Input.preprocess is_valid_xml_char Error.ignore_errors
   |> Xml_tokenizer.tokenize Error.ignore_errors no_custom_entities
-  |> Xml_parser.parse context namespace report
+  |> Markup__xml_parser.parse context namespace report
   |> iter iterate;
 
   ended ()
