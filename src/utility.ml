@@ -94,6 +94,30 @@ let tree ?text ?element ?comment ?pi ?xml ?doctype s throw k =
   let s' = trees ?text ?element ?comment ?pi ?xml ?doctype s in
   next s' throw (fun () -> k None) (fun t -> k (Some t))
 
+type 'a node =
+  [ `Element of name * (name * string) list * 'a list
+  | `Text of string
+  | `Doctype of doctype
+  | `Xml of xml_declaration
+  | `PI of string * string
+  | `Comment of string ]
+
+let from_tree f node =
+  let rec traverse acc node =
+    match f node with
+    | `Element (name, attributes, children) ->
+      children
+      |> List.fold_left traverse ((`Start_element (name, attributes))::acc)
+      |> fun acc -> `End_element::acc
+
+    | `Text s -> (`Text [s])::acc
+
+    | `Doctype _ | `Xml _ | `PI _ | `Comment _ as node ->
+      node::acc
+  in
+
+  traverse [] node |> List.rev |> of_list
+
 let elements select s =
   let depth = ref 0 in
   let started = ref 0 in

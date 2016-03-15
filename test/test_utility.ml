@@ -70,6 +70,23 @@ let tests = [
 
     signals |> to_list |> List.length |> assert_equal 2);
 
+  ("utility.from_tree" >:: fun _ ->
+    let dom =
+      Element ("p", [Text "foo"; Element ("em", [Text "bar"]); Text "baz"]) in
+    dom
+    |> from_tree (function
+      | Element (name, children) -> `Element (("", name), [], children)
+      | Text s -> `Text s)
+    |> to_list
+    |> assert_equal [
+      start_element "p";
+      `Text ["foo"];
+      start_element "em";
+      `Text ["bar"];
+      `End_element;
+      `Text ["baz"];
+      `End_element]);
+
   ("utility.text" >:: fun _ ->
     [`Xml {Markup.version = "1.0"; encoding = None; standalone = None};
      `Comment "blah";

@@ -585,6 +585,21 @@ val tree :
 (** Calls [trees] with its arguments, and evaluates to the first tree emitted,
     if any. *)
 
+type 'a node =
+  [ `Element of name * (name * string) list * 'a list
+  | `Text of string
+  | `Doctype of doctype
+  | `Xml of xml_declaration
+  | `PI of string * string
+  | `Comment of string ]
+(** See {!from_tree} below. *)
+
+val from_tree : ('a -> 'a node) -> 'a -> (signal, sync) stream
+(** Deconstructs tree data structures of type ['a] into signal streams. The
+    function argument is applied to each node. In case the node is an element,
+    the function should evaluate to [`Element (_, _, children)], where
+    [children], is, of course, the list of that node's children in the tree. *)
+
 val elements :
   (name -> (name * string) list -> bool) ->
   ([< signal ] as 'a, 's) stream ->
