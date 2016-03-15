@@ -486,6 +486,15 @@ val peek : ('a, sync) stream -> 'a option
 (** Retrieves the next item in the stream, if any, but does not remove the item
     from the stream. *)
 
+val transform :
+  ('a -> 'b -> 'c list * 'a option) -> 'a -> ('b, 's) stream -> ('c, 's) stream
+(** [transform f init s] creates a stream by repeatedly applying [f acc v],
+    where [acc] is an accumulator whose initial value is [init], and [v] is
+    consecutive values of [s]. Each time, [f acc v] evaluates to a pair
+    [(vs, maybe_acc')]. The values [vs] are added to the result stream. If
+    [maybe_acc'] is [Some acc'], the accumulator is set to [acc']. Otherwise, if
+    [maybe_acc'] is [None], the result stream ends. *)
+
 val fold : ('a -> 'b -> 'a) -> 'a -> ('b, sync) stream -> 'a
 (** [fold f init s] eagerly folds over the items [v], [v'], [v''], ... of [s],
     i.e. evaluates [f (f (f init v) v') v'']... *)
@@ -793,6 +802,9 @@ sig
   val next : ('a, _) stream -> 'a option io
   val peek : ('a, _) stream -> 'a option io
 
+  val transform :
+    ('a -> 'b -> ('c list * 'a option) io) -> 'a -> ('b, _) stream ->
+      ('c, async) stream
   val fold : ('a -> 'b -> 'a io) -> 'a -> ('b, _) stream -> 'a io
   val map : ('a -> 'b io) -> ('a, _) stream -> ('b, async) stream
   val filter : ('a -> bool io) -> ('a, _) stream -> ('a, async) stream

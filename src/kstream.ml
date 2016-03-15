@@ -75,6 +75,24 @@ let checkpoint s =
   let restore () = push_list s (List.rev !buffer) in
   s', restore
 
+let transform f init s =
+  let current_acc = ref (Some init) in
+  let to_emit = ref [] in
+  let rec operate throw e k =
+    match !to_emit with
+    | v::more -> to_emit := more; k v
+    | [] ->
+      match !current_acc with
+      | None -> e ()
+      | Some acc ->
+        next s throw e (fun v ->
+          f acc v throw (fun (vs, acc') ->
+            to_emit := vs;
+            current_acc := acc';
+            operate throw e k))
+  in
+  make operate
+
 let map f s = (fun throw e k -> next s throw e (fun v -> f v throw k)) |> make
 
 let rec fold f v s throw k =

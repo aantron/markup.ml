@@ -40,6 +40,7 @@ val peek_n : int -> 'a t -> 'a list cps
 val tap : ('a -> unit) -> 'a t -> (unit -> unit)
 val checkpoint : 'a t -> 'a t * (unit -> unit)
 
+val transform : ('a -> 'b -> ('c list * 'a option) cps) -> 'a -> 'b t -> 'c t
 val map : ('a -> 'b cps) -> 'a t -> 'b t
 val fold : ('a -> 'b -> 'a cps) -> 'a -> 'b t -> 'a cps
 val iter : ('a -> unit cps) -> 'a t -> unit cps

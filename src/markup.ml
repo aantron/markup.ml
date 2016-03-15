@@ -215,6 +215,9 @@ sig
   val next : ('a, _) stream -> 'a option io
   val peek : ('a, _) stream -> 'a option io
 
+  val transform :
+    ('a -> 'b -> ('c list * 'a option) io) -> 'a -> ('b, _) stream ->
+      ('c, async) stream
   val fold : ('a -> 'b -> 'a io) -> 'a -> ('b, _) stream -> 'a io
   val map : ('a -> 'b io) -> ('a, _) stream -> ('b, async) stream
   val filter : ('a -> bool io) -> ('a, _) stream -> ('a, async) stream
@@ -290,6 +293,9 @@ struct
 
   let next s = Kstream.next_option s |> IO.of_cps
   let peek s = Kstream.peek_option s |> IO.of_cps
+
+  let transform f v s =
+    Kstream.transform (fun v s -> IO.to_cps (fun () -> f v s)) v s
 
   let fold f v s =
     Kstream.fold (fun v v' -> IO.to_cps (fun () -> f v v')) v s |> IO.of_cps

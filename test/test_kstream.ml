@@ -235,6 +235,17 @@ let internal_tests = [
     let s = of_list [1; 2; 3] |> map (fun _ throw _ -> throw exn) in
     to_list s failed (wrong_k "did not fail"));
 
+  ("kstream.internal.transform" >:: fun _ ->
+    let nth_double n =
+      transform (fun acc v _ k ->
+        if acc = n then k ([v; v], None)
+        else k ([], Some (acc + 1)))
+        0
+    in
+
+    let s = of_list [1; 2; 3] |> nth_double 1 in
+    to_list s failed_wrong (assert_equal [2; 2]));
+
   ("kstream.internal.fold" >:: fun _ ->
     fold (fun v v' _ k -> k (v + v')) 0 (of_list [1; 2; 3]) failed_wrong
       (assert_equal 6));
