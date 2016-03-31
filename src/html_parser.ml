@@ -136,7 +136,7 @@ sig
   val uninitialized : unit -> t
   val initialize :
     (location * Html_tokenizer.token) Kstream.t ->
-    _simple_context option ->
+    [< _simple_context ] option ->
     t ->
       unit cps
 

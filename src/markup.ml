@@ -189,7 +189,7 @@ sig
     ?encoding:Encoding.t ->
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
-    ?context:[ `Document | `Fragment ] ->
+    ?context:[< `Document | `Fragment ] ->
     (char, _) stream -> async parser
 
   val write_xml :
@@ -200,7 +200,7 @@ sig
   val parse_html :
     ?report:(location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
-    ?context:[ `Document | `Fragment of string ] ->
+    ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser
 
   val write_html : ([< signal ], _) stream -> (char, async) stream

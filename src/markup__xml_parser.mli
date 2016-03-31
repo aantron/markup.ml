@@ -4,7 +4,7 @@
 open Common
 
 val parse :
-  [ `Document | `Fragment ] option ->
+  [< `Document | `Fragment ] option ->
   (string -> string option) ->
   Error.parse_handler ->
   (location * Xml_tokenizer.token) Kstream.t ->

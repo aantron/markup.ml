@@ -330,7 +330,7 @@ val parse_xml :
   ?encoding:Encoding.t ->
   ?namespace:(string -> string option) ->
   ?entity:(string -> string option) ->
-  ?context:[ `Document | `Fragment ] ->
+  ?context:[< `Document | `Fragment ] ->
   (char, 's) stream -> 's parser
 (** Creates a parser that converts an XML byte stream to a signal stream.
 
@@ -378,7 +378,7 @@ val write_xml :
 val parse_html :
   ?report:(location -> Error.t -> unit) ->
   ?encoding:Encoding.t ->
-  ?context:[ `Document | `Fragment of string ] ->
+  ?context:[< `Document | `Fragment of string ] ->
   (char, 's) stream -> 's parser
 (** Similar to {!parse_xml}, but parses HTML with embedded SVG and MathML, never
     emits signals [`Xml] or [`PI], and [~context] has a different type on tag
@@ -663,7 +663,7 @@ val html5 : ([< signal ], 's) stream -> (signal, 's) stream
     between XHTML and HTML, for example. *)
 
 val xhtml :
-  ?dtd:[ `Strict_1_0 | `Transitional_1_0 | `Frameset_1_0 | `Strict_1_1 ] ->
+  ?dtd:[< `Strict_1_0 | `Transitional_1_0 | `Frameset_1_0 | `Strict_1_1 ] ->
   ([< signal ], 's) stream -> (signal, 's) stream
 (** Similar to [html], but does not strip processing instructions, and prefixes
     an XHTML document type declaration and an XML declaration. The [~dtd]
@@ -770,7 +770,7 @@ sig
     ?encoding:Encoding.t ->
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
-    ?context:[ `Document | `Fragment ] ->
+    ?context:[< `Document | `Fragment ] ->
     (char, _) stream -> async parser
 
   val write_xml :
@@ -783,7 +783,7 @@ sig
   val parse_html :
     ?report:(location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
-    ?context:[ `Document | `Fragment of string ] ->
+    ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser
 
   val write_html : ([< signal ], _) stream -> (char, async) stream
