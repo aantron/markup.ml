@@ -223,7 +223,13 @@ struct
   let initialize tokens requested_context state throw k =
     (fun k ->
       match requested_context with
-      | Some c -> k (c, None)
+      | Some (`Fragment element) ->
+        (* HTML element names are case-insensitive, even in foreign content.
+           Lowercase the element name given by the user before analysis by the
+           parser, to match this convention. [String.lowercase] is acceptable
+           here because the API assumes the string [element] is in UTF-8. *)
+        k (`Fragment (String.lowercase element), None)
+      | Some (`Document as c) -> k (c, None)
       | None -> _detect tokens throw k)
     (fun (detected_context, deciding_token) ->
 

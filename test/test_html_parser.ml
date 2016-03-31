@@ -539,6 +539,11 @@ let tests = [
       [ 1,  1, S (`Start_element ((svg_ns, "a"), []));
         1,  4, S  `End_element]);
 
+  ("html.parser.context-case-insensitivity" >:: fun _ ->
+    expect ~context:(Some (`Fragment "SVG")) "<a></a>"
+      [ 1,  1, S (`Start_element ((svg_ns, "a"), []));
+        1,  4, S  `End_element]);
+
   ("html.parser.bad-self-closing-tag" >:: fun _ ->
     expect "<p/>"
       [ 1,  1, S (start_element "html");
