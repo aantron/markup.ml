@@ -37,6 +37,14 @@ let tests = [
       ("<!DOCTYPE html><html><head></head><body><p><em>foo</em></p>" ^
        "<p><em>bar</em></p></body></html>"));
 
+  ("integration.html.context-disambiguation" >:: fun _ ->
+    "<a></a>"
+    |> string
+    |> parse_html ~context:(`Fragment "svg")
+    |> signals
+    |> to_list
+    |> assert_equal [`Start_element ((Ns.svg, "a"), []); `End_element]);
+
   ("integration.pretty_print" >:: fun _ ->
     "<root>foo<nested>bar</nested><nested>baz</nested></root>"
     |> string

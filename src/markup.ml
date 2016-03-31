@@ -116,13 +116,13 @@ struct
     |> Xml_writer.write report prefix
     |> Utility.strings_to_bytes
 
-  let parse_html report ?encoding _context source =
+  let parse_html report ?encoding context source =
     let with_encoding (encoding : Encoding.t) k =
       source
       |> encoding ~report
       |> Input.preprocess Common.is_valid_html_char report
       |> Html_tokenizer.tokenize report
-      |> Html_parser.parse None report
+      |> Html_parser.parse context report
       |> k
     in
 
