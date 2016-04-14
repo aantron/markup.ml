@@ -232,7 +232,7 @@ let tokenize report (input, get_location) =
           let convert s semicolon k' =
             let maybe_n =
               try Some (int_of_string s)
-              with Failure "int_of_string" -> None
+              with Failure _ -> None
             in
 
             match maybe_n with
