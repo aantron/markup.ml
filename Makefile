@@ -183,7 +183,7 @@ all-tests :
 OUTPUT := _build/src
 generated = \
 	$(OUTPUT)/$(1).cma $(OUTPUT)/$(1).cmxa $(OUTPUT)/$(1).a $(OUTPUT)/$(1).cmi \
-	$(OUTPUT)/$(1).mli $(OUTPUT)/$(1).cmti $(OUTPUT)/$(1).cmt
+	$(OUTPUT)/$(1).mli $(OUTPUT)/$(1).cmti $(OUTPUT)/$(1).cmt $(OUTPUT)/$(1).cmx
 INSTALL := \
 	$(call generated,$(LIB)) \
 	$(call generated,$(LIB)_lwt) \
