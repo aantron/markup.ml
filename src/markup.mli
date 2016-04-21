@@ -678,6 +678,10 @@ val strings_to_bytes : (string, 's) stream -> (char, 's) stream
 (** [strings_to_bytes s] is the stream of all the bytes of all strings in
     [s]. *)
 
+val compare_locations : location -> location -> int
+(** Orders locations according to their appearance in an input stream, i.e.
+    first by line, and then, for locations on the same line, by column. *)
+
 
 
 (** {2 Namespaces} *)

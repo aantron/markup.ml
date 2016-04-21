@@ -50,6 +50,7 @@ let of_list = Kstream.of_list
 
 
 type location = Common.location
+let compare_locations = Common.compare_locations
 
 module Error = Error
 

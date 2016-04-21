@@ -6,6 +6,11 @@ type 'a cps = exn cont -> 'a cont -> unit
 
 type location = int * int
 
+let compare_locations (line, column) (line', column') =
+  match line - line' with
+  | 0 -> column - column'
+  | order -> order
+
 type name = string * string
 
 let (|>) x f = f x
