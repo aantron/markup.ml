@@ -155,6 +155,11 @@ let to_file f bytes = Stream_io.to_file f bytes |> Synchronous.of_cps
 
 
 
+let preprocess_input_stream source =
+  Input.preprocess (fun _ -> true) Error.ignore_errors source
+
+
+
 include Utility
 
 
