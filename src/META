@@ -1,11 +1,11 @@
-version = "0.7.1"
+version = "0.7.2"
 description = "Error-recovering functional HTML5 and XML parsers"
 requires = "uutf"
 archive(byte) = "markup.cma"
 archive(native) = "markup.cmxa"
 
 package "lwt" (
-  version = "0.7.1"
+  version = "0.7.2"
   description = "Error-recovering functional HTML5 and XML parsers"
   exists_if = "markup_lwt.cma"
   requires = "markup lwt"
@@ -13,7 +13,7 @@ package "lwt" (
   archive(native) = "markup_lwt.cmxa"
 
   package "unix" (
-    version = "0.7.1"
+    version = "0.7.2"
     description = "Error-recovering functional HTML5 and XML parsers"
     exists_if = "markup_lwt_unix.cma"
     requires = "markup.lwt lwt.unix"
