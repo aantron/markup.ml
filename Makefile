@@ -1,5 +1,5 @@
 LIB := markup
-VERSION := 0.7.2
+VERSION := 0.7.3
 
 if_package = ! ocamlfind query $(1) > /dev/null 2> /dev/null || ( $(2) )
 

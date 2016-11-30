@@ -1,6 +1,6 @@
-# Markup.ml &nbsp; [![version 0.7.2][version]][releases] [![Documentation][docs-img]][Markup] [![BSD license][license-img]][license] [![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
+# Markup.ml &nbsp; [![version 0.7.3][version]][releases] [![Documentation][docs-img]][Markup] [![BSD license][license-img]][license] [![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
 
-[version]:       https://img.shields.io/badge/version-0.7.2-blue.svg
+[version]:       https://img.shields.io/badge/version-0.7.3-blue.svg
 [docs-img]:      https://img.shields.io/badge/docs-online-blue.svg
 [license-img]:   https://img.shields.io/badge/license-BSD-blue.svg
 [travis]:        https://travis-ci.org/aantron/markup.ml/branches
