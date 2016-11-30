@@ -109,8 +109,10 @@ type ('a, 's) stream
 
 (** {2 Errors}
 
-    The parsers try to recover from errors automatically. Look in module
-    {!Error} if you need to debug parser output or want stricter behavior. *)
+    The parsers recover from errors automatically. If that is sufficient, you
+    can ignore this section. However, if you want stricter behavior, or need to
+    debug parser output, use optional argument [?report] of the parsers, and
+    look in module {!Error}. *)
 
 type location = int * int
 (** Line and column for parsing errors. Both numbers are one-based. *)
@@ -143,7 +145,7 @@ sig
         [`Bad_token ("&", "attribute", "replace with '&amp;'")]
 
       - [`Unexpected_eoi where] is reported by the parsers when the input ends
-        before an item such as a tag, element, or comment is closed. [where]
+        before an item, such as a tag, element, or comment, is closed. [where]
         describes the kind of item that wasn't closed.
 
       - [`Bad_document s] is reported by the parsers when there is a problem
@@ -180,8 +182,9 @@ end
 
 (** {2 Encodings}
 
-    The parsers detect encodings automatically. Look in module {!Encoding} if
-    you need to specify an encoding. *)
+    The parsers detect encodings automatically. If you need to specify an
+    encoding, use optional argument [?encoding] of the parsers, and look in
+    module {!Encoding}. *)
 
 (** Common Internet encodings such as UTF-8 and UTF-16; also includes some less
     popular encodings that are sometimes necessary for parsing XML encoding
@@ -278,20 +281,20 @@ content ::= `Text | element | `PI | `Comment
     it will emit the signal sequence
 
 {[
-`Xml {version = "1.0"; encoding = None; standalone = None};
-`Start_element (("", "root"), []);
+`Xml {version = "1.0"; encoding = None; standalone = None}
+`Start_element (("", "root"), [])
 `Text ["text"]
-`Start_element (("", "nested"), []);
+`Start_element (("", "nested"), [])
 `Text ["more text"]
 `End_element
 `End_element
 ]}
 
     The [`Text] signal carries a [string list] instead of a single [string]
-    because on 32-bit platforms, strings cannot be larger than 16MB. In case the
-    parsers encounter a very long sequence of text, one whose length exceeds
-    about [Sys.max_string_length / 2], they will emit a [`Text] signal with
-    several strings. *)
+    because on 32-bit platforms, OCaml strings cannot be larger than 16MB. In
+    case the parsers encounter a very long sequence of text, one whose length
+    exceeds about [Sys.max_string_length / 2], they will emit a [`Text] signal
+    with several strings. *)
 
 type content_signal =
   [ `Start_element of name * (name * string) list
@@ -334,7 +337,7 @@ val parse_xml :
   (char, 's) stream -> 's parser
 (** Creates a parser that converts an XML byte stream to a signal stream.
 
-    For simple usage, [bytes |> parse_xml |> signals].
+    For simple usage, [string "foo" |> parse_xml |> signals].
 
     If [~report] is provided, [report] is called for every error encountered.
     You may raise an exception in [report], and it will propagate to the code
@@ -395,9 +398,8 @@ foo</bar>
 
     parses differently in [title] elements than in [p] elements. In the former,
     it is parsed as [foo</bar>], while in the latter, it is [foo] followed by a
-    parse error due to unmatched tag [</bar>]. To get these behaviors for a
-    fragment consisting of only the text, you set [~context] to
-    [`Fragment "title"] and [`Fragment "p"], respectively.
+    parse error due to unmatched tag [</bar>]. To get these behaviors, set
+    [~context] to [`Fragment "title"] and [`Fragment "p"], respectively.
 
     If you use [`Fragment "svg"], the fragment is assumed to be SVG markup.
     Likewise, [`Fragment "math"] causes the parser to parse MathML markup.
@@ -480,7 +482,8 @@ val stream : (unit -> 'a option) -> ('a, sync) stream
     [f ()] evaluates to [None], the stream ends. *)
 
 val next : ('a, sync) stream -> 'a option
-(** Retrieves the next item in the stream, if any. *)
+(** Retrieves the next item in the stream, if any, and removes it from the
+    stream. *)
 
 val peek : ('a, sync) stream -> 'a option
 (** Retrieves the next item in the stream, if any, but does not remove the item
@@ -488,9 +491,9 @@ val peek : ('a, sync) stream -> 'a option
 
 val transform :
   ('a -> 'b -> 'c list * 'a option) -> 'a -> ('b, 's) stream -> ('c, 's) stream
-(** [transform f init s] creates a stream by repeatedly applying [f acc v],
-    where [acc] is an accumulator whose initial value is [init], and [v] is
-    consecutive values of [s]. Each time, [f acc v] evaluates to a pair
+(** [transform f init s] lazily creates a stream by repeatedly applying
+    [f acc v], where [acc] is an accumulator whose initial value is [init], and
+    [v] is consecutive values of [s]. Each time, [f acc v] evaluates to a pair
     [(vs, maybe_acc')]. The values [vs] are added to the result stream. If
     [maybe_acc'] is [Some acc'], the accumulator is set to [acc']. Otherwise, if
     [maybe_acc'] is [None], the result stream ends. *)
@@ -500,16 +503,17 @@ val fold : ('a -> 'b -> 'a) -> 'a -> ('b, sync) stream -> 'a
     i.e. evaluates [f (f (f init v) v') v'']... *)
 
 val map : ('a -> 'b) -> ('a, 's) stream -> ('b, 's) stream
-(** [map f s] applies [f] to each item of [s], and produces the resulting
+(** [map f s] lazily applies [f] to each item of [s], and produces the resulting
     stream. *)
 
 val filter : ('a -> bool) -> ('a, 's) stream -> ('a, 's) stream
-(** [filter f s] is [s] without the items for which [f] evaluates to [false]. *)
+(** [filter f s] is [s] without the items for which [f] evaluates to [false].
+    [filter] is lazy. *)
 
 val filter_map : ('a -> 'b option) -> ('a, 's) stream -> ('b, 's) stream
-(** [filter_map f s] applies [f] to each item [v] of [s]. If [f v] evaluates to
-    [Some v'], the result stream has [v']. If [f v] evaluates to [None], no item
-    corresponding to [v] appears in the result stream. *)
+(** [filter_map f s] lazily applies [f] to each item [v] of [s]. If [f v]
+    evaluates to [Some v'], the result stream has [v']. If [f v] evaluates to
+    [None], no item corresponding to [v] appears in the result stream. *)
 
 val iter : ('a -> unit) -> ('a, sync) stream -> unit
 (** [iter f s] eagerly applies [f] to each item of [s], i.e. evaluates
@@ -517,7 +521,7 @@ val iter : ('a -> unit) -> ('a, sync) stream -> unit
 
 val drain : ('a, sync) stream -> unit
 (** [drain s] eagerly consumes [s]. This is useful for observing side effects,
-    such as parsing errors when you don't care about the parsing signals
+    such as parsing errors, when you don't care about the parsing signals
     themselves. It is equivalent to [iter ignore s]. *)
 
 val of_list : 'a list -> ('a, sync) stream
@@ -591,8 +595,8 @@ val tree :
   ?xml:(xml_declaration -> 'a) ->
   ?doctype:(doctype -> 'a) ->
   ([< signal ], sync) stream -> 'a option
-(** Calls [trees] with its arguments, and evaluates to the first tree emitted,
-    if any. *)
+(** Calls [trees] with its arguments, and eagerly retrieves the first tree
+    emitted, if any. *)
 
 type 'a node =
   [ `Element of name * (name * string) list * 'a list
@@ -605,9 +609,33 @@ type 'a node =
 
 val from_tree : ('a -> 'a node) -> 'a -> (signal, sync) stream
 (** Deconstructs tree data structures of type ['a] into signal streams. The
-    function argument is applied to each node. In case the node is an element,
-    the function should evaluate to [`Element (_, _, children)], where
-    [children], is, of course, the list of that node's children in the tree. *)
+    function argument is applied to each data structuee node. For example,
+
+{[
+type dom = Text of string | Element of name * dom list
+
+let dom =
+  Element ("p" [
+    Text "HTML5 is ";
+    Element ("em", [Text "easy"]);
+    Text " to parse"])
+
+dom |> from_tree (function
+  | Text s -> `Text s
+  | Element (name, children) -> `Element (name, [], children))
+]}
+
+    results in the signal stream
+
+{[
+`Start_element (("", "p"), [])
+`Text ["HTML5 is "]
+`Start_element (("", "em"), [])
+`Text ["easy"]
+`End_element
+`Text " to parse"
+`End_element
+]} *)
 
 val elements :
   (name -> (name * string) list -> bool) ->
@@ -617,9 +645,7 @@ val elements :
     [`Start_element (name, attributes)] signals that satisfy
     [f name attributes]. Each such matching signal is the beginning of a
     substream that ends with the corresponding [`End_element] signal. The result
-    of [elements f s] is the stream of these substreams. In simpler words,
-    [elements f s] creates a sequence of streams of elements in [s] that match
-    [f].
+    of [elements f s] is the stream of these substreams.
 
     Matches don't nest. If there is a matching element contained in another
     matching element, only the top one results in a substream.
@@ -629,9 +655,9 @@ val elements :
     should not try to read a previous one. *)
 
 val text : ([< signal ], 's) stream -> (char, 's) stream
-(** Extracts all the text in a signal stream by discarding all markup, i.e. for
-    each [`Text ss] signal, the result stream has the bytes of the strings [ss],
-    and all other signals are ignored. *)
+(** Extracts all the text in a signal stream by discarding all markup. For each
+    [`Text ss] signal, the result stream has the bytes of the strings [ss], and
+    all other signals are ignored. *)
 
 val trim : ([> `Text of string list ] as 'a, 's) stream -> ('a, 's) stream
 (** Trims whitespace in a signal stream. For each signal [`Text ss], transforms
@@ -653,22 +679,23 @@ val normalize_text :
     up the [`Text] signals. *)
 
 val pretty_print : ([> content_signal ] as 'a, 's) stream -> ('a, 's) stream
-(** Adjusts the [`Text] signals in the given stream so that the output appears
-    nicely-indented when the stream is written. *)
+(** Adjusts the whitespace in the [`Text] signals in the given stream so that
+    the output appears nicely-indented when the stream is converted to bytes and
+    written. *)
 
 val html5 : ([< signal ], 's) stream -> (signal, 's) stream
 (** Converts a signal stream into an HTML5 signal stream by stripping any
     document type declarations, XML declarations, and processing instructions,
     and prefixing the HTML5 doctype declaration. This is useful when converting
-    between XHTML and HTML, for example. *)
+    between XHTML and HTML. *)
 
 val xhtml :
   ?dtd:[< `Strict_1_0 | `Transitional_1_0 | `Frameset_1_0 | `Strict_1_1 ] ->
   ([< signal ], 's) stream -> (signal, 's) stream
-(** Similar to [html], but does not strip processing instructions, and prefixes
-    an XHTML document type declaration and an XML declaration. The [~dtd]
-    argument specifies which DTD to refer to in the doctype declaration. The
-    default is [`Strict_1_1]. *)
+(** Similar to {!html5}, but does not strip processing instructions, and
+    prefixes an XHTML document type declaration and an XML declaration. The
+    [~dtd] argument specifies which DTD to refer to in the doctype declaration.
+    The default is [`Strict_1_1]. *)
 
 val xhtml_entity : string -> string option
 (** Translates XHTML entities. This function is for use with the [~entity]
@@ -735,17 +762,16 @@ end
 
     The difference is that functions here can take ['a io] (i.e. ['a Lwt.t])
     threads instead of plain functions as arguments. As a consequence, all of
-    them evaluate to either [async] streams, or threads of type ['a io].
+    them evaluate to either [async] streams, or to threads of type ['a io].
 
     Note that several functions in {!Markup} can take [async] streams as
-    {e arguments}, such as [Markup.map], [Markup.parse_xml], or [Markup.trim].
-    Where those functions, like [trim], don't take another function as argument,
-    they are not duplicated in this signature. [map] and [parse_xml] {e are}
-    provided here because some of their function arguments are replaced by
-    ['a io] threads.
+    {e arguments}, such as {!Markup.map}, {!Markup.parse_xml}, or
+    {!Markup.trim}. Where those functions, like {!Markup.trim}, don't take
+    another function as argument, they are not duplicated in this signature.
+    {!Markup.map} and {!Markup.parse_xml} {e are} provided here because some of
+    their function arguments are replaced by ['a io] threads.
 
-    All functions here accept both [sync] and [async] streams as arguments.
- *)
+    All functions here accept both [sync] and [async] streams as arguments. *)
 module type ASYNCHRONOUS =
 sig
   (** {2 Threads} *)
@@ -899,5 +925,4 @@ val preprocess_input_stream :
       between [head] and [body], are not moved into [head].
     - HTML: [<html>] tags found in the body do not have their attributes added
       to the [`Start_element "html"] signal emitted at the beginning of the
-      document.
-*)
+      document. *)

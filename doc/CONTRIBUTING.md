@@ -30,8 +30,8 @@ The modules depend on each other in roughly the order they are tested in
 
 ## Testing
 
-To test the code, you need package [ounit]. Then, simply run [make test] for
-unit tests. If you also have [bisect_ppx] installed, a coverage report will be
+To test the code, you need package `ounit`. Then, simply run `make test` for
+unit tests. If you also have `bisect_ppx` installed, a coverage report will be
 generated. There are several other kinds of testing:
 
 - `make performance-test` measures time for Markup.ml to parse some XML and HTML
@@ -44,7 +44,7 @@ generated. There are several other kinds of testing:
   and that no dependencies are missing. To get the most out of this test, it
   should be done on an OPAM switch that has Lwt but does not have Uutf.
 
-All tests can be run with [make all-tests]. This also generates the
+All tests can be run with `make all-tests`. This also generates the
 documentation, to make sure that it is not broken.
 
 [repo]:    https://github.com/aantron/markup.ml

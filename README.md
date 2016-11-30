@@ -8,9 +8,9 @@
 [coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
 [coveralls-img]: https://img.shields.io/coveralls/aantron/markup.ml/master.svg
 
-Markup.ml is a pair of best-effort parsers implementing the HTML5 and XML
-specifications. Usage is simple, because each parser is just a function from
-byte streams to parsing signal streams:
+Markup.ml is a pair of parsers implementing the HTML5 and XML specifications,
+including error recovery. Usage is simple, because each parser is a function
+from byte streams to parsing signal streams:
 
 ![Usage example][sample]
 
@@ -18,8 +18,8 @@ byte streams to parsing signal streams:
 
 In addition to being error-correcting, the parsers are:
 
-- **streaming**: capable of parsing partial input and emitting signals while
-  more input is still being received;
+- **streaming**: parsing partial input and emitting signals while more input is
+  still being received;
 - **lazy**: not parsing input unless you have requested the next parsing signal,
   so you can easily stop parsing partway through a document;
 - **non-blocking**: they can be used with [Lwt][lwt], but still provide a
@@ -28,7 +28,7 @@ In addition to being error-correcting, the parsers are:
   document representation, nor buffer input beyond a small amount of lookahead.
 
 The parsers detect character encodings automatically, and emit everything in
-UTF-8.
+UTF-8. The HTML parser understands SVG and MathML, in addition to HTML5.
 
 Here is a breakdown showing the signal stream and errors emitted during the
 parsing and pretty-printing of `bad_html`:
@@ -160,15 +160,10 @@ two are available only if you have [Lwt][lwt] installed.
 The documentation includes a summary of the [conformance status][conformance] of
 Markup.ml.
 
-## Help wanted
-
-Parsing markup has more applications than one person can easily think of, which
-makes it difficult to do exhaustive testing. I would greatly appreciate any bug
-reports.
+## Contributing
 
 Although the parsers are in an "advanced" state of completion, there is still
-considerable work to be done on standard conformance and speed. Again, any help
-would be appreciated.
+considerable work to be done on speed.
 
 I have much more experience with Lwt than Async, so if you would like to create
 an Async interface, it would be very welcome.
@@ -192,7 +187,7 @@ are found in [`LICENSE`][license].
 [XML]:             https://www.w3.org/TR/xml/
 [tests]:           https://github.com/aantron/markup.ml/tree/master/test
 [signal]:          http://aantron.github.io/markup.ml/#TYPEsignal
-[lwt]:             http://ocsigen.org/lwt/
+[lwt]:             https://github.com/ocsigen/lwt
 [lambdasoup]:      https://github.com/aantron/lambda-soup
 [cohttp]:          https://github.com/mirage/ocaml-cohttp
 [license]:         https://github.com/aantron/markup.ml/blob/master/doc/LICENSE
