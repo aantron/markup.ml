@@ -8,6 +8,8 @@ type t = ?report:Error.parse_handler -> char Kstream.t -> int Kstream.t
 
 let wrap f = fun ?(report = Error.ignore_errors) s -> f report s
 
+let _bytes_empty = Bytes.create 0
+
 (* Decoders based on the Uutf library. *)
 let _uutf_decoder encoding name =
   (fun report bytes ->
@@ -17,15 +19,15 @@ let _uutf_decoder encoding name =
       let rec run () =
         match Uutf.decode decoder with
         | `End -> empty ()
-        | `Uchar c -> k c
+        | `Uchar c -> k (Uchar.to_int c)
         | `Malformed s ->
           let location = Uutf.decoder_line decoder, Uutf.decoder_col decoder in
           report location (`Decoding_error (s, name)) throw (fun () ->
-          k Uutf.u_rep)
+          k u_rep)
         | `Await ->
           next bytes throw
-            (fun () -> Uutf.Manual.src decoder "" 0 0; run ())
-            (fun c -> Uutf.Manual.src decoder (String.make 1 c) 0 1; run ())
+            (fun () -> Uutf.Manual.src decoder _bytes_empty 0 0; run ())
+            (fun c -> Uutf.Manual.src decoder (Bytes.make 1 c) 0 1; run ())
       in
       run ())
     |> make)
@@ -79,7 +81,7 @@ let _ucs_4_decoder arrange name =
               let s = Printf.sprintf "%c%c%c%c" b1 b2 b3 b4 in
               report (!line, !column) (`Decoding_error (s, name)) throw
                 (fun () ->
-              char k Uutf.u_rep)
+              char k u_rep)
             else
               let scalar =
                 (high lsl 24) lor (b3' lsl 16) lor (b2' lsl 8) lor low in
@@ -87,7 +89,7 @@ let _ucs_4_decoder arrange name =
               let skip =
                 if !first then begin
                   first := false;
-                  scalar = Uutf.u_bom
+                  scalar = Uchar.to_int Uutf.u_bom
                 end
                 else
                   false
@@ -107,7 +109,7 @@ let _ucs_4_decoder arrange name =
             l |> List.iter (Buffer.add_char buffer);
             report (!line, !column)
               (`Decoding_error (Buffer.contents buffer, name)) throw (fun () ->
-            char k Uutf.u_rep)
+            char k u_rep)
         end
       in
       run ())

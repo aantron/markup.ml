@@ -241,7 +241,7 @@ let tokenize report (input, get_location) =
               report location
                 (`Bad_token (prefix ^ text ^ semicolon, "character reference",
                              "out of range")) !throw (fun () ->
-              k (Some (`One Uutf.u_rep)))
+              k (Some (`One u_rep)))
           in
 
           consume_semicolon begin fun semicolon ->
@@ -261,7 +261,7 @@ let tokenize report (input, get_location) =
                     (`Bad_token (prefix ^ text ^ semicolon,
                                  "character reference", "out of range"))
                     !throw (fun () ->
-                  k (Some (`One Uutf.u_rep)))
+                  k (Some (`One u_rep)))
 
                 | n when is_control_character n || is_non_character n ->
                   report location
@@ -427,7 +427,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "content", "null")) !throw (fun () ->
-        emit (l, `Char Uutf.u_rep) rcdata_state)
+        emit (l, `Char u_rep) rcdata_state)
 
       | None ->
         emit_eof ()
@@ -444,7 +444,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "content", "null")) !throw (fun () ->
-        emit (l, `Char Uutf.u_rep) rawtext_state)
+        emit (l, `Char u_rep) rawtext_state)
 
       | None ->
         emit_eof ()
@@ -461,7 +461,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "content", "null")) !throw (fun () ->
-        emit_character l Uutf.u_rep script_data_state)
+        emit_character l u_rep script_data_state)
 
       | None ->
         emit_eof ()
@@ -475,7 +475,7 @@ let tokenize report (input, get_location) =
     next_option input !throw begin function
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "content", "null")) !throw (fun () ->
-        emit (l, `Char Uutf.u_rep) plaintext_state)
+        emit (l, `Char u_rep) plaintext_state)
 
       | None ->
         emit_eof ()
@@ -562,7 +562,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "tag name", "null")) !throw (fun () ->
-        add_utf_8 tag._tag_name Uutf.u_rep;
+        add_utf_8 tag._tag_name u_rep;
         tag_name_state l' tag)
 
       | None ->
@@ -676,7 +676,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "script", "null")) !throw (fun () ->
-        emit_character l Uutf.u_rep (fun () ->
+        emit_character l u_rep (fun () ->
         script_data_escaped_state l'))
 
       | None ->
@@ -699,7 +699,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "script", "null")) !throw (fun () ->
-        emit_character l Uutf.u_rep (fun () ->
+        emit_character l u_rep (fun () ->
         script_data_escaped_state l'))
 
       | None ->
@@ -725,7 +725,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "script", "null")) !throw (fun () ->
-        emit_character l Uutf.u_rep (fun () ->
+        emit_character l u_rep (fun () ->
         script_data_escaped_state l'))
 
       | None ->
@@ -787,7 +787,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "script", "null")) !throw (fun () ->
-        emit_character l Uutf.u_rep (fun () ->
+        emit_character l u_rep (fun () ->
         script_data_double_escaped_state l'))
 
       | None ->
@@ -811,7 +811,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "script", "null")) !throw (fun () ->
-        emit_character l Uutf.u_rep (fun () ->
+        emit_character l u_rep (fun () ->
         script_data_double_escaped_state l'))
 
       | None ->
@@ -838,7 +838,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "script", "null")) !throw (fun () ->
-        emit_character l Uutf.u_rep (fun () ->
+        emit_character l u_rep (fun () ->
         script_data_double_escaped_state l'))
 
       | None ->
@@ -905,7 +905,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "attribute name", "null")) !throw
           (fun () ->
-        start_attribute Uutf.u_rep)
+        start_attribute u_rep)
 
       | Some (l, (0x0022 | 0x0027 | 0x003C | 0x003D as c)) ->
         report l (`Bad_token (char c, "attribute name",
@@ -936,7 +936,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "attribute name", "null")) !throw
           (fun () ->
-        add_utf_8 name_buffer Uutf.u_rep;
+        add_utf_8 name_buffer u_rep;
         attribute_name_state l' tag name_buffer)
 
       | Some (l, (0x0022 | 0x0027 | 0x003C as c)) ->
@@ -980,7 +980,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "attribute name", "null")) !throw
           (fun () ->
-        start_next_attribute Uutf.u_rep)
+        start_next_attribute u_rep)
 
       | Some (l, (0x0022 | 0x0027 | 0x003C as c)) ->
         report l (`Bad_token (char c, "attribute name",
@@ -1019,7 +1019,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "attribute value", "null")) !throw
           (fun () ->
-        start_value attribute_value_unquoted_state (Some Uutf.u_rep))
+        start_value attribute_value_unquoted_state (Some u_rep))
 
       | Some (l, 0x003E) ->
         report l (`Bad_token (">", "tag", "expected attribute value after '='"))
@@ -1054,7 +1054,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "attribute value", "null")) !throw
           (fun () ->
-        add_utf_8 value_buffer Uutf.u_rep;
+        add_utf_8 value_buffer u_rep;
         attribute_value_quoted_state quote l' tag name value_buffer)
 
       | None ->
@@ -1086,7 +1086,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "attribute value", "null")) !throw
           (fun () ->
-        add_utf_8 value_buffer Uutf.u_rep;
+        add_utf_8 value_buffer u_rep;
         attribute_value_unquoted_state l' tag name value_buffer)
 
       | Some (l, (0x0022 | 0x0027 | 0x003C | 0x003D | 0x0060 as c)) ->
@@ -1169,7 +1169,7 @@ let tokenize report (input, get_location) =
           emit_comment l' buffer
 
         | Some (_, 0) ->
-          add_utf_8 buffer Uutf.u_rep;
+          add_utf_8 buffer u_rep;
           consume ()
 
         | None ->
@@ -1226,7 +1226,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "comment", "null")) !throw (fun () ->
-        add_utf_8 buffer Uutf.u_rep;
+        add_utf_8 buffer u_rep;
         comment_state l' buffer)
 
       | Some (_, 0x003E) ->
@@ -1252,7 +1252,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "comment", "null")) !throw (fun () ->
         Buffer.add_char buffer '-';
-        add_utf_8 buffer Uutf.u_rep;
+        add_utf_8 buffer u_rep;
         comment_state l' buffer)
 
       | Some (_, 0x003E) ->
@@ -1278,7 +1278,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "comment", "null")) !throw (fun () ->
-        add_utf_8 buffer Uutf.u_rep;
+        add_utf_8 buffer u_rep;
         comment_state l' buffer)
 
       | None ->
@@ -1299,7 +1299,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "comment", "null")) !throw (fun () ->
         Buffer.add_char buffer '-';
-        add_utf_8 buffer Uutf.u_rep;
+        add_utf_8 buffer u_rep;
         comment_state l' buffer)
 
       | None ->
@@ -1321,7 +1321,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "comment", "null")) !throw (fun () ->
         Buffer.add_string buffer "--";
-        add_utf_8 buffer Uutf.u_rep;
+        add_utf_8 buffer u_rep;
         comment_state l' buffer)
 
       | Some (l, 0x0021) ->
@@ -1360,7 +1360,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "comment", "null")) !throw (fun () ->
         Buffer.add_string buffer "--!";
-        add_utf_8 buffer Uutf.u_rep;
+        add_utf_8 buffer u_rep;
         comment_state l' buffer)
 
       | None ->
@@ -1406,7 +1406,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "doctype", "null")) !throw (fun () ->
         doctype._doctype_name <-
-          add_doctype_char doctype._doctype_name Uutf.u_rep;
+          add_doctype_char doctype._doctype_name u_rep;
         doctype_name_state l' doctype)
 
       | Some (l, 0x003E) ->
@@ -1436,7 +1436,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "doctype", "null")) !throw (fun () ->
         doctype._doctype_name <-
-          add_doctype_char doctype._doctype_name Uutf.u_rep;
+          add_doctype_char doctype._doctype_name u_rep;
         doctype_name_state l' doctype)
 
       | None ->
@@ -1561,7 +1561,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "doctype", "null")) !throw (fun () ->
-        add doctype Uutf.u_rep;
+        add doctype u_rep;
         doctype_identifier_quoted_state add quote next_state l' doctype)
 
       | Some (l, 0x003E) ->

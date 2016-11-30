@@ -16,7 +16,7 @@ let test_ucs_4 (f : Encoding.t) name s1 s2 bad_bytes =
   begin fun report ->
     let chars = s1 |> string |> f ~report in
     next_option chars ok (assert_equal (Some (Char.code 'f')));
-    next_option chars ok (assert_equal (Some Uutf.u_rep));
+    next_option chars ok (assert_equal (Some u_rep));
     next_option chars ok (assert_equal (Some (Char.code 'o')));
     next_option chars ok (assert_equal None);
     next_option chars ok (assert_equal None)
@@ -28,7 +28,7 @@ let test_ucs_4 (f : Encoding.t) name s1 s2 bad_bytes =
     next_option chars ok (assert_equal (Some (Char.code 'f')));
     next_option chars ok (assert_equal (Some 0x000A));
     next_option chars ok (assert_equal (Some (Char.code 'o')));
-    next_option chars ok (assert_equal (Some Uutf.u_rep));
+    next_option chars ok (assert_equal (Some u_rep));
     next_option chars ok (assert_equal None);
     next_option chars ok (assert_equal None)
   end
@@ -41,7 +41,7 @@ let tests = [
       next_n 3 chars ok (assert_equal (List.map Char.code ['f'; 'o'; 'o']));
       next_option chars ok (assert_equal (Some 0x1F419));
       next_n 3 chars ok (assert_equal (List.map Char.code ['b'; 'a'; 'r']));
-      next_option chars ok (assert_equal (Some Uutf.u_rep));
+      next_option chars ok (assert_equal (Some u_rep));
       next_n 4 chars ok
         (assert_equal (List.map Char.code ['m'; 'o'; 'r'; 'e']));
       next_option chars ok (assert_equal None);
@@ -56,7 +56,7 @@ let tests = [
       next_n 3 chars ok (assert_equal (List.map Char.code ['f'; 'o'; 'o']));
       next_option chars ok (assert_equal (Some 0x1F419));
       next_option chars ok (assert_equal (Some (Char.code 'b')));
-      next_option chars ok (assert_equal (Some Uutf.u_rep));
+      next_option chars ok (assert_equal (Some u_rep));
       next_n 16 chars ok (assert_equal (List.map Char.code ['a'; 'r']));
       next_option chars ok (assert_equal None);
       next_option chars ok (assert_equal None)
@@ -70,7 +70,7 @@ let tests = [
       next_n 3 chars ok (assert_equal (List.map Char.code ['f'; 'o'; 'o']));
       next_option chars ok (assert_equal (Some 0x1F419));
       next_option chars ok (assert_equal (Some (Char.code 'b')));
-      next_option chars ok (assert_equal (Some Uutf.u_rep));
+      next_option chars ok (assert_equal (Some u_rep));
       next_n 16 chars ok (assert_equal (List.map Char.code ['a'; 'r']));
       next_option chars ok (assert_equal None);
       next_option chars ok (assert_equal None)
@@ -89,7 +89,7 @@ let tests = [
     begin fun report ->
       let chars = s |> string |> us_ascii ~report in
       next_n 3 chars ok (assert_equal (List.map Char.code ['f'; 'o'; 'o']));
-      next_option chars ok (assert_equal (Some Uutf.u_rep));
+      next_option chars ok (assert_equal (Some u_rep));
       next_n 3 chars ok (assert_equal (List.map Char.code ['b'; 'a'; 'r']));
       next_option chars ok (assert_equal None);
       next_option chars ok (assert_equal None)

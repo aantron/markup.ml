@@ -134,7 +134,7 @@ let tests = [
     expect "&#1000000000000000000000000000000;"
       [ 1,  1, E (`Bad_token ("&#1000000000000000000000000000000;",
                               reference, "out of range"));
-        1,  1, S (`Char Uutf.u_rep);
+        1,  1, S (`Char u_rep);
         1, 35, S  `EOF];
 
     expect "&#1000000000000000000000000000000"
@@ -142,22 +142,22 @@ let tests = [
                               reference, "missing ';' at end"));
         1,  1, E (`Bad_token ("&#1000000000000000000000000000000",
                               reference, "out of range"));
-        1,  1, S (`Char Uutf.u_rep);
+        1,  1, S (`Char u_rep);
         1, 34, S  `EOF];
 
     expect "&#xD800;"
       [ 1,  1, E (`Bad_token ("&#xD800;", reference, "out of range"));
-        1,  1, S (`Char Uutf.u_rep);
+        1,  1, S (`Char u_rep);
         1,  9, S  `EOF];
 
     expect "&#x110000;"
       [ 1,  1, E (`Bad_token ("&#x110000;", reference, "out of range"));
-        1,  1, S (`Char Uutf.u_rep);
+        1,  1, S (`Char u_rep);
         1, 11, S  `EOF];
 
     expect "&#0;"
       [ 1,  1, E (`Bad_token ("&#0;", reference, "out of range"));
-        1,  1, S (`Char Uutf.u_rep);
+        1,  1, S (`Char u_rep);
         1,  5, S  `EOF];
 
     expect "&#x01;"
@@ -264,7 +264,7 @@ let tests = [
     expect ~state:`RCDATA "f\x00</foo>"
       ([ 1,  1, S (`Char 0x66);
          1,  2, E (`Bad_token ("U+0000", "content", "null"));
-         1,  2, S (`Char Uutf.u_rep)] @
+         1,  2, S (`Char u_rep)] @
        (char_sequence ~start:3 "</foo>"));
 
     expect ~state:`RCDATA "<title>f</title >"
@@ -302,7 +302,7 @@ let tests = [
     expect ~state:`RAWTEXT "f\x00</foo>"
       ([ 1,  1, S (`Char 0x66);
          1,  2, E (`Bad_token ("U+0000", "content", "null"));
-         1,  2, S (`Char Uutf.u_rep)] @
+         1,  2, S (`Char u_rep)] @
        (char_sequence ~start:3 "</foo>")));
 
   ("html.tokenizer.script-data" >:: fun _ ->
@@ -330,7 +330,7 @@ let tests = [
     expect ~state:`Script_data "f<!--o\x00o"
       ((char_sequence ~no_eof:true "f<!--o") @
        [1,  7, E (`Bad_token ("U+0000", "script", "null"));
-        1,  7, S (`Char Uutf.u_rep);
+        1,  7, S (`Char u_rep);
         1,  8, S (`Char 0x6F);
         1,  9, E (`Unexpected_eoi "script");
         1,  9, S  `EOF]);
@@ -363,7 +363,7 @@ let tests = [
     expect ~state:`Script_data "f<!--a-\x00-"
       ((char_sequence ~no_eof:true "f<!--a-") @
        [ 1,  8, E (`Bad_token ("U+0000", "script", "null"));
-         1,  8, S (`Char Uutf.u_rep);
+         1,  8, S (`Char u_rep);
          1,  9, S (`Char 0x02D);
          1, 10, E (`Unexpected_eoi "script");
          1, 10, S  `EOF]);
@@ -371,7 +371,7 @@ let tests = [
     expect ~state:`Script_data "f<!--a--\x00--"
       ((char_sequence ~no_eof:true "f<!--a--") @
        [ 1,  9, E (`Bad_token ("U+0000", "script", "null"));
-         1,  9, S (`Char Uutf.u_rep);
+         1,  9, S (`Char u_rep);
          1, 10, S (`Char 0x02D);
          1, 11, S (`Char 0x02D);
          1, 12, E (`Unexpected_eoi "script");
@@ -380,14 +380,14 @@ let tests = [
     expect ~state:`Script_data "f<!--<script>\x00"
       ((char_sequence ~no_eof:true "f<!--<script>") @
        [ 1, 14, E (`Bad_token ("U+0000", "script", "null"));
-         1, 14, S (`Char Uutf.u_rep);
+         1, 14, S (`Char u_rep);
          1, 15, E (`Unexpected_eoi "script");
          1, 15, S  `EOF]);
 
     expect ~state:`Script_data "f<!--<script>-\x00-"
       ((char_sequence ~no_eof:true "f<!--<script>-") @
        [ 1, 15, E (`Bad_token ("U+0000", "script", "null"));
-         1, 15, S (`Char Uutf.u_rep);
+         1, 15, S (`Char u_rep);
          1, 16, S (`Char 0x2D);
          1, 17, E (`Unexpected_eoi "script");
          1, 17, S  `EOF]);
@@ -395,7 +395,7 @@ let tests = [
     expect ~state:`Script_data "f<!--<script>--\x00--"
       ((char_sequence ~no_eof:true "f<!--<script>--") @
        [ 1, 16, E (`Bad_token ("U+0000", "script", "null"));
-         1, 16, S (`Char Uutf.u_rep);
+         1, 16, S (`Char u_rep);
          1, 17, S (`Char 0x2D);
          1, 18, S (`Char 0x2D);
          1, 19, E (`Unexpected_eoi "script");
@@ -413,7 +413,7 @@ let tests = [
     expect ~state:`Script_data "f\x00</foo>"
       ([ 1,  1, S (`Char 0x66);
          1,  2, E (`Bad_token ("U+0000", "content", "null"));
-         1,  2, S (`Char Uutf.u_rep)] @
+         1,  2, S (`Char u_rep)] @
        (char_sequence ~start:3 "</foo>")));
 
   ("html.tokenizer.plaintext" >:: fun _ ->
@@ -424,7 +424,7 @@ let tests = [
     expect ~state:`PLAINTEXT "f\x00</foo>"
       ([ 1,  1, S (`Char 0x66);
          1,  2, E (`Bad_token ("U+0000", "content", "null"));
-         1,  2, S (`Char Uutf.u_rep)] @
+         1,  2, S (`Char u_rep)] @
        (char_sequence ~start:3 "</foo>")));
 
   ("html.tokenizer.comment" >:: fun _ ->

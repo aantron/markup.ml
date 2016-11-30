@@ -68,7 +68,10 @@ type general_token =
   | `Comment of string
   | `EOF ]
 
-let add_utf_8 = Uutf.Buffer.add_utf_8
+let u_rep = Uchar.to_int Uutf.u_rep
+
+let add_utf_8 buffer c =
+  Uutf.Buffer.add_utf_8 buffer (Uchar.unsafe_of_int c)
 
 let format_char = Printf.sprintf "U+%04X"
 

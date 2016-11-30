@@ -8,6 +8,7 @@ let _escape_attribute s =
   Uutf.String.fold_utf_8 (fun () _ -> function
     | `Malformed _ -> ()
     | `Uchar c ->
+      let c = Uchar.to_int c in
       match c with
       | 0x0026 -> Buffer.add_string buffer "&amp;"
       | 0x00A0 -> Buffer.add_string buffer "&nbsp;"
@@ -21,6 +22,7 @@ let _escape_text s =
   Uutf.String.fold_utf_8 (fun () _ -> function
     | `Malformed _ -> ()
     | `Uchar c ->
+      let c = Uchar.to_int c in
       match c with
       | 0x0026 -> Buffer.add_string buffer "&amp;"
       | 0x00A0 -> Buffer.add_string buffer "&nbsp;"

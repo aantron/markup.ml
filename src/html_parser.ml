@@ -2717,7 +2717,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `Char 0 ->
       report l (`Bad_token ("U+0000", "foreign content", "null")) !throw
         (fun () ->
-      add_character l Uutf.u_rep;
+      add_character l u_rep;
       mode ())
 
     | l, `Char (0x0009 | 0x000A | 0x000C | 0x000D | 0x0020 as c) ->
