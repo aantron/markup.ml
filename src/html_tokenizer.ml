@@ -74,11 +74,20 @@ let find_matches : (string * 'a) array -> string ->
   | 1, Some item -> `Match item
   | _, Some item -> `Match_and_continue item
 
-type _doctype_buffers =
-  {mutable _doctype_name      : Buffer.t option;
-   mutable _public_identifier : Buffer.t option;
-   mutable _system_identifier : Buffer.t option;
-   mutable _force_quirks      : bool}
+type doctype_buffers =
+  {mutable doctype_name      : Buffer.t option;
+   mutable public_identifier : Buffer.t option;
+   mutable system_identifier : Buffer.t option;
+   mutable force_quirks      : bool}
+
+module Doctype_buffers =
+struct
+  type t = doctype_buffers =
+    {mutable doctype_name      : Buffer.t option;
+     mutable public_identifier : Buffer.t option;
+     mutable system_identifier : Buffer.t option;
+     mutable force_quirks      : bool}
+end
 
 let add_doctype_char buffer c =
   let buffer =
@@ -89,11 +98,20 @@ let add_doctype_char buffer c =
   add_utf_8 buffer c;
   Some buffer
 
-type _tag_buffers =
-  {mutable _start        : bool;
-   _tag_name             : Buffer.t;
-   mutable _self_closing : bool;
-   mutable _attributes   : (string * string) list}
+type tag_buffers =
+  {mutable start        : bool;
+   tag_name             : Buffer.t;
+   mutable self_closing : bool;
+   mutable attributes   : (string * string) list}
+
+module Tag_buffers =
+struct
+  type t = tag_buffers =
+    {mutable start        : bool;
+     tag_name             : Buffer.t;
+     mutable self_closing : bool;
+     mutable attributes   : (string * string) list}
+end
 
 let sequence_to_lowercase = List.map (fun (l, c) -> l, to_lowercase c)
 
@@ -140,16 +158,17 @@ let tokenize report (input, get_location) =
         else rev_deduplicate ((n, v)::accumulator) (n::seen) more k
     in
 
-    rev_deduplicate [] [] (List.rev tag'._attributes) (fun attributes ->
+    rev_deduplicate [] [] (List.rev tag'.Tag_buffers.attributes)
+      (fun attributes ->
 
     let tag =
-      {name         = Buffer.contents tag'._tag_name;
-       self_closing = tag'._self_closing;
-       attributes   = List.rev attributes}
+      {Token_tag.name = Buffer.contents tag'.tag_name;
+       self_closing   = tag'.self_closing;
+       attributes     = List.rev attributes}
     in
 
     (fun k ->
-      if tag'._start then begin
+      if tag'.start then begin
         last_start_tag_name := Some tag.name;
         k (`Start tag)
       end
@@ -160,7 +179,7 @@ let tokenize report (input, get_location) =
             report l (`Bad_token (n, "tag", "end tag with attributes")) !throw k
           | _ -> k ())
         @@ (fun k () ->
-          if tag.self_closing then
+          if tag.Token_tag.self_closing then
             report l (`Bad_token ("/>", "tag",
                                   "end tag cannot be self-closing")) !throw k
           else k ())
@@ -173,7 +192,7 @@ let tokenize report (input, get_location) =
     emit (l, `Comment (Buffer.contents buffer)) data_state
 
   and emit_doctype ?(quirks = false) l doctype =
-    if quirks then doctype._force_quirks <- true;
+    if quirks then doctype.Doctype_buffers.force_quirks <- true;
 
     let if_not_missing = function
       | None -> None
@@ -181,11 +200,11 @@ let tokenize report (input, get_location) =
     in
 
     let doctype =
-      {doctype_name      = if_not_missing doctype._doctype_name;
-       public_identifier = if_not_missing doctype._public_identifier;
-       system_identifier = if_not_missing doctype._system_identifier;
-       raw_text          = None;
-       force_quirks      = doctype._force_quirks}
+      {Common.doctype_name = if_not_missing doctype.doctype_name;
+       public_identifier   = if_not_missing doctype.public_identifier;
+       system_identifier   = if_not_missing doctype.system_identifier;
+       raw_text            = None;
+       force_quirks        = doctype.force_quirks}
     in
 
     emit (l, `Doctype doctype) data_state
@@ -487,10 +506,10 @@ let tokenize report (input, get_location) =
   (* 8.2.4.8. *)
   and tag_open_state l' =
     let tag =
-      {_start        = true;
-       _tag_name     = Buffer.create 16;
-       _self_closing = false;
-       _attributes   = []}
+      {start        = true;
+       tag_name     = Buffer.create 16;
+       self_closing = false;
+       attributes   = []}
     in
 
     next_option input !throw begin function
@@ -501,7 +520,7 @@ let tokenize report (input, get_location) =
         end_tag_open_state l' tag
 
       | Some (_, c) when is_alphabetic c ->
-        add_utf_8 tag._tag_name (to_lowercase c);
+        add_utf_8 tag.tag_name (to_lowercase c);
         tag_name_state l' tag
 
       | Some (_, 0x003F) ->
@@ -525,11 +544,11 @@ let tokenize report (input, get_location) =
 
   (* 8.2.4.9. *)
   and end_tag_open_state l' tag =
-    tag._start <- false;
+    tag.start <- false;
 
     next_option input !throw begin function
       | Some (_, c) when is_alphabetic c ->
-        add_utf_8 tag._tag_name (to_lowercase c);
+        add_utf_8 tag.tag_name (to_lowercase c);
         tag_name_state l' tag
 
       | Some (_, 0x003E) ->
@@ -562,14 +581,14 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "tag name", "null")) !throw (fun () ->
-        add_utf_8 tag._tag_name u_rep;
+        add_utf_8 tag.tag_name u_rep;
         tag_name_state l' tag)
 
       | None ->
         report (get_location ()) (`Unexpected_eoi "tag") !throw data_state
 
       | Some (_, c) ->
-        add_utf_8 tag._tag_name (to_lowercase c);
+        add_utf_8 tag.tag_name (to_lowercase c);
         tag_name_state l' tag
     end
 
@@ -600,10 +619,10 @@ let tokenize report (input, get_location) =
   (* 8.2.4.13, 8.2.4.16, 8.2.4.19, 8.2.4.27. *)
   and text_end_tag_name_state state l' cs name_buffer =
     let create_tag () =
-      {_start        = false;
-       _tag_name     = name_buffer;
-       _self_closing = false;
-       _attributes   = []}
+      {start        = false;
+       tag_name     = name_buffer;
+       self_closing = false;
+       attributes   = []}
     in
 
     next_option input !throw begin function
@@ -923,14 +942,14 @@ let tokenize report (input, get_location) =
         after_attribute_name_state l' tag (Buffer.contents name_buffer)
 
       | Some (_, 0x002F) ->
-        tag._attributes <- (Buffer.contents name_buffer, "")::tag._attributes;
+        tag.attributes <- (Buffer.contents name_buffer, "")::tag.attributes;
         self_closing_start_tag_state l' tag
 
       | Some (_, 0x003D) ->
         before_attribute_value_state l' tag (Buffer.contents name_buffer)
 
       | Some (_, 0x003E) ->
-        tag._attributes <- (Buffer.contents name_buffer, "")::tag._attributes;
+        tag.attributes <- (Buffer.contents name_buffer, "")::tag.attributes;
         emit_tag l' tag
 
       | Some (l, 0) ->
@@ -956,7 +975,7 @@ let tokenize report (input, get_location) =
   (* 8.2.4.36. *)
   and after_attribute_name_state l' tag name =
     let start_next_attribute c =
-      tag._attributes <- (name, "")::tag._attributes;
+      tag.attributes <- (name, "")::tag.attributes;
       let name_buffer = Buffer.create 32 in
       add_utf_8 name_buffer c;
       attribute_name_state l' tag name_buffer
@@ -967,14 +986,14 @@ let tokenize report (input, get_location) =
         after_attribute_name_state l' tag name
 
       | Some (_, 0x002F) ->
-        tag._attributes <- (name, "")::tag._attributes;
+        tag.attributes <- (name, "")::tag.attributes;
         self_closing_start_tag_state l' tag
 
       | Some (_, 0x003D) ->
         before_attribute_value_state l' tag name
 
       | Some (_, 0x003E) ->
-        tag._attributes <- (name, "")::tag._attributes;
+        tag.attributes <- (name, "")::tag.attributes;
         emit_tag l' tag
 
       | Some (l, 0) ->
@@ -1024,7 +1043,7 @@ let tokenize report (input, get_location) =
       | Some (l, 0x003E) ->
         report l (`Bad_token (">", "tag", "expected attribute value after '='"))
           !throw (fun () ->
-        tag._attributes <- (name, "")::tag._attributes;
+        tag.attributes <- (name, "")::tag.attributes;
         emit_tag l' tag)
 
       | Some (l, (0x003C | 0x003D | 0x0060 as c)) ->
@@ -1043,8 +1062,8 @@ let tokenize report (input, get_location) =
   and attribute_value_quoted_state quote l' tag name value_buffer =
     next_option input !throw begin function
       | Some (_, c) when c = quote ->
-        tag._attributes <-
-          (name, Buffer.contents value_buffer)::tag._attributes;
+        tag.attributes <-
+          (name, Buffer.contents value_buffer)::tag.attributes;
         after_attribute_value_quoted_state l' tag
 
       | Some (l, 0x0026) ->
@@ -1070,8 +1089,8 @@ let tokenize report (input, get_location) =
   and attribute_value_unquoted_state l' tag name value_buffer =
     next_option input !throw begin function
       | Some (_, (0x0009 | 0x000A | 0x000C | 0x0020)) ->
-        tag._attributes <-
-          (name, Buffer.contents value_buffer)::tag._attributes;
+        tag.attributes <-
+          (name, Buffer.contents value_buffer)::tag.attributes;
         before_attribute_name_state l' tag
 
       | Some (l, 0x0026) ->
@@ -1079,8 +1098,8 @@ let tokenize report (input, get_location) =
         attribute_value_unquoted_state l' tag name value_buffer)
 
       | Some (_, 0x003E) ->
-        tag._attributes <-
-          (name, Buffer.contents value_buffer)::tag._attributes;
+        tag.attributes <-
+          (name, Buffer.contents value_buffer)::tag.attributes;
         emit_tag l' tag
 
       | Some (l, 0) ->
@@ -1147,7 +1166,7 @@ let tokenize report (input, get_location) =
   and self_closing_start_tag_state l' tag =
     next_option input !throw begin function
       | Some (_, 0x003E) ->
-        tag._self_closing <- true;
+        tag.self_closing <- true;
         emit_tag l' tag
 
       | None ->
@@ -1376,10 +1395,10 @@ let tokenize report (input, get_location) =
   (* 8.2.5.52. *)
   and doctype_state l' =
     let doctype =
-      {_doctype_name      = None;
-       _public_identifier = None;
-       _system_identifier = None;
-       _force_quirks      = false}
+      {doctype_name      = None;
+       public_identifier = None;
+       system_identifier = None;
+       force_quirks      = false}
     in
 
     next_option input !throw begin function
@@ -1405,8 +1424,7 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "doctype", "null")) !throw (fun () ->
-        doctype._doctype_name <-
-          add_doctype_char doctype._doctype_name u_rep;
+        doctype.doctype_name <- add_doctype_char doctype.doctype_name u_rep;
         doctype_name_state l' doctype)
 
       | Some (l, 0x003E) ->
@@ -1419,8 +1437,8 @@ let tokenize report (input, get_location) =
         emit_doctype ~quirks:true l' doctype)
 
       | Some (_, c) ->
-        doctype._doctype_name <-
-          add_doctype_char doctype._doctype_name (to_lowercase c);
+        doctype.doctype_name <-
+          add_doctype_char doctype.doctype_name (to_lowercase c);
         doctype_name_state l' doctype
     end
 
@@ -1435,8 +1453,8 @@ let tokenize report (input, get_location) =
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "doctype", "null")) !throw (fun () ->
-        doctype._doctype_name <-
-          add_doctype_char doctype._doctype_name u_rep;
+        doctype.doctype_name <-
+          add_doctype_char doctype.doctype_name u_rep;
         doctype_name_state l' doctype)
 
       | None ->
@@ -1444,8 +1462,8 @@ let tokenize report (input, get_location) =
         emit_doctype ~quirks:true l' doctype)
 
       | Some (_, c) ->
-        doctype._doctype_name <-
-          add_doctype_char doctype._doctype_name (to_lowercase c);
+        doctype.doctype_name <-
+          add_doctype_char doctype.doctype_name (to_lowercase c);
         doctype_name_state l' doctype
     end
 
@@ -1477,27 +1495,27 @@ let tokenize report (input, get_location) =
             report l'' (`Bad_token (char c, "doctype",
                                     "expected 'PUBLIC' or 'SYSTEM'")) !throw
               (fun () ->
-            doctype._force_quirks <- true;
+            doctype.force_quirks <- true;
             bogus_doctype_state l' doctype)
         end
     end
 
   (* Helper. *)
   and begin_public_identifier quote l' doctype =
-    doctype._public_identifier <- Some (Buffer.create 32);
+    doctype.Doctype_buffers.public_identifier <- Some (Buffer.create 32);
     doctype_identifier_quoted_state
       (fun doctype c ->
-        doctype._public_identifier <-
-          add_doctype_char doctype._public_identifier c)
+        doctype.Doctype_buffers.public_identifier <-
+          add_doctype_char doctype.Doctype_buffers.public_identifier c)
         quote after_doctype_public_identifier_state l' doctype
 
   (* Helper. *)
   and begin_system_identifier quote l' doctype =
-    doctype._system_identifier <- Some (Buffer.create 32);
+    doctype.Doctype_buffers.system_identifier <- Some (Buffer.create 32);
     doctype_identifier_quoted_state
       (fun doctype c ->
-        doctype._system_identifier <-
-          add_doctype_char doctype._system_identifier c)
+        doctype.system_identifier <-
+          add_doctype_char doctype.system_identifier c)
       quote after_doctype_system_identifier_state l' doctype
 
   (* 8.2.4.56. *)
@@ -1523,7 +1541,7 @@ let tokenize report (input, get_location) =
       | Some (l, c) ->
         report l (`Bad_token (char c, "doctype",
                               "expected whitespace")) !throw (fun () ->
-        doctype._force_quirks <- true;
+        doctype.force_quirks <- true;
         bogus_doctype_state l' doctype)
     end
 
@@ -1549,7 +1567,7 @@ let tokenize report (input, get_location) =
         report l (`Bad_token (char c, "doctype",
                               "public identifier must be quoted")) !throw
           (fun () ->
-        doctype._force_quirks <- true;
+        doctype.force_quirks <- true;
         bogus_doctype_state l' doctype)
     end
 
@@ -1599,7 +1617,7 @@ let tokenize report (input, get_location) =
         report l (`Bad_token (char c, "doctype",
                               "system identifier must be quoted")) !throw
           (fun () ->
-        doctype._force_quirks <- true;
+        doctype.force_quirks <- true;
         bogus_doctype_state l' doctype)
     end
 
@@ -1623,7 +1641,7 @@ let tokenize report (input, get_location) =
         report l (`Bad_token (char c, "doctype",
                               "system identifier must be quoted")) !throw
           (fun () ->
-        doctype._force_quirks <- true;
+        doctype.force_quirks <- true;
         bogus_doctype_state l' doctype)
     end
 
@@ -1650,7 +1668,7 @@ let tokenize report (input, get_location) =
       | Some (l, c) ->
         report l (`Bad_token (char c, "doctype",
                               "expected whitespace")) !throw (fun () ->
-        doctype._force_quirks <- true;
+        doctype.force_quirks <- true;
         bogus_doctype_state l' doctype)
     end
 
@@ -1676,7 +1694,7 @@ let tokenize report (input, get_location) =
         report l (`Bad_token (char c, "doctype",
                               "system identifier must be quoted")) !throw
           (fun () ->
-        doctype._force_quirks <- true;
+        doctype.force_quirks <- true;
         bogus_doctype_state l' doctype)
     end
 

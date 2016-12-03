@@ -8,12 +8,12 @@ open Kstream
 
 
 (* Namespaces for pattern matching. *)
-type _ns = [ `HTML | `MathML | `SVG | `Other of string ]
-type _qname = _ns * string
+type ns = [ `HTML | `MathML | `SVG | `Other of string ]
+type qname = ns * string
 
 module Ns :
 sig
-  val to_string : _ns -> string
+  val to_string : ns -> string
 end =
 struct
   let to_string = function
@@ -23,9 +23,9 @@ struct
     | `Other s -> s
 end
 
-(* Specialization of List.mem at _qname list, to avoid polymorphic
+(* Specialization of List.mem at qname list, to avoid polymorphic
    comparison. *)
-let list_mem_qname ((ns, tag) : _qname) l =
+let list_mem_qname ((ns, tag) : qname) l =
   let rec loop = function
     | [] -> false
     | (ns', tag')::_ when ns' = ns && tag' = tag -> true
@@ -36,25 +36,25 @@ let list_mem_qname ((ns, tag) : _qname) l =
 
 
 (* Elements. *)
-type _element =
-  {element_name              : _qname;
+type element =
+  {element_name              : qname;
    location                  : location;
    is_html_integration_point : bool;
    suppress                  : bool;
    mutable buffering         : bool;
    mutable is_open           : bool;
-   mutable _attributes       : (name * string) list;
+   mutable attributes       : (name * string) list;
    mutable end_location      : location;
-   mutable children          : _annotated_node list;
-   mutable parent            : _element}
+   mutable children          : annotated_node list;
+   mutable parent            : element}
 
-and _node =
-  | Element of _element
+and node =
+  | Element of element
   | Text of string list
   | PI of string * string
   | Comment of string
 
-and _annotated_node = location * _node
+and annotated_node = location * node
 
 
 
@@ -62,11 +62,11 @@ and _annotated_node = location * _node
 module Element :
 sig
   val create :
-    ?is_html_integration_point:bool -> ?suppress:bool -> _qname -> location ->
-      _element
-  val dummy : _element
+    ?is_html_integration_point:bool -> ?suppress:bool -> qname -> location ->
+      element
+  val dummy : element
 
-  val is_special : _qname -> bool
+  val is_special : qname -> bool
   val is_not_hidden : Token_tag.t -> bool
 end =
 struct
@@ -77,7 +77,7 @@ struct
      suppress                  = true;
      buffering                 = false;
      is_open                   = false;
-     _attributes               = [];
+     attributes                = [];
      end_location              = 1, 1;
      children                  = [];
      parent                    = dummy}
@@ -90,7 +90,7 @@ struct
      suppress;
      buffering    = false;
      is_open      = true;
-     _attributes  = [];
+     attributes   = [];
      end_location = 1, 1;
      children     = [];
      parent       = dummy}
@@ -136,8 +136,8 @@ end
 
 
 (* Context detection. *)
-type _simple_context = [ `Document | `Fragment of string ]
-type _context = [ `Document | `Fragment of _qname ]
+type simple_context = [ `Document | `Fragment of string ]
+type context = [ `Document | `Fragment of qname ]
 
 module Context :
 sig
@@ -146,16 +146,16 @@ sig
   val uninitialized : unit -> t
   val initialize :
     (location * Html_tokenizer.token) Kstream.t ->
-    [< _simple_context ] option ->
+    [< simple_context ] option ->
     t ->
       unit cps
 
-  val the_context : t -> _context
-  val element : t -> _element option
+  val the_context : t -> context
+  val element : t -> element option
   val token : t -> string option
 end =
 struct
-  let _detect tokens throw k =
+  let detect tokens throw k =
     let tokens, restore = checkpoint tokens in
 
     let last_name = ref None in
@@ -226,7 +226,7 @@ struct
 
     scan ()
 
-  type t = (_context * _element option * string option) ref
+  type t = (context * element option * string option) ref
 
   let uninitialized () = ref (`Document, None, None)
 
@@ -240,7 +240,7 @@ struct
            here because the API assumes the string [element] is in UTF-8. *)
         k (`Fragment (String.lowercase element), None)
       | Some (`Document as c) -> k (c, None)
-      | None -> _detect tokens throw k)
+      | None -> detect tokens throw k)
     (fun (detected_context, deciding_token) ->
 
       let context =
@@ -279,9 +279,9 @@ end
 (* Heplers for foreign content. *)
 module Foreign :
 sig
-  val is_mathml_text_integration_point : _qname -> bool
+  val is_mathml_text_integration_point : qname -> bool
   val is_html_integration_point :
-    _ns -> string -> (string * string) list -> bool
+    ns -> string -> (string * string) list -> bool
 
   val adjust_mathml_attributes :
     ((string * string) * string) list -> ((string * string) * string) list
@@ -433,13 +433,13 @@ end
 (* Stack of open elements. *)
 module Stack :
 sig
-  type t = _element list ref
+  type t = element list ref
 
   val create : unit -> t
 
-  val current_element : t -> _element option
-  val require_current_element : t -> _element
-  val adjusted_current_element : Context.t -> t -> _element option
+  val current_element : t -> element option
+  val require_current_element : t -> element
+  val adjusted_current_element : Context.t -> t -> element option
   val current_element_is : t -> string list -> bool
   val current_element_is_foreign : Context.t -> t -> bool
 
@@ -452,14 +452,14 @@ sig
   val in_select_scope : t -> string -> bool
   val one_in_scope : t -> string list -> bool
   val one_in_table_scope : t -> string list -> bool
-  val target_in_scope : t -> _element -> bool
+  val target_in_scope : t -> element -> bool
 
-  val remove : t -> _element -> unit
-  val replace : t -> old:_element -> new_:_element -> unit
-  val insert_below : t -> anchor:_element -> new_:_element -> unit
+  val remove : t -> element -> unit
+  val replace : t -> old:element -> new_:element -> unit
+  val insert_below : t -> anchor:element -> new_:element -> unit
 end =
 struct
-  type t = _element list ref
+  type t = element list ref
 
   let create () = ref []
 
@@ -494,7 +494,7 @@ struct
       (fun {element_name = ns, name'} ->
         ns = `HTML && name' = name) !open_elements
 
-  let _in_scope scope_delimiters open_elements name' =
+  let in_scope_general scope_delimiters open_elements name' =
     let rec scan = function
       | [] -> false
       | {element_name = ns, name'' as name}::more ->
@@ -505,7 +505,7 @@ struct
     in
     scan !open_elements
 
-  let _scope_delimiters =
+  let scope_delimiters =
     [`HTML, "applet"; `HTML, "caption"; `HTML, "html";
      `HTML, "table"; `HTML, "td"; `HTML, "th";
      `HTML, "marquee"; `HTML, "object"; `HTML, "template";
@@ -513,15 +513,15 @@ struct
      `MathML, "ms"; `MathML, "mtext"; `MathML, "annotation-xml";
      `SVG, "foreignObject"; `SVG, "desc"; `SVG, "title"]
 
-  let in_scope = _in_scope _scope_delimiters
+  let in_scope = in_scope_general scope_delimiters
 
-  let in_button_scope = _in_scope ((`HTML, "button")::_scope_delimiters)
+  let in_button_scope = in_scope_general ((`HTML, "button")::scope_delimiters)
 
   let in_list_item_scope =
-    _in_scope ((`HTML, "ol")::(`HTML, "ul")::_scope_delimiters)
+    in_scope_general ((`HTML, "ol")::(`HTML, "ul")::scope_delimiters)
 
   let in_table_scope =
-    _in_scope [`HTML, "html"; `HTML, "table"; `HTML, "template"]
+    in_scope_general [`HTML, "html"; `HTML, "table"; `HTML, "template"]
 
   let in_select_scope open_elements name =
     let rec scan = function
@@ -542,7 +542,7 @@ struct
       | {element_name = ns, name' as name}::more ->
         if ns = `HTML && list_mem_string name' names then true
         else
-          if list_mem_qname name _scope_delimiters then false
+          if list_mem_qname name scope_delimiters then false
           else scan more
     in
     scan !open_elements
@@ -566,7 +566,7 @@ struct
       | e::more ->
         if e == node then true
         else
-          if list_mem_qname node.element_name _scope_delimiters then false
+          if list_mem_qname node.element_name scope_delimiters then false
           else scan more
     in
     scan !open_elements
@@ -596,7 +596,7 @@ module Active :
 sig
   type entry =
     | Marker
-    | Element_ of _element * location * Token_tag.t
+    | Element_ of element * location * Token_tag.t
 
   type t = entry list ref
 
@@ -605,17 +605,17 @@ sig
   val add_marker : t -> unit
   val clear_until_marker : t -> unit
 
-  val has : t -> _element -> bool
-  val remove : t -> _element -> unit
-  val replace : t -> old:_element -> new_:_element -> unit
-  val insert_after : t -> anchor:_element -> new_:_element -> unit
+  val has : t -> element -> bool
+  val remove : t -> element -> unit
+  val replace : t -> old:element -> new_:element -> unit
+  val insert_after : t -> anchor:element -> new_:element -> unit
 
-  val has_before_marker : t -> string -> _element option
+  val has_before_marker : t -> string -> element option
 end =
 struct
   type entry =
     | Marker
-    | Element_ of _element * location * Token_tag.t
+    | Element_ of element * location * Token_tag.t
 
   type t = entry list ref
 
@@ -728,7 +728,7 @@ struct
   type t =
     {open_elements    : Stack.t;
      mutable enabled  : bool;
-     mutable position : _element}
+     mutable position : element}
 
   let create open_elements =
     {open_elements;
@@ -744,7 +744,7 @@ struct
         let child =
           Stack.require_current_element subtree_buffer.open_elements in
 
-        child._attributes <- attributes;
+        child.attributes <- attributes;
         child.parent <- parent;
         parent.children <- (l, Element child)::parent.children;
 
@@ -785,9 +785,9 @@ struct
 
   let disable subtree_buffer =
     let rec traverse acc = function
-      | l, Element {element_name; _attributes; end_location; children} ->
+      | l, Element {element_name; attributes; end_location; children} ->
         let name = Ns.to_string (fst element_name), snd element_name in
-        let start_signal = l, `Start_element (name, _attributes) in
+        let start_signal = l, `Start_element (name, attributes) in
         let end_signal = end_location, `End_element in
         start_signal::(List.fold_left traverse (end_signal::acc) children)
 
@@ -1864,7 +1864,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `End {name = "br"} ->
       report l (`Unmatched_end_tag "br") !throw (fun () ->
       in_body_mode_rules context_name mode
-        (l, `Start {name = "br"; attributes = []; self_closing = false}))
+        (l, `Start
+          {Token_tag.name = "br"; attributes = []; self_closing = false}))
 
     | l, `Start ({name =
         "area" | "br" | "embed" | "img" | "keygen" | "wbr"} as t) ->
@@ -2720,7 +2721,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     else mode ())
 
   and is_html_font_tag tag =
-    tag.attributes |> List.exists (function
+    tag.Token_tag.attributes |> List.exists (function
       | ("color" | "face" | "size"), _ -> true
       | _ -> false)
 

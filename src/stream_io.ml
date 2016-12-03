@@ -4,7 +4,7 @@
 open Common
 open Kstream
 
-let _state_fold f initial =
+let state_fold f initial =
   let state = ref initial in
   (fun throw e k ->
     f !state throw e (fun (c, new_state) ->
@@ -12,14 +12,14 @@ let _state_fold f initial =
   |> make
 
 let string s =
-  _state_fold (fun i _ e k ->
+  state_fold (fun i _ e k ->
     if i >= String.length s then e () else k (s.[i], i + 1)) 0
 
 let buffer b =
-  _state_fold (fun i _ e k ->
+  state_fold (fun i _ e k ->
     if i >= Buffer.length b then e () else k (Buffer.nth b i, i + 1)) 0
 
-type _result = Byte of char | Exn of exn
+type result = Byte of char | Exn of exn
 
 let channel c =
   let ended = ref false in

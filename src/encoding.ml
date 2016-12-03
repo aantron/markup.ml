@@ -8,10 +8,10 @@ type t = ?report:Error.parse_handler -> char Kstream.t -> int Kstream.t
 
 let wrap f = fun ?(report = Error.ignore_errors) s -> f report s
 
-let _bytes_empty = Bytes.create 0
+let bytes_empty = Bytes.create 0
 
 (* Decoders based on the Uutf library. *)
-let _uutf_decoder encoding name =
+let uutf_decoder encoding name =
   (fun report bytes ->
     let decoder = Uutf.decoder ~encoding `Manual in
 
@@ -26,18 +26,18 @@ let _uutf_decoder encoding name =
           k u_rep)
         | `Await ->
           next bytes throw
-            (fun () -> Uutf.Manual.src decoder _bytes_empty 0 0; run ())
+            (fun () -> Uutf.Manual.src decoder bytes_empty 0 0; run ())
             (fun c -> Uutf.Manual.src decoder (Bytes.make 1 c) 0 1; run ())
       in
       run ())
     |> make)
   |> wrap
 
-let utf_8 : t = _uutf_decoder `UTF_8 "utf-8"
-let utf_16be : t = _uutf_decoder `UTF_16BE "utf-16be"
-let utf_16le : t = _uutf_decoder `UTF_16LE "utf-16le"
-let iso_8859_1 : t = _uutf_decoder `ISO_8859_1 "iso-8859-1"
-let us_ascii : t = _uutf_decoder `US_ASCII "us-ascii"
+let utf_8 : t = uutf_decoder `UTF_8 "utf-8"
+let utf_16be : t = uutf_decoder `UTF_16BE "utf-16be"
+let utf_16le : t = uutf_decoder `UTF_16LE "utf-16le"
+let iso_8859_1 : t = uutf_decoder `ISO_8859_1 "iso-8859-1"
+let us_ascii : t = uutf_decoder `US_ASCII "us-ascii"
 
 (* Chooses UTF-16LE unless the BE BOM is present, as in
    http://www.w3.org/TR/encoding/ *)
@@ -52,7 +52,7 @@ let utf_16 : t =
     construct constructor)
   |> wrap
 
-let _ucs_4_decoder arrange name =
+let ucs_4_decoder arrange name =
   (fun report bytes ->
     let first = ref true in
     let line = ref 1 in
@@ -117,13 +117,13 @@ let _ucs_4_decoder arrange name =
   |> wrap
 
 let ucs_4be : t =
-  _ucs_4_decoder (fun (b1, b2, b3, b4) -> b4, b3, b2, b1) "ucs-4be"
+  ucs_4_decoder (fun (b1, b2, b3, b4) -> b4, b3, b2, b1) "ucs-4be"
 let ucs_4le : t =
-  _ucs_4_decoder (fun bs -> bs) "ucs-4le"
+  ucs_4_decoder (fun bs -> bs) "ucs-4le"
 let ucs_4be_transposed : t =
-  _ucs_4_decoder (fun (b1, b2, b3, b4) -> b3, b4, b1, b2) "ucs-4be-transposed"
+  ucs_4_decoder (fun (b1, b2, b3, b4) -> b3, b4, b1, b2) "ucs-4be-transposed"
 let ucs_4le_transposed : t =
-  _ucs_4_decoder (fun (b1, b2, b3, b4) -> b2, b1, b4, b3) "ucs-4le-transposed"
+  ucs_4_decoder (fun (b1, b2, b3, b4) -> b2, b1, b4, b3) "ucs-4le-transposed"
 
 let code_page table =
   if Array.length table < 256 then
@@ -136,7 +136,7 @@ let code_page table =
     |> make)
   |> wrap
 
-let _windows_1251_table = [|
+let windows_1251_table = [|
     (* ASCII *)
     0x0000; 0x0001; 0x0002; 0x0003; 0x0004; 0x0005; 0x0006; 0x0007;
     0x0008; 0x0009; 0x000A; 0x000B; 0x000C; 0x000D; 0x000E; 0x000F;
@@ -180,9 +180,9 @@ let _windows_1251_table = [|
     0x0448; 0x0449; 0x044A; 0x044B; 0x044C; 0x044D; 0x044E; 0x044F
   |]
 
-let windows_1251 : t = code_page _windows_1251_table
+let windows_1251 : t = code_page windows_1251_table
 
-let _windows_1252_table = [|
+let windows_1252_table = [|
     (* ASCII *)
     0x0000; 0x0001; 0x0002; 0x0003; 0x0004; 0x0005; 0x0006; 0x0007;
     0x0008; 0x0009; 0x000A; 0x000B; 0x000C; 0x000D; 0x000E; 0x000F;
@@ -221,9 +221,9 @@ let _windows_1252_table = [|
     0x00F8; 0x00F9; 0x00FA; 0x00FB; 0x00FC; 0x00FD; 0x00FE; 0x00FF
   |]
 
-let windows_1252 : t = code_page _windows_1252_table
+let windows_1252 : t = code_page windows_1252_table
 
-let _ebcdic_37_table = [|
+let ebcdic_37_table = [|
     (* 0x0_ *)
     0x0000; 0x0001; 0x0002; 0x0003; 0x009C; 0x0009; 0x0086; 0x007F;
     0x0097; 0x008D; 0x008E; 0x000B; 0x000C; 0x000D; 0x000E; 0x000F;
@@ -274,4 +274,4 @@ let _ebcdic_37_table = [|
     0x0038; 0x0039; 0x00B3; 0x00DB; 0x00DC; 0x00D9; 0x00DA; 0x009F
   |]
 
-let ebcdic : t = code_page _ebcdic_37_table
+let ebcdic : t = code_page ebcdic_37_table

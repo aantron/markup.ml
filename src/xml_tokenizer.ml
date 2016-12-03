@@ -40,7 +40,7 @@ let is_name_char c =
   || is_in_range 0x0300 0x036F c
   || is_in_range 0x203F 0x2040 c
 
-let _resolve_builtin_reference = function
+let resolve_builtin_reference = function
   | "quot" -> Some "\""
   | "amp" -> Some "&"
   | "apos" -> Some "'"
@@ -53,7 +53,7 @@ open Common.Token_tag
 
 let tokenize report resolve_reference (input, get_location) =
   let resolve_reference s =
-    match _resolve_builtin_reference s with
+    match resolve_builtin_reference s with
     | Some _ as v -> v
     | None -> resolve_reference s
   in

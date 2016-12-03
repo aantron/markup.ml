@@ -3,7 +3,7 @@
 
 open Common
 
-let _list_map_cps : ('a -> 'b cps) -> 'a list -> 'b list cps =
+let list_map_cps : ('a -> 'b cps) -> 'a list -> 'b list cps =
     fun f l throw k ->
 
   let rec loop accumulator = function
@@ -14,11 +14,11 @@ let _list_map_cps : ('a -> 'b cps) -> 'a list -> 'b list cps =
 
 module Parsing =
 struct
-  type _context_entry =
+  type context_entry =
     {f        : string -> string option;
-     previous : _context_entry}
+     previous : context_entry}
 
-  type context = _context_entry ref
+  type context = context_entry ref
 
   let parse qualified_name =
     try
@@ -71,7 +71,7 @@ struct
 
     expand_element report context raw_element_name throw
       (fun expanded_element_name ->
-    _list_map_cps begin fun (name, value) _ k ->
+    list_map_cps begin fun (name, value) _ k ->
       match name with
       | "", "xmlns" -> k ((xmlns_ns, "xmlns"), value)
       | "", name -> k (("", name), value)
@@ -91,12 +91,12 @@ module StringMap = Map.Make (String)
 
 module Writing =
 struct
-  type _context_entry =
+  type context_entry =
     {namespace_to_prefix : string list StringMap.t;
      prefix_to_namespace : string StringMap.t;
-     previous            : _context_entry}
+     previous            : context_entry}
 
-  type context = _context_entry ref * (string -> string option)
+  type context = context_entry ref * (string -> string option)
 
   let init top_level =
     let namespace_to_prefix =
@@ -118,7 +118,7 @@ struct
 
     ref entry, top_level
 
-  let _lookup report allow_default context namespace throw k =
+  let lookup report allow_default context namespace throw k =
     let candidate_prefixes =
       try StringMap.find namespace !(fst context).namespace_to_prefix
       with Not_found -> []
@@ -153,25 +153,25 @@ struct
     | None -> report () (`Bad_namespace namespace) throw (fun () -> k "")
     | Some prefix -> k prefix
 
-  let _format prefix name =
+  let format prefix name =
     match prefix with
     | "" -> name
     | prefix -> prefix ^ ":" ^ name
 
-  let _unexpand_element report context (namespace, name) throw k =
-    _lookup report true context namespace throw (fun prefix ->
-    k (_format prefix name))
+  let unexpand_element report context (namespace, name) throw k =
+    lookup report true context namespace throw (fun prefix ->
+    k (format prefix name))
 
-  let _unexpand_attribute report context ((namespace, name), value) throw k =
+  let unexpand_attribute report context ((namespace, name), value) throw k =
     match namespace with
     | "" -> k (name, value)
     | uri ->
       if uri = xmlns_ns && name = "xmlns" then k ("xmlns", value)
       else
-        _lookup report false context namespace throw (fun prefix ->
-          k (_format prefix name, value))
+        lookup report false context namespace throw (fun prefix ->
+          k (format prefix name, value))
 
-  let _extend k v map =
+  let extend k v map =
     let vs =
       try StringMap.find k map
       with Not_found -> []
@@ -182,10 +182,10 @@ struct
     let namespace_to_prefix, prefix_to_namespace =
       attributes |> List.fold_left (fun (ns_to_prefix, prefix_to_ns) -> function
         | (ns, "xmlns"), uri when ns = xmlns_ns ->
-          _extend uri "" ns_to_prefix,
+          extend uri "" ns_to_prefix,
           StringMap.add "" uri prefix_to_ns
         | (ns, prefix), uri when ns = xmlns_ns ->
-          _extend uri prefix ns_to_prefix,
+          extend uri prefix ns_to_prefix,
           StringMap.add prefix uri prefix_to_ns
         | _ -> ns_to_prefix, prefix_to_ns)
         (!(fst context).namespace_to_prefix, !(fst context).prefix_to_namespace)
@@ -195,8 +195,8 @@ struct
       {namespace_to_prefix; prefix_to_namespace; previous = !(fst context)} in
     (fst context) := entry;
 
-    _unexpand_element report context element_name throw (fun element_name ->
-    _list_map_cps (_unexpand_attribute report context) attributes throw
+    unexpand_element report context element_name throw (fun element_name ->
+    list_map_cps (unexpand_attribute report context) attributes throw
       (fun attributes ->
     k (element_name, attributes)))
 

@@ -3,11 +3,11 @@
 
 open Common
 
-let _installed_workaround_hook = ref false
+let installed_workaround_hook = ref false
 
 exception TailCallWorkaround of (unit -> unit)
 
-let _tail_call_workaround k v =
+let tail_call_workaround k v =
   raise (TailCallWorkaround (fun () -> k v))
 
 let ensure_tail_calls ?hook () =
@@ -18,15 +18,15 @@ let ensure_tail_calls ?hook () =
       match hook with
       | None -> previous_hook exn
       | Some hook -> !hook exn);
-  _installed_workaround_hook := true
+  installed_workaround_hook := true
 
 let to_cps thread =
-  if not !_installed_workaround_hook then
+  if not !installed_workaround_hook then
     fun throw k -> Lwt.on_any (thread ()) k throw
   else
     fun throw k ->
       Lwt.on_any (thread ())
-        (_tail_call_workaround k) (_tail_call_workaround throw)
+        (tail_call_workaround k) (tail_call_workaround throw)
 
 module Adapter =
 struct

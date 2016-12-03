@@ -504,34 +504,34 @@ let read_xml_encoding_declaration bytes (family : Encoding.t) throw k =
 
   prescan ()
 
-let _name_to_encoding_or_utf_8 encoding =
+let name_to_encoding_or_utf_8 encoding =
   match name_to_encoding encoding with
   | Some e -> e
   | None -> utf_8
 
 let select_html ?limit bytes throw k =
   guess_from_bom_html bytes throw (function
-    | Some encoding -> k (_name_to_encoding_or_utf_8 encoding)
+    | Some encoding -> k (name_to_encoding_or_utf_8 encoding)
     | None ->
       meta_tag_prescan ?limit bytes throw (function
-        | Some encoding -> k (_name_to_encoding_or_utf_8 encoding)
+        | Some encoding -> k (name_to_encoding_or_utf_8 encoding)
         | None -> k utf_8))
 
 let select_xml bytes throw k =
   guess_from_bom_xml bytes throw (function
-    | Some encoding -> k (_name_to_encoding_or_utf_8 encoding)
+    | Some encoding -> k (name_to_encoding_or_utf_8 encoding)
     | None ->
       (fun k' ->
         guess_family_xml bytes throw (function
           | None -> k' "utf-8" utf_8
-          | Some family -> k' family (_name_to_encoding_or_utf_8 family)))
+          | Some family -> k' family (name_to_encoding_or_utf_8 family)))
       (fun name family ->
         read_xml_encoding_declaration bytes family throw (function
-          | None -> k (_name_to_encoding_or_utf_8 name)
+          | None -> k (name_to_encoding_or_utf_8 name)
           | Some encoding ->
             match name, normalize_name false encoding with
             | "utf-8", "iso-8859-1" -> k iso_8859_1
             | "utf-8", "us-ascii" -> k us_ascii
             | "utf-8", "windows-1251" -> k windows_1251
             | "utf-8", "windows-1252" -> k windows_1252
-            | _ -> k (_name_to_encoding_or_utf_8 name))))
+            | _ -> k (name_to_encoding_or_utf_8 name))))

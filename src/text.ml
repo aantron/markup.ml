@@ -16,7 +16,7 @@ let note_location text location =
   | Some _ -> ()
   end
 
-let _adding text location =
+let adding text location =
   note_location text location;
 
   if Buffer.length text.buffer >= !length_limit then begin
@@ -25,13 +25,13 @@ let _adding text location =
   end
 
 let add text location c =
-  _adding text location;
+  adding text location;
   add_utf_8 text.buffer c
 
 (* This is only used for strings that are expected to be very small, at the
    moment. *)
 let add_string text location s =
-  _adding text location;
+  adding text location;
   Buffer.add_string text.buffer s
 
 let emit text =

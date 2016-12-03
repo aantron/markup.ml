@@ -1,7 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-let _escape s =
+let escape s =
   let buffer = Buffer.create (String.length s) in
   String.iter (function
     | '"' -> Buffer.add_string buffer "&quot;"
@@ -13,12 +13,12 @@ let _escape s =
     s;
   Buffer.contents buffer
 
-let _attribute_strings end_ attributes =
+let attribute_strings end_ attributes =
   let rec prepend_attributes words = function
     | [] -> words
     | (name, value)::more ->
       prepend_attributes
-        (" "::name::"=\""::(_escape value)::"\""::words) more
+        (" "::name::"=\""::(escape value)::"\""::words) more
   in
 
   prepend_attributes [end_] (List.rev attributes)
@@ -68,7 +68,7 @@ let write report prefix signals =
           let end_ = if self_closing then "/>" else ">" in
 
           let tag =
-            "<"::formatted_name::(_attribute_strings end_ formatted_attributes)
+            "<"::formatted_name::(attribute_strings end_ formatted_attributes)
           in
 
           emit_list tag throw e k))
@@ -86,7 +86,7 @@ let write report prefix signals =
         if List.for_all (fun s -> String.length s = 0) ss then
           next_signal throw e k
         else
-          emit_list (List.map _escape ss) throw e k
+          emit_list (List.map escape ss) throw e k
 
       | _, `Xml {version; encoding; standalone} ->
         let attributes =
@@ -104,7 +104,7 @@ let write report prefix signals =
 
         let attributes = ("version", version)::attributes in
 
-        let declaration = "<?xml"::(_attribute_strings "?>" attributes) in
+        let declaration = "<?xml"::(attribute_strings "?>" attributes) in
 
         emit_list declaration throw e k
 

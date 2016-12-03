@@ -245,14 +245,14 @@ end
 
 module Asynchronous (IO : IO) =
 struct
-  let _wrap_report report = fun l e -> IO.to_cps (fun () -> report l e)
+  let wrap_report report = fun l e -> IO.to_cps (fun () -> report l e)
 
   module Encoding =
   struct
     include Encoding
 
     let decode ?(report = fun _ _ -> IO.return ()) (f : Encoding.t) s =
-      f ~report:(_wrap_report report) s
+      f ~report:(wrap_report report) s
   end
 
   let parse_xml
@@ -264,14 +264,14 @@ struct
       source =
 
     Cps.parse_xml
-      (_wrap_report report) ?encoding namespace entity context source
+      (wrap_report report) ?encoding namespace entity context source
 
   let write_xml
       ?(report = fun _ _ -> IO.return ())
       ?(prefix = fun _ -> None)
       signals =
 
-    Cps.write_xml (_wrap_report report) prefix signals
+    Cps.write_xml (wrap_report report) prefix signals
 
   let parse_html
       ?(report = fun _ _ -> IO.return ())
@@ -279,7 +279,7 @@ struct
       ?context
       source =
 
-    Cps.parse_html (_wrap_report report) ?encoding context source
+    Cps.parse_html (wrap_report report) ?encoding context source
 
   let write_html signals =
     Cps.write_html signals

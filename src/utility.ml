@@ -29,7 +29,7 @@ let strings_to_bytes strings =
   in
   make emit
 
-let _unwrap_lists ls =
+let unwrap_lists ls =
   let current_list = ref [] in
 
   let rec emit throw e k =
@@ -184,7 +184,7 @@ let text s =
     | `Xml _ -> k None
   in
   filter_map filter s
-  |> _unwrap_lists
+  |> unwrap_lists
   |> strings_to_bytes
 
 let trim s =
@@ -236,14 +236,14 @@ let normalize_text s =
 
   make match_other
 
-let _tab_width = 2
+let tab_width = 2
 
 let pretty_print s =
   let s = s |> normalize_text |> trim in
 
   let indent n =
     let n = if n < 0 then 0 else n in
-    String.make (n * _tab_width) ' '
+    String.make (n * tab_width) ' '
   in
 
   let rec current_state = ref (fun throw e k -> row 0 throw e k)

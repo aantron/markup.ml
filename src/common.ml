@@ -247,33 +247,33 @@ let token_to_string = function
   | `EOF ->
     "EOF"
 
-let _whitespace_chars = " \t\n\r"
+let whitespace_chars = " \t\n\r"
 
-let _whitespace_prefix_length s =
+let whitespace_prefix_length s =
   let rec loop index =
     if index = String.length s then index
     else
-      if String.contains _whitespace_chars s.[index] then loop (index + 1)
+      if String.contains whitespace_chars s.[index] then loop (index + 1)
       else index
   in
   loop 0
 
-let _whitespace_suffix_length s =
+let whitespace_suffix_length s =
   let rec loop rindex =
     if rindex = String.length s then rindex
     else
-      if String.contains _whitespace_chars s.[String.length s - rindex - 1] then
+      if String.contains whitespace_chars s.[String.length s - rindex - 1] then
         loop (rindex + 1)
       else rindex
   in
   loop 0
 
 let trim_string_left s =
-  let prefix_length = _whitespace_prefix_length s in
+  let prefix_length = whitespace_prefix_length s in
   String.sub s prefix_length (String.length s - prefix_length)
 
 let trim_string_right s =
-  let suffix_length = _whitespace_suffix_length s in
+  let suffix_length = whitespace_suffix_length s in
   String.sub s 0 (String.length s - suffix_length)
 
 (* String.trim not available for OCaml < 4.00. *)

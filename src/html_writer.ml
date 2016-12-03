@@ -3,7 +3,7 @@
 
 open Common
 
-let _escape_attribute s =
+let escape_attribute s =
   let buffer = Buffer.create (String.length s) in
   Uutf.String.fold_utf_8 (fun () _ -> function
     | `Malformed _ -> ()
@@ -17,7 +17,7 @@ let _escape_attribute s =
     () s;
   Buffer.contents buffer
 
-let _escape_text s =
+let escape_text s =
   let buffer = Buffer.create (String.length s) in
   Uutf.String.fold_utf_8 (fun () _ -> function
     | `Malformed _ -> ()
@@ -32,16 +32,16 @@ let _escape_text s =
     () s;
   Buffer.contents buffer
 
-let _void_elements =
+let void_elements =
   ["area"; "base"; "basefont"; "bgsound"; "br"; "col"; "embed"; "frame"; "hr";
    "img"; "input"; "keygen"; "link"; "meta"; "param"; "source"; "track"; "wbr"]
 
-let _prepend_newline_for = ["pre"; "textarea"; "listing"]
+let prepend_newline_for = ["pre"; "textarea"; "listing"]
 
-let rec _starts_with_newline = function
+let rec starts_with_newline = function
   | [] -> false
   | s::more ->
-    if String.length s = 0 then _starts_with_newline more
+    if String.length s = 0 then starts_with_newline more
     else s.[0] = '\x0A'
 
 open Kstream
@@ -90,13 +90,13 @@ let write signals =
           | [] -> words
           | (name, value)::more ->
             prepend_attributes
-              (" "::name::"=\""::(_escape_attribute value)::"\""::words) more
+              (" "::name::"=\""::(escape_attribute value)::"\""::words) more
         in
 
         let tag =
           "<"::tag_name::(prepend_attributes [">"] (List.rev attributes)) in
 
-        let is_void = ns = html_ns && list_mem_string name' _void_elements in
+        let is_void = ns = html_ns && list_mem_string name' void_elements in
 
         if is_void then
           peek signals throw (fun () -> emit_list tag throw e k) (function
@@ -110,9 +110,9 @@ let write signals =
         else begin
           open_elements := tag_name::!open_elements;
 
-          if ns = html_ns && list_mem_string name' _prepend_newline_for then
+          if ns = html_ns && list_mem_string name' prepend_newline_for then
             peek_option signals throw (function
-              | Some (`Text ss) when _starts_with_newline ss ->
+              | Some (`Text ss) when starts_with_newline ss ->
                 emit_list (tag @ ["\n"]) throw e k
               | Some (`Text _ | `Start_element _ | `End_element | `Comment _ |
                       `PI _ | `Doctype _ | `Xml _)
@@ -133,7 +133,7 @@ let write signals =
         if List.for_all (fun s -> String.length s = 0) ss then
           next_signal throw e k
         else
-          emit_list (List.map _escape_text ss) throw e k
+          emit_list (List.map escape_text ss) throw e k
 
       | `Comment s ->
         emit_list ["<!--"; s; "-->"] throw e k

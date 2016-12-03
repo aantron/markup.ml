@@ -14,7 +14,7 @@ type t =
   | `Misnested_tag of string * string
   | `Bad_content of string ]
 
-let _explode_string s =
+let explode_string s =
   let rec iterate index acc =
     if index >= String.length s then List.rev acc
     else iterate (index + 1) (s.[index]::acc)
@@ -34,7 +34,7 @@ let to_string ?location error =
         fmt "bad byte '0x%02X' for encoding '%s'" (Char.code bytes.[0]) encoding
       | _ ->
         fmt "bad bytes '%s' for encoding '%s'"
-          (_explode_string bytes
+          (explode_string bytes
            |> List.map Char.code
            |> List.map (fmt "0x%02X")
            |> String.concat " ")
