@@ -75,7 +75,9 @@ let add_utf_8 buffer c =
 
 let format_char = Printf.sprintf "U+%04X"
 
-let is_in_range lower upper c = c >= lower && c <= upper
+(* Type constraints are necessary to avoid polymorphic comparison, which would
+   greatly reduce performance: https://github.com/aantron/markup.ml/pull/15. *)
+let is_in_range (lower : int) (upper : int) c = c >= lower && c <= upper
 
 (* HTML 8.2.2.5. *)
 let is_control_character = function
