@@ -278,3 +278,7 @@ let trim_string_right s =
 
 (* String.trim not available for OCaml < 4.00. *)
 let trim_string s = s |> trim_string_left |> trim_string_right
+
+(* Specialization of List.mem at string list, to avoid polymorphic
+   comparison. *)
+let list_mem_string (s : string) l = List.exists (fun s' -> s' = s) l

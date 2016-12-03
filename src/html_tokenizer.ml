@@ -133,7 +133,7 @@ let tokenize report (input, get_location) =
       match attributes with
       | [] -> k accumulator
       | (n, v)::more ->
-        if List.mem n seen then
+        if list_mem_string n seen then
           report l (`Bad_token (n, "tag", "duplicate attribute")) !throw
             (fun () ->
           rev_deduplicate accumulator seen more k)

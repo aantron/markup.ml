@@ -352,7 +352,7 @@ let meta_tag_prescan =
         get_attribute begin function
           | None -> k got_pragma need_pragma charset
           | Some (name, value) ->
-            if List.mem name names then
+            if list_mem_string name names then
               iterate names got_pragma need_pragma charset
             else
               let names = name::names in

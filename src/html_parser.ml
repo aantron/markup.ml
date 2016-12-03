@@ -23,6 +23,16 @@ struct
     | `Other s -> s
 end
 
+(* Specialization of List.mem at _qname list, to avoid polymorphic
+   comparison. *)
+let list_mem_qname ((ns, tag) : _qname) l =
+  let rec loop = function
+    | [] -> false
+    | (ns', tag')::_ when ns' = ns && tag' = tag -> true
+    | _::rest -> loop rest
+  in
+  loop l
+
 
 
 (* Elements. *)
@@ -86,7 +96,7 @@ struct
      parent       = dummy}
 
   let is_special name =
-    List.mem name
+    list_mem_qname name
       [`HTML, "address"; `HTML, "applet"; `HTML, "area";
        `HTML, "article"; `HTML, "aside"; `HTML, "base";
        `HTML, "basefont"; `HTML, "bgsound"; `HTML, "blockquote";
@@ -281,7 +291,7 @@ sig
 end =
 struct
   let is_mathml_text_integration_point qname =
-    List.mem qname
+    list_mem_qname qname
       [`MathML, "mi"; `MathML, "mo"; `MathML, "mn"; `MathML, "ms";
        `MathML, "mtext"]
 
@@ -295,7 +305,7 @@ struct
         | "encoding", "application/xhtml+xml" -> true
         | _ -> false)
     | `SVG ->
-      List.mem tag_name ["foreignObject"; "desc"; "title"]
+      list_mem_string tag_name ["foreignObject"; "desc"; "title"]
 
   let adjust_mathml_attributes attributes =
     attributes |> List.map (fun ((ns, name), value) ->
@@ -471,7 +481,7 @@ struct
 
   let current_element_is open_elements names =
     match !open_elements with
-    | {element_name = `HTML, name}::_ -> List.mem name names
+    | {element_name = `HTML, name}::_ -> list_mem_string name names
     | _ -> false
 
   let current_element_is_foreign context open_elements =
@@ -490,7 +500,7 @@ struct
       | {element_name = ns, name'' as name}::more ->
         if ns = `HTML && name'' = name' then true
         else
-          if List.mem name scope_delimiters then false
+          if list_mem_qname name scope_delimiters then false
           else scan more
     in
     scan !open_elements
@@ -530,9 +540,9 @@ struct
     let rec scan = function
       | [] -> false
       | {element_name = ns, name' as name}::more ->
-        if ns = `HTML && List.mem name' names then true
+        if ns = `HTML && list_mem_string name' names then true
         else
-          if List.mem name _scope_delimiters then false
+          if list_mem_qname name _scope_delimiters then false
           else scan more
     in
     scan !open_elements
@@ -541,9 +551,9 @@ struct
     let rec scan = function
       | [] -> false
       | {element_name = ns, name' as name}::more ->
-        if ns = `HTML && List.mem name' names then true
+        if ns = `HTML && list_mem_string name' names then true
         else
-          if List.mem name
+          if list_mem_qname name
               [`HTML, "html"; `HTML, "table"; `HTML, "template"] then
             false
           else scan more
@@ -556,7 +566,7 @@ struct
       | e::more ->
         if e == node then true
         else
-          if List.mem node.element_name _scope_delimiters then false
+          if list_mem_qname node.element_name _scope_delimiters then false
           else scan more
     in
     scan !open_elements
@@ -1031,7 +1041,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     let rec iterate = function
       | [] -> k ()
       | {element_name = ns, name; location}::more ->
-        report_if (not (ns = `HTML && List.mem name names))
+        report_if (not (ns = `HTML && list_mem_string name names))
           location (fun () -> `Unmatched_start_tag name) !throw (fun () ->
         iterate more)
     in
@@ -1236,7 +1246,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       match !open_elements with
       | [] -> mode ()
       | {element_name = ns, name}::_ ->
-        if ns = `HTML && List.mem name names then pop location mode
+        if ns = `HTML && list_mem_string name names then pop location mode
         else
           report location (`Unmatched_start_tag name) !throw (fun () ->
           pop location iterate)
@@ -1246,7 +1256,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   and pop_implied ?(except = "") location mode =
     pop_until (fun {element_name = _, name} ->
       name = except ||
-        not @@ List.mem name
+        not @@ list_mem_string name
           ["dd"; "dt"; "li"; "option"; "optgroup"; "p"; "rb"; "rp"; "rt";
            "rtc"]) location mode
 
@@ -1303,11 +1313,11 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     let rec scan = function
       | [] -> mode ()
       | {element_name = (ns, name) as name'}::more ->
-        if ns = `HTML && List.mem name names then
+        if ns = `HTML && list_mem_string name names then
           close_element_with_implied name l mode
         else
           if Element.is_special name' &&
-            not @@ List.mem name'
+            not @@ list_mem_qname name'
               [`HTML, "address"; `HTML, "div"; `HTML, "p"] then
             mode ()
           else
@@ -1399,7 +1409,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         push_and_emit l t before_head_mode
 
       | l, `End {name}
-          when not @@ List.mem name ["head"; "body"; "html"; "br"] ->
+          when not @@ list_mem_string name ["head"; "body"; "html"; "br"] ->
         unmatched_end_tag l name before_html_mode
 
       | l, _ as v ->
@@ -1428,7 +1438,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         push_and_emit l t in_head_mode
 
       | l, `End {name}
-          when not @@ List.mem name ["head"; "body"; "html"; "br"] ->
+          when not @@ list_mem_string name ["head"; "body"; "html"; "br"] ->
         report l (`Unmatched_end_tag name) !throw before_head_mode
 
       | l, _ as v ->
@@ -1498,7 +1508,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `Start {name = "head"} ->
       report l (`Misnested_tag ("head", "head")) !throw mode
 
-    | l, `End {name} when not @@ List.mem name ["body"; "html"; "br"] ->
+    | l, `End {name} when not @@ list_mem_string name ["body"; "html"; "br"] ->
       report l (`Unmatched_end_tag name) !throw mode
 
     | l, _ as v ->
@@ -1575,7 +1585,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         report l (`Bad_document "duplicate head element") !throw
           after_head_mode
 
-      | l, `End {name} when not @@ List.mem name ["body"; "html"; "br"] ->
+      | l, `End {name}
+          when not @@ list_mem_string name ["body"; "html"; "br"] ->
         report l (`Unmatched_end_tag name) !throw after_head_mode
 
       (* This case is not found in the specification. It is a deliberate
@@ -1784,7 +1795,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           (fun next ->
             match Stack.current_element open_elements with
             | Some {element_name = `HTML, name'}
-                when List.mem name' ["h1"; "h2"; "h3"; "h4"; "h5"; "h6"] ->
+                when list_mem_string
+                  name' ["h1"; "h2"; "h3"; "h4"; "h5"; "h6"] ->
               next ()
             | _ ->
               report l (`Unmatched_end_tag name) !throw next)

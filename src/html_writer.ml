@@ -63,7 +63,8 @@ let write signals =
       | `Start_element ((ns, name') as name, attributes) ->
         let tag_name =
           match name with
-          | ns, local_name when List.mem ns [html_ns; svg_ns; mathml_ns] ->
+          | ns, local_name
+              when list_mem_string ns [html_ns; svg_ns; mathml_ns] ->
             local_name
           | ns, local_name when ns = xml_ns -> "xml:" ^ local_name
           | ns, local_name when ns = xmlns_ns -> "xmlns:" ^ local_name
@@ -95,7 +96,7 @@ let write signals =
         let tag =
           "<"::tag_name::(prepend_attributes [">"] (List.rev attributes)) in
 
-        let is_void = ns = html_ns && List.mem name' _void_elements in
+        let is_void = ns = html_ns && list_mem_string name' _void_elements in
 
         if is_void then
           peek signals throw (fun () -> emit_list tag throw e k) (function
@@ -109,7 +110,7 @@ let write signals =
         else begin
           open_elements := tag_name::!open_elements;
 
-          if ns = html_ns && List.mem name' _prepend_newline_for then
+          if ns = html_ns && list_mem_string name' _prepend_newline_for then
             peek_option signals throw (function
               | Some (`Text ss) when _starts_with_newline ss ->
                 emit_list (tag @ ["\n"]) throw e k
