@@ -1,6 +1,19 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
+(* Aliases for reducing the number of deprecation warings. *)
+module String =
+struct
+  include String
+  let lowercase = lowercase
+end
+
+module Char =
+struct
+  include Char
+  let lowercase = lowercase
+end
+
 type 'a cont = 'a -> unit
 type 'a cps = exn cont -> 'a cont -> unit
 
