@@ -36,7 +36,7 @@ struct
 
   let of_cps f =
     let thread, wake = Lwt.wait () in
-    f (Lwt.wakeup_exn wake) (Lwt.wakeup wake);
+    f (Lwt.wakeup_later_exn wake) (Lwt.wakeup_later wake);
     thread
 
   let to_cps = to_cps

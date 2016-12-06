@@ -24,21 +24,41 @@ let suite =
       next s >|= assert_equal (Some 1337)
       |> Lwt_main.run);
 
-    ("lwt.stream.tail_call" >:: fun _ ->
+    ("lwt.stream.tail_call.to_cps" >:: fun _ ->
       ensure_tail_calls ();
       let s = (fun () -> Lwt.return (Some 1337)) |> stream in
       let limit = 10000 in
       Lwt.catch
         (fun () ->
           fold (fun count _ ->
-            if count >= limit then raise Exit
+            if count >= limit then Lwt.fail Exit
             else Lwt.return (count + 1))
             0 s
           >|= ignore)
         (function
           | Exit -> Lwt.return_unit
-          | exn -> raise exn)
+          | exn -> Lwt.fail exn)
       |> Lwt_main.run);
+
+    ("lwt.stream.tail_call.of_cps" >:: fun _ ->
+      let t = ref (Lwt.wait ()) in
+      let s = (fun () -> fst !t) |> stream in
+      let rec repeat n =
+        if n = 0 then
+          Lwt.return_unit
+        else begin
+          let proceed =
+            next s >>= (function
+            | Some () -> repeat (n - 1)
+            | None -> Lwt.fail_with "unexpected result")
+          in
+          let push = snd !t in
+          t := Lwt.wait ();
+          Lwt.wakeup push (Some ());
+          proceed
+        end
+      in
+      Lwt_main.run (repeat 10000));
 
     ("lwt.lwt_stream" >:: fun _ ->
       [1; 2; 3]
