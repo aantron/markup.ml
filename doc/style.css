@@ -28,8 +28,8 @@
 /* Formatting. */
 
 .warning {
+    margin-right: 1ex;
     font-weight: bold;
-    color: red;
 }
 
 .info {
