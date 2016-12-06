@@ -21,31 +21,6 @@ opam install lwt markup
 
 open Markup
 
-val ensure_tail_calls : ?hook:((exn -> unit) ref) -> unit -> unit
-(** Call [ensure_tail_calls ()] before using [Markup_lwt] to avoid stack
-    overflows.
-
-    Current versions of Lwt don't interface well with continuation-passing
-    style, in which Markup.ml is written. [ensure_tail_calls] installs a
-    workaround that abuses [Lwt.async_exception_hook] to avoid this problem.
-
-    If your application needs to use [Lwt.async_exception_hook] for its own
-    purposes, there are two options:
-
-    - If you don't need to modify [Lwt.async_exception_hook] after installing
-      your hook, simply install it, then call [ensure_tail_calls ()]. When
-      [Markup_lwt] receives any exception besides its internal workaround
-      exception, it will delegate handling to your hook.
-    - If you need to modify the hook after initialization, you can use the
-      [~hook] parameter to provide a reference, and modify that reference
-      instead of [Lwt.async_exception_hook]. [Markup_lwt] will delegate to the
-      handler stored in the reference.
-
-    See {{:https://github.com/ocsigen/lwt/pull/206} Lwt pull request #206}. When
-    Lwt makes a release that is compatible with CPS, this function will be
-    deprecated, and the implementation will be changed to a no-op.
- *)
-
 include Markup.ASYNCHRONOUS with type 'a io := 'a Lwt.t
 
 val lwt_stream : 'a Lwt_stream.t -> ('a, async) stream
@@ -53,6 +28,9 @@ val lwt_stream : 'a Lwt_stream.t -> ('a, async) stream
 
 val to_lwt_stream : ('a, _) stream -> 'a Lwt_stream.t
 (** Adapts a Markup.ml stream to an Lwt stream. *)
+
+val ensure_tail_calls : ?hook:((exn -> unit) ref) -> unit -> unit
+(** @deprecated Not necessary since Markup.ml 0.7.4. *)
 
 (**/**)
 

@@ -3,30 +3,15 @@
 
 open Common
 
-let installed_workaround_hook = ref false
-
-exception TailCallWorkaround of (unit -> unit)
-
-let tail_call_workaround k v =
-  raise (TailCallWorkaround (fun () -> k v))
-
-let ensure_tail_calls ?hook () =
-  let previous_hook = !Lwt.async_exception_hook in
-  Lwt.async_exception_hook := (function
-    | TailCallWorkaround k -> k ()
-    | exn ->
-      match hook with
-      | None -> previous_hook exn
-      | Some hook -> !hook exn);
-  installed_workaround_hook := true
+let ensure_tail_calls ?hook:_hook = ignore
 
 let to_cps thread =
-  if not !installed_workaround_hook then
-    fun throw k -> Lwt.on_any (thread ()) k throw
-  else
-    fun throw k ->
-      Lwt.on_any (thread ())
-        (tail_call_workaround k) (tail_call_workaround throw)
+  fun throw k ->
+    let thread = thread () in
+    match Lwt.state thread with
+    | Lwt.Return x -> k x
+    | Lwt.Fail e -> throw e
+    | Lwt.Sleep -> Lwt.on_any thread k throw
 
 module Adapter =
 struct

@@ -25,7 +25,6 @@ let suite =
       |> Lwt_main.run);
 
     ("lwt.stream.tail_call.to_cps" >:: fun _ ->
-      ensure_tail_calls ();
       let s = (fun () -> Lwt.return (Some 1337)) |> stream in
       let limit = 10000 in
       Lwt.catch
