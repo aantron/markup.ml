@@ -208,7 +208,6 @@ ocamlfind-uninstall :
 
 .PHONY : install
 install :
-	[ -f opam ] || ln -s src/opam
 	opam pin add . -y
 
 .PHONY : uninstall
@@ -218,5 +217,5 @@ uninstall :
 .PHONY : clean
 clean :
 	$(OCAMLBUILD) -clean
-	rm -rf bisect*.out $(COVERAGE) $(HTML) $(PUBLISH) $(DOC_ZIP) opam
+	rm -rf bisect*.out $(COVERAGE) $(HTML) $(PUBLISH) $(DOC_ZIP)
 	cd $(DEP_TEST_DIR) && $(OCAMLBUILD) -clean
