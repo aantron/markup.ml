@@ -1112,7 +1112,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     let rec iterate last = function
       | [e] when not last && Context.the_context context <> `Document ->
         begin match Context.the_context context with
-        | `Document -> failwith "impossible"
+        | `Document -> assert false (*BISECT-IGNORE*)
         | `Fragment name -> iterate true [{e with element_name = name}]
         end
       | {element_name = _, "select"}::ancestors ->

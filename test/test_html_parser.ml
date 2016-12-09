@@ -227,6 +227,10 @@ let tests = [
         1, 21, S  `End_element;
         1, 28, S  `End_element]);
 
+  ("html.parser.body.whitespace" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) " \n\r\t\x0c&#x0d;"
+      [ 1,  1, S (`Text [" \n\n\t\x0c\r"])]);
+
   ("html.parser.paragraphs" >:: fun _ ->
     expect "<p>foo</p>"
       [ 1,  1, S (start_element "html");
@@ -508,6 +512,9 @@ let tests = [
     expect ~context:(Some (`Fragment "title")) "</p>"
       [ 1,  1, S (`Text ["</p>"])];
 
+    expect ~context:(Some (`Fragment "textarea")) "</p>"
+      [ 1,  1, S (`Text ["</p>"])];
+
     expect ~context:(Some (`Fragment "body")) "</p>"
       [ 1,  1, E (`Unmatched_end_tag "p");
         1,  1, S (start_element "p");
@@ -515,6 +522,18 @@ let tests = [
 
     expect ~context:(Some (`Fragment "body")) "<!DOCTYPE html>"
       [ 1,  1, E (`Bad_document "doctype should be first")]);
+
+  ("html.parser.fragment.rawtext" >:: fun _ ->
+    expect ~context:(Some (`Fragment "style")) "&nbsp;</p>"
+      [ 1,  1, S (`Text ["&nbsp;</p>"])]);
+
+  ("html.parser.fragment.script" >:: fun _ ->
+    expect ~context:(Some (`Fragment "script")) "&nbsp;</p>"
+      [ 1,  1, S (`Text ["&nbsp;</p>"])]);
+
+  ("html.parser.fragment.plaintext" >:: fun _ ->
+    expect ~context:(Some (`Fragment "plaintext")) "&nbsp;</p></plaintext>"
+      [ 1,  1, S (`Text ["&nbsp;</p></plaintext>"])]);
 
   ("html.parser.context-detection" >:: fun _ ->
     expect ~context:None "<p>foo</p>"
