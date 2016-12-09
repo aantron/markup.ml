@@ -1,9 +1,15 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Common
-open Kstream
-open Encoding
+open Markup_common
+open Markup_kstream
+open Markup_encoding
+module Common = Markup_common
+module Kstream = Markup_kstream
+module Stream_io = Markup_stream_io
+module Encoding = Markup_encoding
+module Input = Markup_input
+module Xml_tokenizer = Markup_xml_tokenizer
 
 let name_to_encoding = function
   | "utf-8" -> Some utf_8

@@ -1,4 +1,4 @@
-open Common
+open Markup_common
 
 type t =
   {mutable strings  : string list;

@@ -4,8 +4,8 @@
 open OUnit2
 open Test_support
 
-open Common
-open Kstream
+open Markup_common
+open Markup_kstream
 
 let exn = Failure "failure"
 

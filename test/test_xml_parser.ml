@@ -3,7 +3,8 @@
 
 open OUnit2
 open Test_support
-open Common
+open Markup_common
+module Error = Markup_error
 
 let xml_decl = Test_xml_tokenizer.xml_decl
 let raw_doctype = Test_xml_tokenizer.raw_doctype
@@ -19,10 +20,10 @@ let expect ?context ?(namespace = no_top_level_namespaces) text signals =
     expect_signals signal_to_string text signals in
 
   text
-  |> Stream_io.string
-  |> Encoding.utf_8
-  |> Input.preprocess is_valid_xml_char Error.ignore_errors
-  |> Xml_tokenizer.tokenize Error.ignore_errors no_custom_entities
+  |> Markup_stream_io.string
+  |> Markup_encoding.utf_8
+  |> Markup_input.preprocess is_valid_xml_char Error.ignore_errors
+  |> Markup_xml_tokenizer.tokenize Error.ignore_errors no_custom_entities
   |> Markup__xml_parser.parse context namespace report
   |> iter iterate;
 

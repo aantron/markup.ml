@@ -8,7 +8,7 @@ open Test_support
 let (>>=) = Lwt.(>>=)
 let (>|=) = Lwt.(>|=)
 
-open Common
+open Markup_common
 open Markup_lwt
 open Markup_lwt_unix
 

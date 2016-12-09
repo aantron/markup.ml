@@ -2,7 +2,7 @@
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
 open OUnit2
-open Common
+open Markup_common
 
 (* Lwt.Infix not available for Lwt 2.4.6 (Ocaml 4.00). *)
 let (>>=) = Lwt.(>>=)

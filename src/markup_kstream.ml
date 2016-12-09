@@ -1,7 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Common
+open Markup_common
 
 type 'a t = {mutable f : exn cont -> unit cont -> 'a cont -> unit}
 

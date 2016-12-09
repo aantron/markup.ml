@@ -3,14 +3,14 @@
 
 open OUnit2
 open Test_support
-open Common
+open Markup_common
 
 let expect id signals strings =
   let _, iterate, ended = expect_strings id strings in
 
   signals
-  |> Kstream.of_list
-  |> Html_writer.write
+  |> Markup_kstream.of_list
+  |> Markup_html_writer.write
   |> iter iterate;
 
   ended ()

@@ -36,7 +36,7 @@ build :
 .PHONY : entities
 entities :
 	$(OCAMLBUILD) -quiet $(CFLAGS) translate_entities.native -- \
-		> src/entities.ml
+		> src/markup_entities.ml
 
 COVERAGE := test/coverage
 run_test = \

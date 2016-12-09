@@ -2,6 +2,7 @@
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
 open OUnit2
+module Trie = Markup_trie
 
 let singleton w value =
   Trie.create () |> Trie.add w value

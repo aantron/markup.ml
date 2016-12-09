@@ -15,7 +15,7 @@
    interface of Markup.ml, and the internal code should be calling them only
    when it is statically provable that the functions will succeed. *)
 
-open Common
+open Markup_common
 
 type 'a t
 

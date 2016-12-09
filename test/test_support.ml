@@ -2,7 +2,10 @@
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
 open OUnit2
-open Common
+open Markup_common
+module Text = Markup_text
+module Error = Markup_error
+module Kstream = Markup_kstream
 
 let sprintf = Printf.sprintf
 

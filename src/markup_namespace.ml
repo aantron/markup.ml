@@ -1,7 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Common
+open Markup_common
 
 let list_map_cps : ('a -> 'b cps) -> 'a list -> 'b list cps =
     fun f l throw k ->

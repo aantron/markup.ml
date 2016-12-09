@@ -4,10 +4,10 @@
 open OUnit2
 open Test_support
 
-open Common
-open Kstream
-open Stream_io
-open Detect
+open Markup_common
+open Markup_kstream
+open Markup_stream_io
+open Markup_detect
 
 let ok = wrong_k "failed"
 
@@ -183,7 +183,7 @@ let tests = [
       _check_rewound chars s
     in
 
-    let open Encoding in
+    let open Markup_encoding in
 
     check utf_8 "<?xml encoding='utf-8'?>" (Some "utf-8");
     check utf_16be "<?xml encoding='utf-8'?>" None;

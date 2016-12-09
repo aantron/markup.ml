@@ -3,7 +3,8 @@
 
 open OUnit2
 open Test_support
-open Common
+open Markup_common
+module Error = Markup_error
 
 let doctype =
   `Doctype
@@ -21,11 +22,11 @@ let expect ?prefix ?(context = Some `Document) text signals =
     expect_signals ?prefix signal_to_string text signals in
 
   text
-  |> Stream_io.string
-  |> Encoding.utf_8
-  |> Input.preprocess is_valid_html_char Error.ignore_errors
-  |> Html_tokenizer.tokenize Error.ignore_errors
-  |> Html_parser.parse context report
+  |> Markup_stream_io.string
+  |> Markup_encoding.utf_8
+  |> Markup_input.preprocess is_valid_html_char Error.ignore_errors
+  |> Markup_html_tokenizer.tokenize Error.ignore_errors
+  |> Markup_html_parser.parse context report
   |> iter iterate;
 
   ended ()

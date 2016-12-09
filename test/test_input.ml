@@ -4,11 +4,11 @@
 open OUnit2
 open Test_support
 
-open Common
-open Kstream
-open Stream_io
-open Encoding
-open Input
+open Markup_common
+open Markup_kstream
+open Markup_stream_io
+open Markup_encoding
+open Markup_input
 
 let ok = wrong_k "failed"
 
