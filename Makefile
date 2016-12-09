@@ -184,11 +184,12 @@ all-tests :
 OUTPUT := _build/src
 generated = \
 	$(OUTPUT)/$(1).cma $(OUTPUT)/$(1).cmxa $(OUTPUT)/$(1).a $(OUTPUT)/$(1).cmi \
-	$(OUTPUT)/$(1).mli $(OUTPUT)/$(1).cmti $(OUTPUT)/$(1).cmt $(OUTPUT)/$(1).cmx
+	$(OUTPUT)/$(1).mli $(OUTPUT)/$(1).cmti $(OUTPUT)/$(1).cmt
 INSTALL := \
 	$(call generated,$(LIB)) \
 	$(call generated,$(LIB)_lwt) \
-	$(call generated,$(LIB)_lwt_unix)
+	$(call generated,$(LIB)_lwt_unix) \
+	$(shell find $(OUTPUT) -name '*.cmx')
 PACKAGE := markup
 
 .PHONY : ocamlfind-install
