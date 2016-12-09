@@ -44,35 +44,14 @@ let replace_windows_1252_entity = function
   | 0x9F -> 0x0178
   | c -> c
 
-let find_matches : (string * 'a) array -> string ->
-    [ `None
-    | `Continue
-    | `Match_and_continue of string * 'a
-    | `Match of string * 'a ] = fun dict s ->
-
-  let startswith prefix s =
-    try String.sub s 0 (String.length prefix) = prefix
-    with Invalid_argument _ -> false
-  in
-
-  let rec scan matches exact index =
-    if index >= Array.length dict then matches, exact
-    else
-      let (key, _) as item = dict.(index) in
-      if startswith s key then
-        if String.length s = String.length key then
-          scan (matches + 1) (Some item) (index + 1)
-        else
-          scan (matches + 1) exact (index + 1)
-      else
-        scan matches exact (index + 1)
-  in
-
-  match scan 0 None 0 with
-  | 0, _ -> `None
-  | _, None -> `Continue
-  | 1, Some item -> `Match item
-  | _, Some item -> `Match_and_continue item
+let named_entity_trie =
+  lazy begin
+    let trie = Trie.create () in
+    Array.fold_left (fun trie (name, characters) ->
+      Trie.add name characters trie)
+      trie
+      Entities.entities
+  end
 
 type doctype_buffers =
   {mutable doctype_name      : Buffer.t option;
@@ -385,21 +364,27 @@ let tokenize report (input, get_location) =
                   | _ -> unterminated ())
         in
 
-        let rec match_named best matched replace candidate =
+        let rec match_named best matched replace trie text =
           next_option input !throw (function
-            | None -> finish best matched replace
-            | Some ((_, c) as v) when c > 0x7F ->
-              finish best matched (v::replace)
+            | None ->
+              finish best matched replace
             | Some ((_, c) as v) ->
-              let candidate = Printf.sprintf "%s%c" candidate (Char.chr c) in
-              match find_matches Entities.entities candidate with
-              | `None -> finish best matched (v::replace)
-              | `Continue -> match_named best matched (v::replace) candidate
-              | `Match_and_continue m ->
-                match_named (Some m) (v::(replace @ matched)) [] candidate
-              | `Match m -> finish (Some m) (v::matched) [])
+              let trie = Trie.advance c trie in
+              add_utf_8 text c;
+              match Trie.matches trie with
+              | Trie.No ->
+                finish best matched (v::replace)
+              | Trie.Prefix ->
+                match_named best matched (v::replace) trie text
+              | Trie.Multiple m ->
+                let w = Buffer.contents text in
+                match_named (Some (w, m)) (v::(replace @ matched)) [] trie text
+              | Trie.Yes m ->
+                let w = Buffer.contents text in
+                finish (Some (w, m)) (v::matched) [])
         in
-        match_named None [] [] "")
+        match_named
+          None [] [] (Lazy.force named_entity_trie) (Buffer.create 16))
 
   (* 8.2.4.1. *)
   and data_state () =

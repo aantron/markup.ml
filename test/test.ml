@@ -9,6 +9,7 @@ let suite =
     Test_stream_io.tests;
     Test_encoding.tests;
     Test_input.tests;
+    Test_trie.tests;
     Test_xml_tokenizer.tests;
     Test_xml_parser.tests;
     Test_xml_writer.tests;
