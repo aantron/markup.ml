@@ -9,7 +9,7 @@
       input.
     - Reports all errors before recovery, so you can get strict parsing
       instead.
-    - Is based on the XML grammar and HTML parser from the respective
+    - Conforms closely to the XML grammar and HTML parser from the respective
       specifications.
     - Accepts document fragments, but can be told to accept only full documents.
     - Detects character encodings automatically.
@@ -71,8 +71,8 @@ val write_xml  : signal stream -> char stream
     {!modules:Markup_lwt Markup_lwt_unix}
 
     Most of the interface of {!Markup_lwt} is specified in signature
-    {!ASYNCHRONOUS}, which will later be shared with a planned [Markup_async]
-    module.
+    {!ASYNCHRONOUS}, which will be shared with a [Markup_async] module, should
+    it be implemented.
 
     Markup.ml is developed on {{:https://github.com/aantron/markup.ml} GitHub}
     and distributed under the
@@ -754,8 +754,8 @@ end
 
 (** Markup.ml interface for monadic I/O libraries such as Lwt and Async. This
     signature is included in the signature of {!Markup_lwt}, with type ['a io]
-    replaced by ['a Lwt.t], and will be included in the planned [Markup_async].
-    To use the functions in this interface, use {!Markup_lwt}.
+    replaced by ['a Lwt.t]. To use the functions in this interface, use
+    {!Markup_lwt}. A [Markup_async] module has not (yet) been implemented.
 
     All of the functions here correspond directly to functions in {!Markup} with
     the same name. See that module for details on each function.
@@ -876,19 +876,21 @@ val preprocess_input_stream :
 
 (** {2 Conformance status}
 
-    The HTML parser seeks to implement section 8 of the HTML5 specification.
-    That section describes a parser, part of a full-blown user agent, that is
-    building up a DOM representation of an HTML document. Markup.ml is neither
-    inherently part of a user agent, nor does it build up a DOM representation.
-    With respect to section 8 of HTML5, Markup.ml is concerned with only the
-    syntax. When that section requires that the user agent perform an action,
-    Markup.ml emits enough information for a hypothetical user agent based on it
-    to be able to decide to perform this action. Likewise, Markup.ml seeks to
-    emit enough information for a hypothetical user agent to build up a
-    conforming DOM.
+    The HTML parser seeks to implement
+    {{:https://www.w3.org/TR/html5/syntax.html} section 8 of the HTML5
+    specification}. That section describes a parser, part of a full-blown user
+    agent, that is building up a DOM representation of an HTML document.
+    Markup.ml is neither inherently part of a user agent, nor does it build up a
+    DOM representation. With respect to section 8 of HTML5, Markup.ml is
+    concerned with only the syntax. When that section requires that the user
+    agent perform an action, Markup.ml emits enough information for a
+    hypothetical user agent based on it to be able to decide to perform this
+    action. Likewise, Markup.ml seeks to emit enough information for a
+    hypothetical user agent to build up a conforming DOM.
 
-    The XML parser seeks to be a non-validating implementation of the XML and
-    Namespaces in XML specifications.
+    The XML parser seeks to be a non-validating implementation of the
+    {{:https://www.w3.org/TR/xml/} XML} and {{:https://www.w3.org/TR/xml-names/}
+    Namespaces in XML} specifications.
 
     This rest of this section lists known deviations from HTML5, XML, and
     Namespaces in XML. Some of these deviations are meant to be corrected in
@@ -904,7 +906,7 @@ val preprocess_input_stream :
     - They can easily be corrected by code written over Markup.ml that builds up
       a DOM or maintains other auxiliary data structures during parsing.
 
-    {3 To be corrected}
+    {3 To be corrected:}
 
     - XML: There is no attribute value normalization.
     - HTML: {e foster parenting} is not implemented, because it requires
@@ -916,7 +918,7 @@ val preprocess_input_stream :
     - HTML: The form translation for [isindex] is completely ignored. [isindex]
       is handled as an unknown element.
 
-    {3 To remain}
+    {3 To remain:}
 
     - HTML: Except when detecting encodings, the parser does not try to read
       [<meta>] tags for encoding declarations. The user of Markup.ml should read

@@ -8,9 +8,9 @@
 [coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
 [coveralls-img]: https://img.shields.io/coveralls/aantron/markup.ml/master.svg
 
-Markup.ml is a pair of parsers implementing the HTML5 and XML specifications,
-including error recovery. Usage is simple, because each parser is a function
-from byte streams to parsing signal streams:
+Markup.ml is a pair of parsers implementing the [HTML5][HTML5] and [XML][XML]
+specifications, including error recovery. Usage is simple, because each parser
+is a function from byte streams to parsing signal streams:
 
 ![Usage example][sample]
 
@@ -92,62 +92,57 @@ file "some.xml" |> parse_xml ~report |> signals |> drain
 
 ## Advanced: [Cohttp][cohttp] + Markup.ml + [Lambda Soup][lambdasoup] + [Lwt][lwt]
 
-The code below is a complete program that requests a Google search, then
-performs a streaming scrape of result titles. The first GitHub link is printed,
-then the program exits without waiting for the rest of input. Perhaps early exit
-is not so important for a Google results page, but it may be needed for large
-documents. Memory consumption is low because only the `h3` elements are
-converted into DOM-like trees.
+This program requests a Google search, then does a streaming scrape of result
+titles. It exits when it finds a GitHub link, without reading more input. Only
+one `h3` element is converted into an in-memory tree at a time.
 
 ```ocaml
-open Lwt.Infix
-
 let () =
-  Markup_lwt.ensure_tail_calls ();    (* Workaround for current Lwt :( *)
-
   Lwt_main.run begin
-    Uri.of_string "https://www.google.com/search?q=markup.ml"
-    |> Cohttp_lwt_unix.Client.get
-    >|= snd                           (* Assume success and get body. *)
-    >|= Cohttp_lwt_body.to_stream     (* Now an Lwt_stream.t. *)
-    >|= Markup_lwt.lwt_stream         (* Now a Markup.stream. *)
-    >|= Markup.strings_to_bytes
-    >|= Markup.parse_html
-    >|= Markup.signals
-    >|= Markup.elements (fun name _ -> snd name = "h3")
-    >>= Markup_lwt.iter begin fun h3_subtree ->
-      h3_subtree
-      |> Markup_lwt.to_list
-      >|= Markup.of_list
-      >|= Soup.from_signals
-      >|= fun soup ->
-        let open Soup in
-        match soup $? "a[href*=github]" with
-        | None -> ()
-        | Some a ->
-          a |> texts |> List.iter print_string;
-          print_newline ();
-          exit 0
-    end
+    (* Send request. Assume success. *)
+    let url = "https://www.google.com/search?q=markup.ml" in
+    let%lwt _, body = Cohttp_lwt_unix.Client.get (Uri.of_string url) in
+
+    (* Adapt response to a Markup.ml stream. *)
+    let body = body |> Cohttp_lwt_body.to_stream |> Markup_lwt.lwt_stream in
+
+    (* Set up a lazy stream of h3 elements. *)
+    let h3s = Markup.(body
+      |> strings_to_bytes |> parse_html |> signals
+      |> elements (fun (_ns, name) _attrs -> name = "h3"))
+    in
+
+    (* Find the GitHub link. .iter and .load cause actual reading of data. *)
+    h3s |> Markup_lwt.iter (fun h3 ->
+      let%lwt h3 = Markup_lwt.load h3 in
+      match Soup.(from_signals h3 $? "a[href*=github]") with
+      | None -> Lwt.return_unit
+      | Some anchor ->
+        print_endline (String.concat "" (Soup.texts anchor));
+        exit 0)
   end
 ```
 
-This prints `aantron/markup.ml · GitHub`. To run it, do:
+This prints
+`GitHub - aantron/markup.ml: Error-recovering streaming HTML5 and ...`. To run
+it, do:
 
 ```sh
-ocamlfind opt -linkpkg -package lwt.unix -package cohttp.lwt \
-    -package markup.lwt -package lambdasoup scrape.ml && ./a.out
+ocamlfind opt -linkpkg \
+    -package cohttp.lwt -package lwt.unix -package lwt.ppx \
+    -package markup.lwt -package lambdasoup \
+    scrape.ml && ./a.out
 ```
 
 You can get all the necessary packages by
 
-```sh
+```
 opam install lwt ssl cohttp lambdasoup markup
 ```
 
 ## Installing
 
-```sh
+```
 opam install markup
 ```
 
@@ -155,21 +150,15 @@ opam install markup
 
 The interface of Markup.ml is three modules: [`Markup`][Markup],
 [`Markup_lwt`][Markup_lwt], and [`Markup_lwt_unix`][Markup_lwt_unix]. The last
-two are available only if you have [Lwt][lwt] installed.
+two are available only if you have [Lwt][lwt] installed (OPAM package `lwt`).
 
 The documentation includes a summary of the [conformance status][conformance] of
 Markup.ml.
 
 ## Contributing
 
-Although the parsers are in an "advanced" state of completion, there is still
-considerable work to be done on speed.
-
-I have much more experience with Lwt than Async, so if you would like to create
-an Async interface, it would be very welcome.
-
-Please see the [`CONTRIBUTING`][contributing] file. Feel free to open issues on
-GitHub, or send me an email at [antonbachin@yahoo.com][email].
+Contributions are very much welcome. Please see [`CONTRIBUTING`][contributing]
+for instructions, suggestions, and an overview of the code.
 
 ## License
 
