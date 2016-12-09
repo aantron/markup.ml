@@ -147,7 +147,13 @@ let suite =
       close_out_noerr c;
       (Markup.of_list ['f'; 'o'; 'o'] |> to_file name >>= fun () ->
       Markup.file name |> fst |> to_list >|= assert_equal ['f'; 'o'; 'o'])
-      |> Lwt_main.run)
+      |> Lwt_main.run);
+
+    ("lwt.load" >:: fun _ ->
+      (Markup.of_list ['f'; 'o'; 'o'] |> Markup_lwt.load
+      >|= Markup.to_list
+      >|= assert_equal ['f'; 'o'; 'o'])
+      |> Lwt_main.run);
   ]
 
 let () =

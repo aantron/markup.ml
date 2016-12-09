@@ -844,6 +844,10 @@ sig
 
   val to_list : ('a, _) stream -> 'a list io
 
+  val load : ('a, _) stream -> ('a, sync) stream io
+  (** [load s] converts a general stream [s] to a synchronous stream by
+      buffering it. *)
+
   (** {2 Utility} *)
 
   val tree :

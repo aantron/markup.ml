@@ -245,6 +245,8 @@ sig
 
   val to_list : ('a, _) stream -> 'a list io
 
+  val load : ('a, _) stream -> ('a, sync) stream io
+
   val tree :
     ?text:(string list -> 'a) ->
     ?element:(name -> (name * string) list -> 'a list -> 'a) ->
@@ -330,6 +332,10 @@ struct
   let drain s = iter (fun _ -> IO.return ()) s
 
   let to_list s = Kstream.to_list s |> IO.of_cps
+
+  let load s =
+    (fun throw k -> Kstream.to_list s throw (fun l -> k (Kstream.of_list l)))
+    |> IO.of_cps
 
   let tree ?text ?element ?comment ?pi ?xml ?doctype s =
     Utility.tree ?text ?element ?comment ?pi ?xml ?doctype s |> IO.of_cps
