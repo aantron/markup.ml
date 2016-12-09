@@ -6,6 +6,11 @@ if_package = ! ocamlfind query $(1) > /dev/null 2> /dev/null || ( $(2) )
 OCAML_VERSION := \
 	$(shell ocamlc -version | grep -E -o '^[0-9]+\.[0-9]+' | sed 's/\.//')
 
+ifeq ($(shell test $(OCAML_VERSION) -ge 403 && echo true),true)
+FLAMBDA_TAGS := \
+	-tag-line '<src/*>: optimize(3)'
+endif
+
 ifeq ($(shell test $(OCAML_VERSION) -ge 402 && echo true),true)
 SAFE_STRING := ,-safe-string
 ifeq ($(shell ocamlfind query bisect_ppx > /dev/null 2> /dev/null && \
@@ -27,11 +32,12 @@ OCAMLBUILD := ocamlbuild -use-ocamlfind -j 0 -no-links
 
 .PHONY : build
 build :
-	$(OCAMLBUILD) $(CFLAGS) $(LIB).cma $(LIB).cmxa
+	$(OCAMLBUILD) $(CFLAGS) $(FLAMBDA_TAGS) $(LIB).cma $(LIB).cmxa
 	$(call if_package,lwt,\
-	  	$(OCAMLBUILD) $(CFLAGS) $(LIB)_lwt.cma $(LIB)_lwt.cmxa)
+	  	$(OCAMLBUILD) $(CFLAGS) $(FLAMBDA_TAGS) $(LIB)_lwt.cma $(LIB)_lwt.cmxa)
 	$(call if_package,lwt.unix,\
-	  	$(OCAMLBUILD) $(CFLAGS) $(LIB)_lwt_unix.cma $(LIB)_lwt_unix.cmxa)
+	  	$(OCAMLBUILD) $(CFLAGS) $(FLAMBDA_TAGS) \
+	  		$(LIB)_lwt_unix.cma $(LIB)_lwt_unix.cmxa)
 
 .PHONY : entities
 entities :
