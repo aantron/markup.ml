@@ -1,8 +1,6 @@
-# Markup.ml &nbsp; [![version 0.7.4][version]][releases] [![Documentation][docs-img]][Markup] [![BSD license][license-img]][license] [![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
+# Markup.ml &nbsp; [![version 0.7.4][version]][releases] [![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
 
 [version]:       https://img.shields.io/badge/version-0.7.4-blue.svg
-[docs-img]:      https://img.shields.io/badge/docs-online-blue.svg
-[license-img]:   https://img.shields.io/badge/license-BSD-blue.svg
 [travis]:        https://travis-ci.org/aantron/markup.ml/branches
 [travis-img]:    https://img.shields.io/travis/aantron/markup.ml/master.svg
 [coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
@@ -164,8 +162,7 @@ for instructions, suggestions, and an overview of the code.
 
 Markup.ml is distributed under the [BSD license][license]. The Markup.ml source
 distribution includes a copy of the HTML5 entity list, which is distributed
-under the W3C document license. The copyright notices and text of this license
-are found in [`LICENSE`][license].
+under the [W3C document license][w3c-license].
 
 [releases]:        https://github.com/aantron/markup.ml/releases
 [parse_html]:      http://aantron.github.io/markup.ml/#VALparse_html
@@ -179,10 +176,11 @@ are found in [`LICENSE`][license].
 [lwt]:             https://github.com/ocsigen/lwt
 [lambdasoup]:      https://github.com/aantron/lambda-soup
 [cohttp]:          https://github.com/mirage/ocaml-cohttp
-[license]:         https://github.com/aantron/markup.ml/blob/master/doc/LICENSE
+[license]:         https://github.com/aantron/markup.ml/blob/master/LICENSE.md
 [contributing]:    https://github.com/aantron/markup.ml/blob/master/doc/CONTRIBUTING.md
 [email]:           mailto:antonbachin@yahoo.com
 [Markup]:          http://aantron.github.io/markup.ml
 [Markup_lwt]:      http://aantron.github.io/markup.ml/Markup_lwt.html
 [Markup_lwt_unix]: http://aantron.github.io/markup.ml/Markup_lwt_unix.html
 [conformance]:     http://aantron.github.io/markup.ml/#2_Conformancestatus
+[w3c-license]: https://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
