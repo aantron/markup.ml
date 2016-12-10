@@ -64,7 +64,7 @@ The XML parser follows the same structure, even though it is not explicitly
 suggested.
 
 With the structure and kstreams in mind, the modules can be arranged in the
-following logical order. Everything
+following logical order:
 
 1.  [`Markup_common`][common] – shared definitions, compiler compatibility,
     etc.,
@@ -124,7 +124,7 @@ implementing. It may also be useful to see the [conformance status][conformance]
 [main]: https://github.com/aantron/markup.ml/blob/master/src/markup.mli
 [lwt]: https://github.com/aantron/markup.ml/blob/master/src/markup_lwt.mli
 [lwt_unix]: https://github.com/aantron/markup.ml/blob/master/src/markup_lwt_unix.mli
-[status]: http://aantron.github.io/markup.ml/#2_Conformancestatus
+[conformance]: http://aantron.github.io/markup.ml/#2_Conformancestatus
 
 ## Testing
 
