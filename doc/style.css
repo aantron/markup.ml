@@ -99,13 +99,13 @@ body {
     margin: 0;
     margin-left: 20em;
     max-width: 50em;
+    background-color: #fefefe;
 }
 
 .toc {
     position: fixed;
     top: 3em;
     left: 1em;
-    background-color: white;
 }
 
 .toc p {
@@ -231,6 +231,23 @@ a .code {
 
 a.github {
     font-weight: bold;
+}
+
+h2:target,
+a:target {
+    background-color: yellow;
+}
+
+h2[id] > a,
+a[id] {
+    color: inherit;
+    outline: none;
+}
+
+h2[id] > a:hover,
+a[id]:hover {
+    background-color: yellow;
+    text-decoration: none;
 }
 
 /* Code. */

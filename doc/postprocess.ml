@@ -233,7 +233,20 @@ let clean_up_content soup =
   uncolor "constructor" "Pervasives";
   uncolor "constructor" "Lwt_io";
   uncolor "keyword" "false";
-  uncolor "keyword" "parser"
+  uncolor "keyword" "parser";
+
+  soup $$ "span[id]" |> iter (fun span ->
+    set_name "a" span;
+    set_attribute "href" ("#" ^ (R.attribute "id" span)) span);
+
+  soup $$ "h2[id]" |> iter (fun h2 ->
+    let href = "#" ^ (R.attribute "id" h2) in
+    let a =
+      create_element
+        ~attributes:["href", href] ~inner_text:(R.leaf_text h2) "a";
+    in
+    clear h2;
+    append_child h2 a)
 
 let add_with_type soup type_name =
   let extra =
