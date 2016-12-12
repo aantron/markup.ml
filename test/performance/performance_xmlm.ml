@@ -16,5 +16,5 @@ let parse file =
     raise exn
 
 let () =
-  measure 100 "xmlm" xml_spec "html" (fun () ->
+  measure 100 "xmlm" xml_spec "xml" (fun () ->
     parse xml_spec)
