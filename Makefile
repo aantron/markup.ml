@@ -26,7 +26,7 @@ BIN_ANNOT := ,-bin-annot
 endif
 
 CFLAGS := \
-	-cflags -g,-w,+A-4-9-44-45-48,-warn-error,+A-3$(BIN_ANNOT)$(SAFE_STRING)
+	-cflags -g,-w,+A-4-9-44-45-48-58,-warn-error,+A-3$(BIN_ANNOT)$(SAFE_STRING)
 
 OCAMLBUILD := ocamlbuild -use-ocamlfind -j 0 -no-links
 
