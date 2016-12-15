@@ -16,15 +16,15 @@ before_script:
 
 script:
   - opam install -y ounit lwt js_of_ocaml
-  - "[ -z $DOCS ] || opam install -y lambdasoup"
   - "[ -z $COVERALLS ] || opam install -y bisect_ppx ocveralls"
   - make install
   - make dependency-test
   - make test
+  - "[ -z $COVERALLS ] || ocveralls --prefix _build bisect*.out --send"
   - make performance-test
   - make js-test
-  - "[ -z $DOCS ] || make docs"
-  - "[ -z $COVERALLS ] || ocveralls --prefix _build bisect*.out --send"
+  - "[ -z $DOCS ] || opam install -y lambdasoup"
+  - "[ -z $DOCS ] || make clean docs"
 
 notifications:
   email:
