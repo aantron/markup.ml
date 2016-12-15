@@ -60,6 +60,8 @@ For a higher-level parser, see [Lambda Soup][lambdasoup], which is based on
 Markup.ml, but can search documents using CSS selectors, and perform various
 manipulations.
 
+<br/>
+
 ## Overview and basic usage
 
 The interface is centered around four functions between byte streams and signal
@@ -81,12 +83,14 @@ let report =
     count := !count + 1;
     if !count >= 10 then raise_notrace Exit
 
-file "some.xml" |> parse_xml ~report |> signals |> drain
+file "some.xml" |> fst |> parse_xml ~report |> signals |> drain
 ```
 
 [input]: http://aantron.github.io/markup.ml/#2_Inputsources
 [output]: http://aantron.github.io/markup.ml/#2_Outputdestinations
 [transform]: http://aantron.github.io/markup.ml/#2_Utility
+
+<br/>
 
 ## Advanced: [Cohttp][cohttp] + Markup.ml + [Lambda Soup][lambdasoup] + [Lwt][lwt]
 
@@ -138,11 +142,15 @@ You can get all the necessary packages by
 opam install lwt ssl cohttp lambdasoup markup
 ```
 
+<br/>
+
 ## Installing
 
 ```
 opam install markup
 ```
+
+<br/>
 
 ## Documentation
 
@@ -153,10 +161,23 @@ two are available only if you have [Lwt][lwt] installed (OPAM package `lwt`).
 The documentation includes a summary of the [conformance status][conformance] of
 Markup.ml.
 
+<br/>
+
+## Depending
+
+Markup.ml uses [semantic versioning][semver], but is currently in `0.x.x`. The
+minor version number will be incremented on breaking changes. To give yourself a
+chance to review the changelog, put a constraint on your Markup.ml dependency:
+`markup {< "0.8.0"}`.
+
+<br/>
+
 ## Contributing
 
 Contributions are very much welcome. Please see [`CONTRIBUTING`][contributing]
 for instructions, suggestions, and an overview of the code.
+
+<br/>
 
 ## License
 
@@ -184,3 +205,4 @@ under the [W3C document license][w3c-license].
 [Markup_lwt_unix]: http://aantron.github.io/markup.ml/Markup_lwt_unix.html
 [conformance]:     http://aantron.github.io/markup.ml/#2_Conformancestatus
 [w3c-license]: https://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
+[semver]: http://semver.org/

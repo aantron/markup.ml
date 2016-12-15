@@ -46,6 +46,7 @@ string "some xml" |> parse_xml ~report |> signals |> drain
 type html = Text of string | Element of string * html list
 
 file "some_file"
+|> fst
 |> parse_html
 |> signals
 |> tree
@@ -439,9 +440,14 @@ val channel : Pervasives.in_channel -> (char, sync) stream
 val file : string -> (char, sync) stream * (unit -> unit)
 (** [file path] opens the file at [path], then evaluates to a pair [s, close],
     where reading from stream [s] retrieves successive bytes from the file, and
-    calling [close ()] closes the file. If the file cannot be opened, raises
-    [Sys_error] immediately. Otherwise, with respect to [s], behaves as
-    {!channel}. *)
+    calling [close ()] closes the file.
+
+    The file is closed automatically if [s] is read to completion, or if reading
+    [s] raises an exception. It is not necessary to call [close ()] in these
+    cases.
+
+    If the file cannot be opened, raises [Sys_error] immediately. If the file
+    cannot be read, reading the stream raises [Sys_error]. *)
 
 val fn : (unit -> char option) -> (char, sync) stream
 (** [fn f] is a stream that retrives bytes by calling [f ()]. If the call
@@ -609,20 +615,20 @@ type 'a node =
 
 val from_tree : ('a -> 'a node) -> 'a -> (signal, sync) stream
 (** Deconstructs tree data structures of type ['a] into signal streams. The
-    function argument is applied to each data structuee node. For example,
+    function argument is applied to each data structure node. For example,
 
 {[
-type dom = Text of string | Element of name * dom list
+type dom = Text of string | Element of string * dom list
 
 let dom =
-  Element ("p" [
+  Element ("p", [
     Text "HTML5 is ";
     Element ("em", [Text "easy"]);
     Text " to parse"])
 
 dom |> from_tree (function
   | Text s -> `Text s
-  | Element (name, children) -> `Element (name, [], children))
+  | Element (name, children) -> `Element (("", name), [], children))
 ]}
 
     results in the signal stream
@@ -699,7 +705,7 @@ val xhtml :
 
 val xhtml_entity : string -> string option
 (** Translates XHTML entities. This function is for use with the [~entity]
-    argument of [parse_xml] when parsing XHTML. *)
+    argument of {!parse_xml} when parsing XHTML. *)
 
 val strings_to_bytes : (string, 's) stream -> (char, 's) stream
 (** [strings_to_bytes s] is the stream of all the bytes of all strings in
