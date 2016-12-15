@@ -325,6 +325,10 @@ struct
   let next s = Kstream.next_option s |> IO.of_cps
   let peek s = Kstream.peek_option s |> IO.of_cps
 
+  (* Without Flambda, thunks are repeatedly created and passed on IO.to_cps,
+     resulting in a performance penalty. Flambda seems to optimize this away,
+     however. *)
+
   let transform f v s =
     Kstream.transform (fun v s -> IO.to_cps (fun () -> f v s)) v s
 
