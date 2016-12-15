@@ -41,10 +41,21 @@ struct
     | None -> raise Not_synchronous
     | Some v -> v
 
+  (* Used in to_cps to avoid the need for a match .. with | exception ..
+     expression, which would break compatibility with OCaml < 4.02. Flambda
+     seems to optimizes the allocation of these results away completely. There
+     is a small performance penalty when not using Flambda. *)
+  type 'a result = Value of 'a | Exn of exn
+
   let to_cps f =
     fun throw k ->
-      try k (f ())
-      with exn -> throw exn
+      let result =
+        try Value (f ())
+        with exn -> Exn exn
+      in
+      match result with
+      | Value v -> k v
+      | Exn exn -> throw exn
 end
 
 
