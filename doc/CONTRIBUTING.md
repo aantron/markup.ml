@@ -6,6 +6,8 @@ and email at [antonbachin@yahoo.com][email].
 [repo]:    https://github.com/aantron/markup.ml
 [email]:   mailto:antonbachin@yahoo.com
 
+<br/>
+
 ## Getting started
 
 A development version of Markup.ml can be installed in two ways. The easiest is
@@ -17,6 +19,8 @@ opam source --dev-repo --pin markup
 The other way is to clone this repo (perhaps after forking it), then execute
 `make install` in it. If you go this route, execute `make uninstall` later to
 remove the pin.
+
+<br/>
 
 ## Code overview
 
@@ -36,9 +40,8 @@ type 'a cont = 'a -> unit
 type 'a cps = (exn -> unit) -> ('a -> unit) -> unit
 ```
 
-Pieces of each parser are connected to each other by CPS streams, or *kstreams*,
-where *k* is for kontinuation ([markup_kstream.mli][kstream]). The fundamental
-function on these streams is:
+Pieces of each parser are connected to each other by CPS streams, or *kstreams*
+([markup_kstream.mli][kstream]). The fundamental function on these streams is:
 
 ```ocaml
 next : 'a t -> (exn -> unit) -> (unit -> unit) -> ('a -> unit) -> unit
@@ -53,7 +56,7 @@ such that `next stream on_exn on_empty k` results in:
 
 The HTML specification strongly suggests a logical structure for the parser in
 the section [*8.2.1 Overview of the parsing model*][model], from where the
-following image is brutally ripped:
+following image ripped without any shame whatsoever:
 
 ![HTML parsing model][model-img]
 
@@ -96,7 +99,7 @@ following logical order:
     the user, and finally...
 17. [`Markup`][main], [`Markup_lwt`][lwt], [`Markup_lwt_unix`][lwt_unix] – the
     public interface for operating all of the above machinery without going
-    insane. This is where the CPS implementation is hidden.
+    insane. This is the part that hides the CPS implementation from the user.
 
 Almost everything is based directly on specifications. Most functions are
 commented with the HTML or XML specification section number they are
@@ -126,11 +129,13 @@ implementing. It may also be useful to see the [conformance status][conformance]
 [lwt_unix]: https://github.com/aantron/markup.ml/blob/master/src/markup_lwt_unix.mli
 [conformance]: http://aantron.github.io/markup.ml/#2_Conformancestatus
 
+<br/>
+
 ## Testing
 
-To test the code, you need package `ounit`. Then, simply run `make test` for
-unit tests. If you also have `bisect_ppx` installed, a coverage report will be
-generated. There are several other kinds of testing:
+To test the code, you need to have package `ounit`. Then, simply run `make test`
+for unit tests. If you also have `bisect_ppx` installed, a coverage report will
+be generated. There are several other kinds of testing:
 
 - `make performance-test` measures time for Markup.ml to parse some XML and HTML
   files. If you have Ocamlnet and/or Xmlm installed, those libraries will also
@@ -144,6 +149,8 @@ generated. There are several other kinds of testing:
 
 All tests can be run with `make all-tests`. This also generates the
 documentation, to make sure that it is not broken.
+
+<br/>
 
 ## Suggestions
 
