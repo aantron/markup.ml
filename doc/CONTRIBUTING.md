@@ -56,7 +56,7 @@ such that `next stream on_exn on_empty k` results in:
 
 The HTML specification strongly suggests a logical structure for the parser in
 the section [*8.2.1 Overview of the parsing model*][model], from where the
-following image ripped without any shame whatsoever:
+following image is ripped without any shame whatsoever:
 
 ![HTML parsing model][model-img]
 

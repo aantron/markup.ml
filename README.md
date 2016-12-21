@@ -166,9 +166,7 @@ Markup.ml.
 ## Depending
 
 Markup.ml uses [semantic versioning][semver], but is currently in `0.x.x`. The
-minor version number will be incremented on breaking changes. To give yourself a
-chance to review the changelog, put a constraint on your Markup.ml dependency:
-`markup {< "0.8.0"}`.
+minor version number will be incremented on breaking changes.
 
 <br/>
 
