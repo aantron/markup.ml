@@ -50,6 +50,11 @@ open Kstream
 let write signals =
   let open_elements = ref [] in
 
+  let in_script () =
+    match !open_elements with
+      | "script" :: _ -> true
+      | _ -> false in
+
   let rec queue = ref next_signal
 
   and emit_list l throw e k =
@@ -133,6 +138,8 @@ let write signals =
       | `Text ss ->
         if List.for_all (fun s -> String.length s = 0) ss then
           next_signal throw e k
+        else if in_script () then
+          emit_list ss throw e k
         else
           emit_list (List.map escape_text ss) throw e k
 

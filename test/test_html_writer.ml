@@ -118,4 +118,13 @@ let tests = [
        `End_element]
       [S "<"; S "use"; S " "; S "xlink:href"; S "=\""; S "#foo"; S "\""; S ">";
        S "</"; S "use"; S ">"]);
+
+  ("html.writer.script-element" >:: fun _ ->
+     expect "script element"
+     [ `Start_element ((html_ns, "script"), []);
+       `Text ["true && false"];
+       `End_element ]
+     [ S "<"; S "script"; S ">";
+       S "true && false";
+       S "</"; S "script"; S ">" ]);
 ]
