@@ -47,12 +47,15 @@ let rec starts_with_newline = function
 
 open Kstream
 
+let literal_text_elements =
+  ["style"; "script"; "xmp"; "iframe"; "noembed"; "noframes"; "plaintext"]
+
 let write signals =
   let open_elements = ref [] in
 
-  let in_script () =
+  let in_literal_text_element () =
     match !open_elements with
-      | "script" :: _ -> true
+      | element :: _ -> List.mem element literal_text_elements
       | _ -> false in
 
   let rec queue = ref next_signal
@@ -138,7 +141,7 @@ let write signals =
       | `Text ss ->
         if List.for_all (fun s -> String.length s = 0) ss then
           next_signal throw e k
-        else if in_script () then
+        else if in_literal_text_element () then
           emit_list ss throw e k
         else
           emit_list (List.map escape_text ss) throw e k
