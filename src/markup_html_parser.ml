@@ -48,7 +48,7 @@ type element =
    suppress                  : bool;
    mutable buffering         : bool;
    mutable is_open           : bool;
-   mutable attributes       : (name * string) list;
+   mutable attributes        : (name * string) list;
    mutable end_location      : location;
    mutable children          : annotated_node list;
    mutable parent            : element}
@@ -67,7 +67,9 @@ and annotated_node = location * node
 module Element :
 sig
   val create :
-    ?is_html_integration_point:bool -> ?suppress:bool -> qname -> location ->
+    ?is_html_integration_point:bool ->
+    ?suppress:bool ->
+    qname -> location ->
       element
   val dummy : element
 
@@ -1036,6 +1038,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   let template_insertion_modes = Template.create () in
   let frameset_ok = ref true in
   let head_seen = ref false in
+  let form_element_pointer = ref None in
 
   let add_character = Text.add text in
 
@@ -1173,7 +1176,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   and push_and_emit
       ?(formatting = false) ?(acknowledge = false) ?(namespace = `HTML)
-      location ({Token_tag.name; attributes; self_closing} as tag) mode =
+      ?(set_form_element_pointer = false) location
+      ({Token_tag.name; attributes; self_closing} as tag) mode =
 
     report_if (self_closing && not acknowledge) location (fun () ->
       `Bad_token ("/>", "tag", "should not be self-closing"))
@@ -1203,6 +1207,9 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       Element.create ~is_html_integration_point (namespace, tag_name) location
     in
     open_elements := element_entry::!open_elements;
+
+    if set_form_element_pointer then
+      form_element_pointer := Some element_entry;
 
     if formatting then
       active_formatting_elements :=
@@ -1726,8 +1733,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           mode ())))
 
     | l, `Start ({name = "form"} as t) ->
-      close_current_p_element l (fun () ->
-      push_and_emit l t mode)
+      if !form_element_pointer <> None &&
+         not @@ Stack.has open_elements "template" then
+        report l (`Misnested_tag ("form", "form")) !throw mode
+      else begin
+        close_current_p_element l (fun () ->
+        let in_template = Stack.has open_elements "template" in
+        push_and_emit ~set_form_element_pointer:(not in_template) l t mode)
+      end
 
     | l, `Start ({name = "li"} as t) ->
       frameset_ok := false;
@@ -1769,7 +1782,28 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         close_element_with_implied name l mode
 
     | l, `End {name = "form"} ->
-      close_element_with_implied "form" l mode
+      if not @@ Stack.has open_elements "template" then begin
+        let form_element = !form_element_pointer in
+        form_element_pointer := None;
+        match form_element with
+        | Some element when Stack.target_in_scope open_elements element ->
+          pop_implied l (fun () ->
+          match Stack.current_element open_elements with
+          | Some element' when element' == element ->
+            pop l mode
+          | _ ->
+            report element.location (`Unmatched_start_tag "form") !throw
+              (fun () ->
+            pop_until (fun element' -> element' == element) l (fun () ->
+            pop l mode)))
+        | _ ->
+          report l (`Unmatched_end_tag "form") !throw mode
+      end
+      else
+        if not @@ Stack.in_scope open_elements "form" then
+          report l (`Unmatched_end_tag "form") !throw mode
+        else
+          close_element_with_implied "form" l mode
 
     | l, `End {name = "p"} ->
       (fun mode' ->

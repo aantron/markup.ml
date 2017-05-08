@@ -1028,6 +1028,17 @@ let tests = [
       [ 1,  1, S (start_element "form");
         1,  7, S  `End_element]);
 
+  ("html.parser.form.nested" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) "<form><form></form>"
+      [ 1,  1, S (start_element "form");
+        1,  7, E (`Misnested_tag ("form", "form"));
+        1, 13, S  `End_element]
+  );
+
+  ("html.parser.form.unopened" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) "</form>"
+      [ 1,  1, E (`Unmatched_end_tag "form")]);
+
   ("html.parser.noframes" >:: fun _ ->
     expect ~context:None "<noframes>foo&amp;bar</a></noframes>"
       [ 1,  1, S (start_element "noframes");
