@@ -3,6 +3,7 @@
 
 <src/*> or <test/**>: package(uutf)
 <src/markup_lwt*>: package(lwt)
+<src/markup_lwt_unix*>: package(lwt.unix)
 
 <src/translate_entities.*>: package(yojson)
 
