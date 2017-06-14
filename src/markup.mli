@@ -921,7 +921,9 @@ val preprocess_input_stream :
       non-local adjustments.
     - HTML: Quirks mode is not honored. This affects the interaction between
       automatic closing of [p] elements and opening of [table] elements.
-    - HTML: The parser ignores the {e form element pointer}.
+    - HTML: The parser has non-standard recovery from unmatched closing [form]
+      tags in {{: https://github.com/aantron/markup.ml/commit/0bf4f1b} some
+      situations}.
     - HTML: The parser ignores interactions between [form] and [template].
     - HTML: The form translation for [isindex] is completely ignored. [isindex]
       is handled as an unknown element.
