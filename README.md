@@ -173,7 +173,8 @@ minor version number will be incremented on breaking changes.
 ## Contributing
 
 Contributions are very much welcome. Please see [`CONTRIBUTING`][contributing]
-for instructions, suggestions, and an overview of the code.
+for instructions, suggestions, and an overview of the code. There is also a list
+of [easy issues][easy].
 
 <br/>
 
@@ -204,3 +205,4 @@ under the [W3C document license][w3c-license].
 [conformance]:     http://aantron.github.io/markup.ml/#2_Conformancestatus
 [w3c-license]: https://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
 [semver]: http://semver.org/
+[easy]: https://github.com/aantron/markup.ml/labels/easy
