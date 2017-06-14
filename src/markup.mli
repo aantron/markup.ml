@@ -20,7 +20,7 @@
     - Does one pass over the input and emits a stream of SAX-style parsing
       signals. A helper ({!tree}) allows that to be easily converted into
       DOM-style trees.
-  
+
     The usage is straightforward. For example:
 
 {[
@@ -544,33 +544,19 @@ val content : ([< signal ], 's) stream -> (content_signal, 's) stream
 (** Converts a {!signal} stream into a {!content_signal} stream by filtering out
     all signals besides [`Start_element], [`End_element], and [`Text]. *)
 
-val trees :
+val tree :
   ?text:(string list -> 'a) ->
   ?element:(name -> (name * string) list -> 'a list -> 'a) ->
   ?comment:(string -> 'a) ->
   ?pi:(string -> string -> 'a) ->
   ?xml:(xml_declaration -> 'a) ->
   ?doctype:(doctype -> 'a) ->
-  ([< signal ], 's) stream -> ('a, 's) stream
-(** Assembles tree data structures of type ['a] from signal streams. Streams are
-    parsed according to the following grammar:
+  ([< signal ], sync) stream -> 'a option
+(** This function's type signature may look intimidating, but it is actually
+    easy to use. It is best introduced by example:
 
 {[
-stream  ::= node*
-node    ::= element | `Text | `Comment | `PI | `Xml | `Doctype
-element ::= `Start_element node* `End_element
-]}
-
-    Each time [trees] matches [node], it calls the corresponding function to
-    convert the node into your tree type ['a]. For example, when [trees] matches
-    [`Text ss], it calls [~text ss], if [~text] is supplied. Similarly, when
-    [trees] matches [element], it calls [~element name attributes children], if
-    [~element] is supplied.
-
-    For example,
-
-{[
-type dom = Text of string | Element of name * dom list
+type my_dom = Text of string | Element of name * my_dom list
 
 "<p>HTML5 is <em>easy</em> to parse"
 |> string
@@ -590,19 +576,35 @@ Element ("p" [
   Text " to parse"])
 ]}
 
-    emitted on the stream resulting from [trees]. If there are multiple
-    top-level nodes, they are emitted on the result stream in sequence. *)
+    Formally, [tree] assembles a tree data structure of type ['a] from a signal
+    stream. The stream is parsed according to the following grammar:
 
-val tree :
+{[
+stream  ::= node*
+node    ::= element | `Text | `Comment | `PI | `Xml | `Doctype
+element ::= `Start_element node* `End_element
+]}
+
+    Each time [trees] matches a production of [node], it calls the corresponding
+    function to convert the node into your tree type ['a]. For example, when
+    [trees] matches [`Text ss], it calls [~text ss], if [~text] is supplied.
+    Similarly, when [trees] matches [element], it calls
+    [~element name attributes children], if [~element] is supplied.
+
+    See {!trees} if the input stream might have multiple top-level trees. This
+    function [tree] only retrieves the first one. *)
+
+val trees :
   ?text:(string list -> 'a) ->
   ?element:(name -> (name * string) list -> 'a list -> 'a) ->
   ?comment:(string -> 'a) ->
   ?pi:(string -> string -> 'a) ->
   ?xml:(xml_declaration -> 'a) ->
   ?doctype:(doctype -> 'a) ->
-  ([< signal ], sync) stream -> 'a option
-(** Calls [trees] with its arguments, and eagerly retrieves the first tree
-    emitted, if any. *)
+  ([< signal ], 's) stream -> ('a, 's) stream
+(** Like {!tree}, but converts all top-level trees, not only the first one. The
+    trees are emitted on the resulting stream, in the sequence that they appear
+    in the input. *)
 
 type 'a node =
   [ `Element of name * (name * string) list * 'a list
@@ -618,7 +620,7 @@ val from_tree : ('a -> 'a node) -> 'a -> (signal, sync) stream
     function argument is applied to each data structure node. For example,
 
 {[
-type dom = Text of string | Element of string * dom list
+type my_dom = Text of string | Element of string * my_dom list
 
 let dom =
   Element ("p", [
