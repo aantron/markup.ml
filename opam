@@ -10,6 +10,7 @@ dev-repo: "https://github.com/aantron/markup.ml.git"
 license: "BSD"
 depends: [
   "uutf" {>= "1.0.0"}
+  "uchar"
   "ocamlfind" {build}
   "ocamlbuild" {build}
   "ounit" {test}
