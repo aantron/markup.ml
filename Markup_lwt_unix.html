@@ -1,0 +1,84 @@
+<html><head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+
+
+
+
+
+
+
+<title>Markup_lwt_unix - Markup.ml</title>
+<link rel="canonical" href="http://aantron.github.io/markup.ml/Markup_lwt_unix.html">
+<meta name="author" content="Anton Bachin">
+<meta name="viewport" content="width=device-width"></head>
+<body>
+
+<div class="head">
+  <div class="top-links">
+    <a class="github" href="https://github.com/aantron/markup.ml">GitHub</a>
+    <a href="https://github.com/aantron/markup.ml#installing">Installing</a>
+    <a href="https://github.com/aantron/markup.ml/blob/master/doc/CONTRIBUTING.md">Contributing</a>
+  </div>
+
+  <h1>Markup.ml</h1>
+</div>
+
+
+<pre><span class="keyword">module</span> Markup_lwt_unix: <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info module top">
+Stream functions based on <code class="code">Lwt_io</code>.
+<p>
+
+    This module contains additional functions over <a href="Markup_lwt.html"><code class="code">Markup_lwt</code></a>.
+</p><p>
+
+    <code class="code">Markup_lwt_unix</code> is available if Markup.ml is installed when Lwt is
+    installed, i.e.
+</p><p>
+
+</p><pre class="codepre"><code class="code">opam install lwt markup
+</code></pre>
+<p>
+
+    To link with this module, depend on the findlib package <code class="code">markup.lwt.unix</code>
+    instead of <code class="code">markup</code> or <code class="code">markup.lwt</code>.<br>
+</p><div class="toc"><div class="hide-narrow"><a href="index.html">[Up]</a><br><br></div></div></div>
+
+
+<pre><a href="#VALchannel" id="VALchannel"><span class="keyword">val</span> channel</a> : <code class="type">Lwt_io.input Lwt_io.channel -&gt; (char, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Evaluates to a stream that retrieves successive bytes from the given
+    channel. If the channel cannot be read, the next read of the stream results
+    in the thread failing with an exception, as specified in <code class="code">Lwt_io</code>.<br>
+</div>
+
+<pre><a href="#VALfile" id="VALfile"><span class="keyword">val</span> file</a> : <code class="type">string -&gt; (char, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a> * (unit -&gt; unit Lwt.t)</code></pre><div class="info ">
+Evaluates to a pair <code class="code">s,&nbsp;close</code>, where reading from stream <code class="code">s</code> retrieves
+    successive bytes from the given file, and completing <code class="code">close&nbsp;()</code> closes the
+    file. If the file cannot be opened, the first read of the stream results in
+    failure with an exception, as specified in <code class="code">Lwt_io</code>. If the file cannot be
+    read, reading the stream results in the reading thread failing with an
+    exception, also as in <code class="code">Lwt_io</code>.<br>
+</div>
+
+<pre><a href="#VALto_channel" id="VALto_channel"><span class="keyword">val</span> to_channel</a> : <code class="type">Lwt_io.output Lwt_io.channel -&gt; (char, 'a) <a href="index.html#TYPEstream">stream</a> -&gt; unit Lwt.t</code></pre><div class="info ">
+Writes bytes from the given stream to the given channel.<br>
+</div>
+
+<pre><a href="#VALto_file" id="VALto_file"><span class="keyword">val</span> to_file</a> : <code class="type">string -&gt; (char, 'a) <a href="index.html#TYPEstream">stream</a> -&gt; unit Lwt.t</code></pre><div class="info ">
+Writes bytes from the given stream to the given file.<br>
+</div>
+<div class="footer">
+  Copyright © 2016 Anton Bachin. Released under the BSD 2-clause license.
+  See
+  <a href="https://github.com/aantron/markup.ml/blob/master/LICENSE.md">
+    LICENSE
+  </a>
+  <br>
+  This page is part of the documentation for
+  <a class="protect" href="https://github.com/aantron/markup.ml">Markup.ml</a>.
+</div>
+</body></html>

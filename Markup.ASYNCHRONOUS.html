@@ -1,0 +1,123 @@
+<html><head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<title>ASYNCHRONOUS - Markup.ml</title>
+<link rel="canonical" href="http://aantron.github.io/markup.ml/Markup.ASYNCHRONOUS.html">
+<meta name="author" content="Anton Bachin">
+<meta name="viewport" content="width=device-width"></head>
+<body class="asynchronous">
+
+<div class="head">
+  <div class="top-links">
+    <a class="github" href="https://github.com/aantron/markup.ml">GitHub</a>
+    <a href="https://github.com/aantron/markup.ml#installing">Installing</a>
+    <a href="https://github.com/aantron/markup.ml/blob/master/doc/CONTRIBUTING.md">Contributing</a>
+  </div>
+
+  <h1>Markup.ml</h1>
+</div>
+
+
+<pre><span class="keyword">module type</span> ASYNCHRONOUS = <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info modtype top">
+Markup.ml interface for monadic I/O libraries such as Lwt and Async. This
+    signature is included in the signature of <a href="Markup_lwt.html"><code class="code">Markup_lwt</code></a>, with type <code class="code"><span class="keywordsign">'</span>a&nbsp;io</code>
+    replaced by <code class="code"><span class="keywordsign">'</span>a&nbsp;<span class="constructor">Lwt</span>.t</code>. To use the functions in this interface, use
+    <a href="Markup_lwt.html"><code class="code">Markup_lwt</code></a>. A <code class="code">Markup_async</code> module has not (yet) been implemented.
+<p>
+
+    All of the functions here correspond directly to functions in <a href="index.html"><code class="code">Markup</code></a> with
+    the same name. See that module for details on each function.
+</p><p>
+
+    The difference is that functions here can take <code class="code"><span class="keywordsign">'</span>a&nbsp;io</code> (i.e. <code class="code"><span class="keywordsign">'</span>a&nbsp;<span class="constructor">Lwt</span>.t</code>)
+    threads instead of plain functions as arguments. As a consequence, all of
+    them evaluate to either <code class="code">async</code> streams, or to threads of type <code class="code"><span class="keywordsign">'</span>a&nbsp;io</code>.
+</p><p>
+
+    Note that several functions in <a href="index.html"><code class="code">Markup</code></a> can take <code class="code">async</code> streams as
+    <em>arguments</em>, such as <a href="index.html#VALmap"><code class="code">map</code></a>, <a href="index.html#VALparse_xml"><code class="code">parse_xml</code></a>, or
+    <a href="index.html#VALtrim"><code class="code">trim</code></a>. Where those functions, like <a href="index.html#VALtrim"><code class="code">trim</code></a>, don't take
+    another function as argument, they are not duplicated in this signature.
+    <a href="index.html#VALmap"><code class="code">map</code></a> and <a href="index.html#VALparse_xml"><code class="code">parse_xml</code></a> <em>are</em> provided here because some of
+    their function arguments are replaced by <code class="code"><span class="keywordsign">'</span>a&nbsp;io</code> threads.
+</p><p>
+
+    All functions here accept both <code class="code">sync</code> and <code class="code">async</code> streams as arguments.<br>
+</p><div class="toc"><div class="hide-narrow"><a href="index.html">[Up]</a><br><br></div></div></div>
+
+
+<h2 id="2_Threads"><a href="#2_Threads">Threads</a></h2>
+
+<pre><a href="#TYPEio" id="TYPEio"><span class="keyword">type</span> <code class="type">'a</code> io</a> </pre>
+<div class="info ">
+Thread type. Replaced by <code class="code"><span class="keywordsign">'</span>a&nbsp;<span class="constructor">Lwt</span>.t</code> in <a href="Markup_lwt.html"><code class="code">Markup_lwt</code></a>.<br>
+</div>
+
+
+<h2 id="2_Encodings"><a href="#2_Encodings">Encodings</a></h2>
+
+<pre><span class="keyword">module</span> <a href="Markup.ASYNCHRONOUS.Encoding.html">Encoding</a>: <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info">
+Asynchronous counterpart to <a href="Markup.Encoding.html"><code class="code">Encoding</code></a>.
+</div>
+
+<h2 id="2_XML"><a href="#2_XML">XML</a></h2>
+
+<pre><a href="#VALparse_xml" id="VALparse_xml"><span class="keyword">val</span> parse_xml</a> : <code class="type"><br>       ?report:(<a href="index.html#TYPElocation">location</a> -&gt; <a href="Markup.Error.html#TYPEt">Error.t</a> -&gt; unit <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ?encoding:Encoding.t -&gt;<br>       ?namespace:(string -&gt; string option) -&gt;<br>       ?entity:(string -&gt; string option) -&gt;<br>       ?context:[&lt; `Document | `Fragment ] -&gt;<br>       (char, 'a) <a href="index.html#TYPEstream">stream</a> -&gt; <a href="index.html#TYPEasync">async</a> <a href="index.html#TYPEparser">parser</a></code></pre>
+<pre><a href="#VALwrite_xml" id="VALwrite_xml"><span class="keyword">val</span> write_xml</a> : <code class="type"><br>       ?report:(<a href="index.html#TYPEsignal">signal</a> * int -&gt; <a href="Markup.Error.html#TYPEt">Error.t</a> -&gt; unit <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ?prefix:(string -&gt; string option) -&gt;<br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ], 'a) <a href="index.html#TYPEstream">stream</a> -&gt; (char, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<h2 id="2_HTML"><a href="#2_HTML">HTML</a></h2>
+
+<pre><a href="#VALparse_html" id="VALparse_html"><span class="keyword">val</span> parse_html</a> : <code class="type"><br>       ?report:(<a href="index.html#TYPElocation">location</a> -&gt; <a href="Markup.Error.html#TYPEt">Error.t</a> -&gt; unit <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ?encoding:Encoding.t -&gt;<br>       ?context:[&lt; `Document | `Fragment of string ] -&gt;<br>       (char, 'a) <a href="index.html#TYPEstream">stream</a> -&gt; <a href="index.html#TYPEasync">async</a> <a href="index.html#TYPEparser">parser</a></code></pre>
+<pre><a href="#VALwrite_html" id="VALwrite_html"><span class="keyword">val</span> write_html</a> : <code class="type">([&lt; <a href="index.html#TYPEsignal">signal</a> ], 'a) <a href="index.html#TYPEstream">stream</a> -&gt; (char, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<h2 id="2_IO"><a href="#2_IO">I/O</a></h2>
+
+<pre><a href="#VALfn" id="VALfn"><span class="keyword">val</span> fn</a> : <code class="type"><br>       (unit -&gt; char option <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       (char, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<pre><a href="#VALto_string" id="VALto_string"><span class="keyword">val</span> to_string</a> : <code class="type">(char, 'a) <a href="index.html#TYPEstream">stream</a> -&gt; string <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<pre><a href="#VALto_buffer" id="VALto_buffer"><span class="keyword">val</span> to_buffer</a> : <code class="type">(char, 'a) <a href="index.html#TYPEstream">stream</a> -&gt; Buffer.t <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<h2 id="2_Streammanipulation"><a href="#2_Streammanipulation">Stream manipulation</a></h2>
+
+<pre><a href="#VALstream" id="VALstream"><span class="keyword">val</span> stream</a> : <code class="type"><br>       (unit -&gt; 'a option <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ('a, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<pre><a href="#VALnext" id="VALnext"><span class="keyword">val</span> next</a> : <code class="type">('a, 'b) <a href="index.html#TYPEstream">stream</a> -&gt; 'a option <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<pre><a href="#VALpeek" id="VALpeek"><span class="keyword">val</span> peek</a> : <code class="type">('a, 'b) <a href="index.html#TYPEstream">stream</a> -&gt; 'a option <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<pre><a href="#VALtransform" id="VALtransform"><span class="keyword">val</span> transform</a> : <code class="type"><br>       ('a -&gt; 'b -&gt; ('c list * 'a option) <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       'a -&gt; ('b, 'd) <a href="index.html#TYPEstream">stream</a> -&gt; ('c, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<pre><a href="#VALfold" id="VALfold"><span class="keyword">val</span> fold</a> : <code class="type"><br>       ('a -&gt; 'b -&gt; 'a <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       'a -&gt; ('b, 'c) <a href="index.html#TYPEstream">stream</a> -&gt; 'a <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<pre><a href="#VALmap" id="VALmap"><span class="keyword">val</span> map</a> : <code class="type"><br>       ('a -&gt; 'b <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ('a, 'c) <a href="index.html#TYPEstream">stream</a> -&gt; ('b, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<pre><a href="#VALfilter" id="VALfilter"><span class="keyword">val</span> filter</a> : <code class="type"><br>       ('a -&gt; bool <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ('a, 'b) <a href="index.html#TYPEstream">stream</a> -&gt; ('a, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<pre><a href="#VALfilter_map" id="VALfilter_map"><span class="keyword">val</span> filter_map</a> : <code class="type"><br>       ('a -&gt; 'b option <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ('a, 'c) <a href="index.html#TYPEstream">stream</a> -&gt; ('b, <a href="index.html#TYPEasync">async</a>) <a href="index.html#TYPEstream">stream</a></code></pre>
+<pre><a href="#VALiter" id="VALiter"><span class="keyword">val</span> iter</a> : <code class="type"><br>       ('a -&gt; unit <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a>) -&gt;<br>       ('a, 'b) <a href="index.html#TYPEstream">stream</a> -&gt; unit <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<pre><a href="#VALdrain" id="VALdrain"><span class="keyword">val</span> drain</a> : <code class="type">('a, 'b) <a href="index.html#TYPEstream">stream</a> -&gt; unit <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<pre><a href="#VALto_list" id="VALto_list"><span class="keyword">val</span> to_list</a> : <code class="type">('a, 'b) <a href="index.html#TYPEstream">stream</a> -&gt; 'a list <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre>
+<pre><a href="#VALload" id="VALload"><span class="keyword">val</span> load</a> : <code class="type"><br>       ('a, 'b) <a href="index.html#TYPEstream">stream</a> -&gt;<br>       ('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre><div class="multiline-member info">
+<code class="code">load&nbsp;s</code> converts a general stream <code class="code">s</code> to a synchronous stream by
+      buffering it.<br>
+</div>
+
+<h2 id="2_Utility"><a href="#2_Utility">Utility</a></h2>
+
+<pre><a href="#VALtree" id="VALtree"><span class="keyword">val</span> tree</a> : <code class="type"><br>       ?text:(string list -&gt; 'a) -&gt;<br>       ?element:(<a href="index.html#TYPEname">name</a> -&gt; (<a href="index.html#TYPEname">name</a> * string) list -&gt; 'a list -&gt; 'a) -&gt;<br>       ?comment:(string -&gt; 'a) -&gt;<br>       ?pi:(string -&gt; string -&gt; 'a) -&gt;<br>       ?xml:(<a href="index.html#TYPExml_declaration">xml_declaration</a> -&gt; 'a) -&gt;<br>       ?doctype:(<a href="index.html#TYPEdoctype">doctype</a> -&gt; 'a) -&gt;<br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ], 'b) <a href="index.html#TYPEstream">stream</a> -&gt; 'a option <a href="Markup.ASYNCHRONOUS.html#TYPEio">io</a></code></pre><div class="footer">
+  Copyright © 2016 Anton Bachin. Released under the BSD 2-clause license.
+  See
+  <a href="https://github.com/aantron/markup.ml/blob/master/LICENSE.md">
+    LICENSE
+  </a>
+  <br>
+  This page is part of the documentation for
+  <a class="protect" href="https://github.com/aantron/markup.ml">Markup.ml</a>.
+</div>
+</body></html>

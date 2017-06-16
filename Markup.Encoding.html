@@ -1,0 +1,84 @@
+<html><head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+
+
+
+
+
+
+
+
+<title>Encoding - Markup.ml</title>
+<link rel="canonical" href="http://aantron.github.io/markup.ml/Markup.Encoding.html">
+<meta name="author" content="Anton Bachin">
+<meta name="viewport" content="width=device-width"></head>
+<body>
+
+<div class="head">
+  <div class="top-links">
+    <a class="github" href="https://github.com/aantron/markup.ml">GitHub</a>
+    <a href="https://github.com/aantron/markup.ml#installing">Installing</a>
+    <a href="https://github.com/aantron/markup.ml/blob/master/doc/CONTRIBUTING.md">Contributing</a>
+  </div>
+
+  <h1>Markup.ml</h1>
+</div>
+
+
+<pre><span class="keyword">module</span> Encoding: <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info module top">
+Common Internet encodings such as UTF-8 and UTF-16; also includes some less
+    popular encodings that are sometimes necessary for parsing XML encoding
+    declarations.<br>
+<div class="toc"><div class="hide-narrow"><a href="index.html">[Up]</a><br><br></div></div></div>
+
+
+<pre><a href="#TYPEt" id="TYPEt"><span class="keyword">type</span> <code class="type"></code>t</a> </pre>
+<div class="info ">
+Decoders. These are notionally maps from byte streams to Unicode scalar
+      value streams, i.e. pseudocode type <code class="code">char&nbsp;stream&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int&nbsp;stream</code>.<br>
+</div>
+
+
+<pre><a href="#VALdecode" id="VALdecode"><span class="keyword">val</span> decode</a> : <code class="type"><br>       ?report:(<a href="index.html#TYPElocation">location</a> -&gt; <a href="Markup.Error.html#TYPEt">Error.t</a> -&gt; unit) -&gt;<br>       <a href="Markup.Encoding.html#TYPEt">t</a> -&gt; (char, 's) <a href="index.html#TYPEstream">stream</a> -&gt; (int, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+Applies a decoder to a byte stream. Illegal input byte sequences result in
+      calls to the error handler <code class="code">~report</code> with error kind <code class="code"><span class="keywordsign">`</span><span class="constructor">Decoding_error</span></code>.
+      The illegal bytes are then skipped, and zero or more U+FFFD replacement
+      characters are emitted. The default handler ignores errors.
+<p>
+
+      The locations provided to the error handler by the built-in decoders below
+      in this module are fully accurate only if the input byte stream uses LF
+      characters as line breaks.<br>
+</p></div>
+
+<pre><a href="#VALutf_8" id="VALutf_8"><span class="keyword">val</span> utf_8</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALutf_16be" id="VALutf_16be"><span class="keyword">val</span> utf_16be</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALutf_16le" id="VALutf_16le"><span class="keyword">val</span> utf_16le</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALutf_16" id="VALutf_16"><span class="keyword">val</span> utf_16</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALiso_8859_1" id="VALiso_8859_1"><span class="keyword">val</span> iso_8859_1</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALus_ascii" id="VALus_ascii"><span class="keyword">val</span> us_ascii</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALwindows_1251" id="VALwindows_1251"><span class="keyword">val</span> windows_1251</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALwindows_1252" id="VALwindows_1252"><span class="keyword">val</span> windows_1252</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALucs_4be" id="VALucs_4be"><span class="keyword">val</span> ucs_4be</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALucs_4le" id="VALucs_4le"><span class="keyword">val</span> ucs_4le</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALucs_4be_transposed" id="VALucs_4be_transposed"><span class="keyword">val</span> ucs_4be_transposed</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALucs_4le_transposed" id="VALucs_4le_transposed"><span class="keyword">val</span> ucs_4le_transposed</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre>
+<pre><a href="#VALebcdic" id="VALebcdic"><span class="keyword">val</span> ebcdic</a> : <code class="type"><a href="Markup.Encoding.html#TYPEt">t</a></code></pre><div class="info ">
+Code page 37.<br>
+</div>
+<div class="footer">
+  Copyright © 2016 Anton Bachin. Released under the BSD 2-clause license.
+  See
+  <a href="https://github.com/aantron/markup.ml/blob/master/LICENSE.md">
+    LICENSE
+  </a>
+  <br>
+  This page is part of the documentation for
+  <a class="protect" href="https://github.com/aantron/markup.ml">Markup.ml</a>.
+</div>
+</body></html>

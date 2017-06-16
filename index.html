@@ -1,0 +1,871 @@
+<html><head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<title>Markup.ml - Error-recovering HTML and XML parsers for OCaml</title>
+<link rel="canonical" href="http://aantron.github.io/markup.ml">
+<meta name="author" content="Anton Bachin">
+<meta name="viewport" content="width=device-width">
+<meta name="description" content="Streaming, error-recovering, standards-based HTML(5) and XML parsers with an interface designed for ease of use."></head>
+<body class="index">
+
+<div class="head">
+  <div class="top-links">
+    <a class="github" href="https://github.com/aantron/markup.ml">GitHub</a>
+    <a href="https://github.com/aantron/markup.ml#installing">Installing</a>
+    <a href="https://github.com/aantron/markup.ml/blob/master/doc/CONTRIBUTING.md">Contributing</a>
+  </div>
+
+  <h1>Markup.ml</h1>
+</div>
+
+
+<pre><span class="keyword">module</span> Markup: <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info module top">
+Error-recovering streaming HTML and XML parsers and writers.
+<p>
+
+    Markup.ml is an HTML and XML parsing and serialization library. It:
+</p><ul>
+<li>Is error-recovering, so you can get a best-effort parse of malformed
+      input.</li>
+<li>Reports all errors before recovery, so you can get strict parsing
+      instead.</li>
+<li>Conforms closely to the XML grammar and HTML parser from the respective
+      specifications.</li>
+<li>Accepts document fragments, but can be told to accept only full documents.</li>
+<li>Detects character encodings automatically.</li>
+<li>Supports both simple synchronous (this module) and non-blocking usage
+      (<a href="Markup_lwt.html"><code class="code">Markup_lwt</code></a>).</li>
+<li>Is streaming and lazy. Partial input is processed as soon as received, but
+      only as needed.</li>
+<li>Does one pass over the input and emits a stream of SAX-style parsing
+      signals. A helper (<a href="index.html#VALtree"><code class="code">tree</code></a>) allows that to be easily converted into
+      DOM-style trees.</li>
+</ul>
+
+    The usage is straightforward. For example:
+<p>
+
+</p><pre class="codepre"><code class="code"><span class="keyword">open</span> Markup
+
+<span class="comment">(* Correct and pretty-print HTML. *)</span>
+channel stdin
+|&gt; parse_html |&gt; signals |&gt; pretty_print
+|&gt; write_html |&gt; to_channel stdout
+
+<span class="comment">(* Show up to 10 XML well-formedness errors to the user. Stop after
+   the 10th, without reading more input. *)</span>
+<span class="keyword">let</span> report =
+  <span class="keyword">let</span> count = ref 0 <span class="keyword">in</span>
+  <span class="keyword">fun</span> location error <span class="keywordsign">-&gt;</span>
+    error |&gt; Error.to_string ~location |&gt; prerr_endline;
+    count := !count + 1;
+    <span class="keyword">if</span> !count &gt;= 10 <span class="keyword">then</span> raise_notrace <span class="constructor">Exit</span>
+
+string <span class="string">"some xml"</span> |&gt; parse_xml ~report |&gt; signals |&gt; drain
+
+<span class="comment">(* Load HTML into a custom document tree data type. *)</span>
+<span class="keyword">type</span> html = <span class="constructor">Text</span> <span class="keyword">of</span> string <span class="keywordsign">|</span> <span class="constructor">Element</span> <span class="keyword">of</span> string * html list
+
+file <span class="string">"some_file"</span>
+|&gt; fst
+|&gt; parse_html
+|&gt; signals
+|&gt; tree
+  ~text:(<span class="keyword">fun</span> ss <span class="keywordsign">-&gt;</span> <span class="constructor">Text</span> (<span class="constructor">String</span>.concat <span class="string">""</span> ss))
+  ~element:(<span class="keyword">fun</span> (_, name) _ children <span class="keywordsign">-&gt;</span> <span class="constructor">Element</span> (name, children))
+</code></pre>
+<p>
+
+    The interface is centered around four functions. In pseudocode:
+</p><p>
+
+</p><pre class="codepre"><code class="code"><span class="keyword">val</span> parse_html : char stream   <span class="keywordsign">-&gt;</span> signal stream
+<span class="keyword">val</span> write_html : signal stream <span class="keywordsign">-&gt;</span> char stream
+<span class="keyword">val</span> parse_xml  : char stream   <span class="keywordsign">-&gt;</span> signal stream
+<span class="keyword">val</span> write_xml  : signal stream <span class="keywordsign">-&gt;</span> char stream
+</code></pre>
+<p>
+
+    Most of the remaining functions create streams from, or write streams to,
+    strings, files, and channels, or manipulate streams, such as <a href="index.html#VALnext"><code class="code">next</code></a> and the
+    combinators <a href="index.html#VALmap"><code class="code">map</code></a> and <a href="index.html#VALfold"><code class="code">fold</code></a>.
+</p><p>
+
+    Apart from this module, Markup.ml provides two other top-level modules:
+</p><table class="indextable">
+<tbody><tr><td class="module"><a href="Markup_lwt.html">Markup_lwt</a></td><td><div class="info">
+Lwt interface to Markup.ml.
+</div>
+</td></tr>
+<tr><td class="module"><a href="Markup_lwt_unix.html">Markup_lwt_unix</a></td><td><div class="info">
+Stream functions based on <code class="code">Lwt_io</code>.
+</div>
+</td></tr>
+</tbody></table>
+
+<p>
+
+    Most of the interface of <a href="Markup_lwt.html"><code class="code">Markup_lwt</code></a> is specified in signature
+    <a href="Markup.ASYNCHRONOUS.html"><code class="code">ASYNCHRONOUS</code></a>, which will be shared with a <code class="code">Markup_async</code> module, should
+    it be implemented.
+</p><p>
+
+    Markup.ml is developed on <a href="https://github.com/aantron/markup.ml"> GitHub</a>
+    and distributed under the
+    <a href="https://github.com/aantron/markup.ml/blob/master/LICENSE.md"> BSD
+    license</a>. This documentation is for version 0.7.5 of the library.
+    Documentation for older versions can be found on the
+    <a href=" https://github.com/aantron/markup.ml/releases"> releases page</a>.<br>
+</p><div class="toc"><p>Module contents</p><div class="links"><a class="hide-narrow" href="#">[Top]</a><br><br><a href="#2_Streams">Streams</a><br><a href="#2_Errors">Errors</a><br><a href="#2_Encodings">Encodings</a><br><a href="#2_Signals">Signals</a><br><a href="#2_Parsers">Parsers</a><br><a href="#2_XML">XML</a><br><a href="#2_HTML">HTML</a><br><a href="#2_Inputsources">Input sources</a><br><a href="#2_Outputdestinations">Output destinations</a><br><a href="#2_Streamoperations">Stream operations</a><br><a href="#2_Utility">Utility</a><br><a href="#2_Namespaces">Namespaces</a><br><a href="#2_Asynchronousinterface">Asynchronous interface</a><br><a href="#2_Conformancestatus">Conformance status</a><br></div><br><br><a class="github hide-narrow" href="https://github.com/aantron/markup.ml">GitHub</a></div></div>
+
+
+<h2 id="2_Streams"><a href="#2_Streams">Streams</a></h2>
+
+<pre><a href="#TYPEasync" id="TYPEasync"><span class="keyword">type</span> <code class="type"></code>async</a> </pre>
+
+
+<pre><a href="#TYPEsync" id="TYPEsync"><span class="keyword">type</span> <code class="type"></code>sync</a> </pre>
+<div class="info ">
+Phantom types for use with <code class="code">(<span class="keywordsign">'</span>a,&nbsp;<span class="keywordsign">'</span>s)&nbsp;stream</code> in place of <code class="code"><span class="keywordsign">'</span>s</code>. See
+    explanation below.<br>
+</div>
+
+
+<pre><a href="#TYPEstream" id="TYPEstream"><span class="keyword">type</span> <code class="type">('a, 's)</code> stream</a> </pre>
+<div class="info ">
+Streams of elements of type <code class="code"><span class="keywordsign">'</span>a</code>.
+<p>
+
+    In simple usage, when using only this module <code class="code">Markup</code>, the additional type
+    parameter <code class="code"><span class="keywordsign">'</span>s</code> is always <code class="code">sync</code>, and there is no need to consider it
+    further.
+</p><p>
+
+    However, if you are using <a href="Markup_lwt.html"><code class="code">Markup_lwt</code></a>, you may create some <code class="code">async</code>
+    streams. The difference between the two is that <a href="index.html#VALnext"><code class="code">next</code></a> on a <code class="code">sync</code> stream
+    retrieves an element before <a href="index.html#VALnext"><code class="code">next</code></a> "returns," while <a href="index.html#VALnext"><code class="code">next</code></a> on an <code class="code">async</code>
+    stream might not retrieve an element until later. As a result, it is not
+    safe to pass an <code class="code">async</code> stream where a <code class="code">sync</code> stream is required. The
+    phantom types are used to make the type checker catch such errors at compile
+    time.<br>
+</p></div>
+
+
+<h2 id="2_Errors"><a href="#2_Errors">Errors</a></h2>
+<p>
+
+    The parsers recover from errors automatically. If that is sufficient, you
+    can ignore this section. However, if you want stricter behavior, or need to
+    debug parser output, use optional argument <code class="code">?report</code> of the parsers, and
+    look in module <a href="Markup.Error.html"><code class="code">Error</code></a>.<br>
+
+</p><pre><a href="#TYPElocation" id="TYPElocation"><span class="keyword">type</span> <code class="type"></code>location</a> = <code class="type">int * int</code> </pre>
+<div class="info ">
+Line and column for parsing errors. Both numbers are one-based.<br>
+</div>
+
+
+<pre><span class="keyword">module</span> <a href="Markup.Error.html">Error</a>: <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info">
+Error type and <code class="code">to_string</code> function.
+</div>
+
+<h2 id="2_Encodings"><a href="#2_Encodings">Encodings</a></h2>
+<p>
+
+    The parsers detect encodings automatically. If you need to specify an
+    encoding, use optional argument <code class="code">?encoding</code> of the parsers, and look in
+    module <a href="Markup.Encoding.html"><code class="code">Encoding</code></a>.<br>
+
+</p><pre><span class="keyword">module</span> <a href="Markup.Encoding.html">Encoding</a>: <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info">
+Common Internet encodings such as UTF-8 and UTF-16; also includes some less
+    popular encodings that are sometimes necessary for parsing XML encoding
+    declarations.
+</div>
+
+<h2 id="2_Signals"><a href="#2_Signals">Signals</a></h2>
+
+<pre><a href="#TYPEname" id="TYPEname"><span class="keyword">type</span> <code class="type"></code>name</a> = <code class="type">string * string</code> </pre>
+<div class="info ">
+Expanded name: a namespace URI followed by a local name.<br>
+</div>
+
+
+<pre><code><a href="#TYPExml_declaration" id="TYPExml_declaration"><span class="keyword">type</span> <code class="type"></code>xml_declaration</a> = {</code></pre><table class="typetable">
+<tbody><tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTxml_declaration.version" id="TYPEELTxml_declaration.version">version</a>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTxml_declaration.encoding" id="TYPEELTxml_declaration.encoding">encoding</a>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTxml_declaration.standalone" id="TYPEELTxml_declaration.standalone">standalone</a>&nbsp;: <code class="type">bool option</code>;</code></td>
+
+</tr></tbody></table>
+}
+
+<div class="info ">
+Representation of an XML declaration, i.e.
+    <code class="code">&lt;?xml&nbsp;version=<span class="string">"1.0"</span>&nbsp;encoding=<span class="string">"utf-8"</span><span class="keywordsign">?&gt;</span></code>.<br>
+</div>
+
+
+<pre><code><a href="#TYPEdoctype" id="TYPEdoctype"><span class="keyword">type</span> <code class="type"></code>doctype</a> = {</code></pre><table class="typetable">
+<tbody><tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTdoctype.doctype_name" id="TYPEELTdoctype.doctype_name">doctype_name</a>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTdoctype.public_identifier" id="TYPEELTdoctype.public_identifier">public_identifier</a>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTdoctype.system_identifier" id="TYPEELTdoctype.system_identifier">system_identifier</a>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTdoctype.raw_text" id="TYPEELTdoctype.raw_text">raw_text</a>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top">
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top">
+<code><a href="#TYPEELTdoctype.force_quirks" id="TYPEELTdoctype.force_quirks">force_quirks</a>&nbsp;: <code class="type">bool</code>;</code></td>
+
+</tr></tbody></table>
+}
+
+<div class="info ">
+Representation of a document type declaration. The HTML parser fills in all
+    fields besides <code class="code">raw_text</code>. The XML parser reads declarations roughly, and
+    fills only the <code class="code">raw_text</code> field with the text found in the declaration.<br>
+</div>
+
+
+<pre><a href="#TYPEsignal" id="TYPEsignal"><span class="keyword">type</span> <code class="type"></code>signal</a> = <code class="type"><br>       [ `Comment of string<br>       | `Doctype of <a href="index.html#TYPEdoctype">doctype</a><br>       | `End_element<br>       | `PI of string * string<br>       | `Start_element of <a href="index.html#TYPEname">name</a> * (<a href="index.html#TYPEname">name</a> * string) list<br>       | `Text of string list<br>       | `Xml of <a href="index.html#TYPExml_declaration">xml_declaration</a> ]</code> </pre>
+<div class="multiline-member info">
+Parsing signals. The parsers emit them according to the following grammar:
+<p>
+
+</p><pre class="codepre"><code class="code">doc     ::= <span class="keywordsign">`</span><span class="constructor">Xml</span>? misc* <span class="keywordsign">`</span><span class="constructor">Doctype</span>? misc* element misc*
+misc    ::= <span class="keywordsign">`</span><span class="constructor">PI</span> <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">Comment</span>
+element ::= <span class="keywordsign">`</span><span class="constructor">Start_element</span> content* <span class="keywordsign">`</span><span class="constructor">End_element</span>
+content ::= <span class="keywordsign">`</span><span class="constructor">Text</span> <span class="keywordsign">|</span> element <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">PI</span> <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">Comment</span>
+</code></pre>
+<p>
+
+    As a result, emitted <code class="code"><span class="keywordsign">`</span><span class="constructor">Start_element</span></code> and <code class="code"><span class="keywordsign">`</span><span class="constructor">End_element</span></code> signals are always
+    balanced, and, if there is an XML declaration, it is the first signal.
+</p><p>
+
+    If parsing with <code class="code">~context:<span class="keywordsign">`</span><span class="constructor">Document</span></code>, the signal sequence will match the
+    <code class="code">doc</code> production until the first error. If parsing with
+    <code class="code">~context:<span class="keywordsign">`</span><span class="constructor">Fragment</span></code>, it will match <code class="code">content*</code>. If <code class="code">~context</code> is not
+    specified, the parser will pick one of the two by examining the input.
+</p><p>
+
+    As an example, if the XML parser is parsing
+</p><p>
+
+</p><pre class="codepre"><code class="code">&lt;?xml version=<span class="string">"1.0"</span><span class="keywordsign">?&gt;&lt;</span>root&gt;text&lt;nested&gt;more text&lt;/nested&gt;&lt;/root&gt;
+</code></pre>
+<p>
+
+    it will emit the signal sequence
+</p><p>
+
+</p><pre class="codepre"><code class="code"><span class="keywordsign">`</span><span class="constructor">Xml</span> {version = <span class="string">"1.0"</span>; encoding = <span class="constructor">None</span>; standalone = <span class="constructor">None</span>}
+<span class="keywordsign">`</span><span class="constructor">Start_element</span> ((<span class="string">""</span>, <span class="string">"root"</span>), [])
+<span class="keywordsign">`</span><span class="constructor">Text</span> [<span class="string">"text"</span>]
+<span class="keywordsign">`</span><span class="constructor">Start_element</span> ((<span class="string">""</span>, <span class="string">"nested"</span>), [])
+<span class="keywordsign">`</span><span class="constructor">Text</span> [<span class="string">"more text"</span>]
+<span class="keywordsign">`</span><span class="constructor">End_element</span>
+<span class="keywordsign">`</span><span class="constructor">End_element</span>
+</code></pre>
+<p>
+
+    The <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code> signal carries a <code class="code">string&nbsp;list</code> instead of a single <code class="code">string</code>
+    because on 32-bit platforms, OCaml strings cannot be larger than 16MB. In
+    case the parsers encounter a very long sequence of text, one whose length
+    exceeds about <code class="code"><span class="constructor">Sys</span>.max_string_length&nbsp;/&nbsp;2</code>, they will emit a <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code> signal
+    with several strings.<br>
+</p></div>
+
+
+<pre><a href="#TYPEcontent_signal" id="TYPEcontent_signal"><span class="keyword">type</span> <code class="type"></code>content_signal</a> = <code class="type"><br>       [ `End_element<br>       | `Start_element of <a href="index.html#TYPEname">name</a> * (<a href="index.html#TYPEname">name</a> * string) list<br>       | `Text of string list ]</code> </pre>
+<div class="multiline-member info">
+A restriction of type <a href="index.html#TYPEsignal"><code class="code">signal</code></a> to only elements and text, i.e. no comments,
+    processing instructions, or declarations. This can be useful for pattern
+    matching in applications that only care about the content and element
+    structure of a document. See the helper <a href="index.html#VALcontent"><code class="code">content</code></a>.<br>
+</div>
+
+
+<pre><a href="#VALsignal_to_string" id="VALsignal_to_string"><span class="keyword">val</span> signal_to_string</a> : <code class="type">[&lt; <a href="index.html#TYPEsignal">signal</a> ] -&gt; string</code></pre><div class="info ">
+Provides a human-readable representation of signals for debugging.<br>
+</div>
+
+<h2 id="2_Parsers"><a href="#2_Parsers">Parsers</a></h2>
+
+<pre><a href="#TYPEparser" id="TYPEparser"><span class="keyword">type</span> <code class="type">'s</code> parser</a> </pre>
+<div class="info ">
+An <code class="code"><span class="keywordsign">'</span>s&nbsp;parser</code> is a thin wrapper around a <code class="code">(signal,&nbsp;<span class="keywordsign">'</span>s)&nbsp;stream</code> that
+    supports access to additional information that is not carried directly in
+    the stream, such as source locations.<br>
+</div>
+
+
+<pre><a href="#VALsignals" id="VALsignals"><span class="keyword">val</span> signals</a> : <code class="type">'s <a href="index.html#TYPEparser">parser</a> -&gt; (<a href="index.html#TYPEsignal">signal</a>, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Converts a parser to its underlying signal stream.<br>
+</div>
+
+<pre><a href="#VALlocation" id="VALlocation"><span class="keyword">val</span> location</a> : <code class="type">'a <a href="index.html#TYPEparser">parser</a> -&gt; <a href="index.html#TYPElocation">location</a></code></pre><div class="info ">
+Evaluates to the location of the last signal emitted on the parser's signal
+    stream. If no signals have yet been emitted, evaluates to <code class="code">(1,&nbsp;1)</code>.<br>
+</div>
+
+<h2 id="2_XML"><a href="#2_XML">XML</a></h2>
+
+<pre><a href="#VALparse_xml" id="VALparse_xml"><span class="keyword">val</span> parse_xml</a> : <code class="type"><br>       ?report:(<a href="index.html#TYPElocation">location</a> -&gt; <a href="Markup.Error.html#TYPEt">Error.t</a> -&gt; unit) -&gt;<br>       ?encoding:<a href="Markup.Encoding.html#TYPEt">Encoding.t</a> -&gt;<br>       ?namespace:(string -&gt; string option) -&gt;<br>       ?entity:(string -&gt; string option) -&gt;<br>       ?context:[&lt; `Document | `Fragment ] -&gt;<br>       (char, 's) <a href="index.html#TYPEstream">stream</a> -&gt; 's <a href="index.html#TYPEparser">parser</a></code></pre><div class="multiline-member info">
+Creates a parser that converts an XML byte stream to a signal stream.
+<p>
+
+    For simple usage, <code class="code">string&nbsp;<span class="string">"foo"</span>&nbsp;|&gt;&nbsp;parse_xml&nbsp;|&gt;&nbsp;signals</code>.
+</p><p>
+
+    If <code class="code">~report</code> is provided, <code class="code">report</code> is called for every error encountered.
+    You may raise an exception in <code class="code">report</code>, and it will propagate to the code
+    reading the signal stream.
+</p><p>
+
+    If <code class="code">~encoding</code> is <em>not</em> specified, the parser detects the input encoding
+    automatically. Otherwise, the given encoding is used.
+</p><p>
+
+    <code class="code">~namespace</code> is called when the parser is unable to resolve a namespace
+    prefix. If it evaluates to <code class="code"><span class="constructor">Some</span>&nbsp;s</code>, the parser maps the prefix to <code class="code">s</code>.
+    Otherwise, the parser reports <code class="code"><span class="keywordsign">`</span><span class="constructor">Bad_namespace</span></code>.
+</p><p>
+
+    <code class="code">~entity</code> is called when the parser is unable to resolve an entity
+    reference. If it evaluates to <code class="code"><span class="constructor">Some</span>&nbsp;s</code>, the parser inserts <code class="code">s</code> into the
+    text or attribute being parsed without any further parsing of <code class="code">s</code>. <code class="code">s</code> is
+    assumed to be encoded in UTF-8. If <code class="code">entity</code> evaluates to <code class="code"><span class="constructor">None</span></code> instead,
+    the parser reports <code class="code"><span class="keywordsign">`</span><span class="constructor">Bad_token</span></code>. See <a href="index.html#VALxhtml_entity"><code class="code">xhtml_entity</code></a> if you are parsing
+    XHTML.
+</p><p>
+
+    The meaning of <code class="code">~context</code> is described at <a href="index.html#TYPEsignal"><code class="code">signal</code></a>, above.<br>
+</p></div>
+
+<pre><a href="#VALwrite_xml" id="VALwrite_xml"><span class="keyword">val</span> write_xml</a> : <code class="type"><br>       ?report:(<a href="index.html#TYPEsignal">signal</a> * int -&gt; <a href="Markup.Error.html#TYPEt">Error.t</a> -&gt; unit) -&gt;<br>       ?prefix:(string -&gt; string option) -&gt;<br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ], 's) <a href="index.html#TYPEstream">stream</a> -&gt; (char, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+Converts an XML signal stream to a byte stream.
+<p>
+
+    If <code class="code">~report</code> is provided, it is called for every error encountered. The
+    first argument is a pair of the signal causing the error and its index in
+    the signal stream. You may raise an exception in <code class="code">report</code>, and it will
+    propagate to the code reading the byte stream.
+</p><p>
+
+    <code class="code">~prefix</code> is called when the writer is unable to find a prefix in scope
+    for a namespace URI. If it evaluates to <code class="code"><span class="constructor">Some</span>&nbsp;s</code>, the writer uses <code class="code">s</code> for
+    the URI. Otherwise, the writer reports <code class="code"><span class="keywordsign">`</span><span class="constructor">Bad_namespace</span></code>.<br>
+</p></div>
+
+<h2 id="2_HTML"><a href="#2_HTML">HTML</a></h2>
+
+<pre><a href="#VALparse_html" id="VALparse_html"><span class="keyword">val</span> parse_html</a> : <code class="type"><br>       ?report:(<a href="index.html#TYPElocation">location</a> -&gt; <a href="Markup.Error.html#TYPEt">Error.t</a> -&gt; unit) -&gt;<br>       ?encoding:<a href="Markup.Encoding.html#TYPEt">Encoding.t</a> -&gt;<br>       ?context:[&lt; `Document | `Fragment of string ] -&gt;<br>       (char, 's) <a href="index.html#TYPEstream">stream</a> -&gt; 's <a href="index.html#TYPEparser">parser</a></code></pre><div class="multiline-member info">
+Similar to <a href="index.html#VALparse_xml"><code class="code">parse_xml</code></a>, but parses HTML with embedded SVG and MathML, never
+    emits signals <code class="code"><span class="keywordsign">`</span><span class="constructor">Xml</span></code> or <code class="code"><span class="keywordsign">`</span><span class="constructor">PI</span></code>, and <code class="code">~context</code> has a different type on tag
+    <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span></code>.
+<p>
+
+    For HTML fragments, you should specify the enclosing element, e.g.
+    <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span>&nbsp;<span class="string">"body"</span></code>. This is because, when parsing HTML, error recovery and
+    the interpretation of text depend on the current element. For example, the
+    text
+</p><p>
+
+</p><pre class="codepre"><code class="code">foo&lt;/bar&gt;
+</code></pre>
+<p>
+
+    parses differently in <code class="code">title</code> elements than in <code class="code">p</code> elements. In the former,
+    it is parsed as <code class="code">foo&lt;/bar&gt;</code>, while in the latter, it is <code class="code">foo</code> followed by a
+    parse error due to unmatched tag <code class="code">&lt;/bar&gt;</code>. To get these behaviors, set
+    <code class="code">~context</code> to <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span>&nbsp;<span class="string">"title"</span></code> and <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span>&nbsp;<span class="string">"p"</span></code>, respectively.
+</p><p>
+
+    If you use <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span>&nbsp;<span class="string">"svg"</span></code>, the fragment is assumed to be SVG markup.
+    Likewise, <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span>&nbsp;<span class="string">"math"</span></code> causes the parser to parse MathML markup.
+</p><p>
+
+    If <code class="code">~context</code> is omitted, the parser guesses it from the input stream. For
+    example, if the first signal would be <code class="code"><span class="keywordsign">`</span><span class="constructor">Doctype</span></code>, the context is set to
+    <code class="code"><span class="keywordsign">`</span><span class="constructor">Document</span></code>, but if the first signal would be <code class="code"><span class="keywordsign">`</span><span class="constructor">Start_element</span>&nbsp;<span class="string">"td"</span></code>, the
+    context is set to <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span>&nbsp;<span class="string">"tr"</span></code>. If the first signal would be
+    <code class="code"><span class="keywordsign">`</span><span class="constructor">Start_element</span>&nbsp;<span class="string">"g"</span></code>, the context is set to <code class="code"><span class="keywordsign">`</span><span class="constructor">Fragment</span>&nbsp;<span class="string">"svg"</span></code>.<br>
+</p></div>
+
+<pre><a href="#VALwrite_html" id="VALwrite_html"><span class="keyword">val</span> write_html</a> : <code class="type">([&lt; <a href="index.html#TYPEsignal">signal</a> ], 's) <a href="index.html#TYPEstream">stream</a> -&gt; (char, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Similar to <a href="index.html#VALwrite_xml"><code class="code">write_xml</code></a>, but emits HTML5 instead of XML.<br>
+</div>
+
+<h2 id="2_Inputsources"><a href="#2_Inputsources">Input sources</a></h2>
+
+<pre><a href="#VALstring" id="VALstring"><span class="keyword">val</span> string</a> : <code class="type">string -&gt; (char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Evaluates to a stream that retrieves successive bytes from the given
+    string.<br>
+</div>
+
+<pre><a href="#VALbuffer" id="VALbuffer"><span class="keyword">val</span> buffer</a> : <code class="type">Buffer.t -&gt; (char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Evaluates to a stream that retrieves successive bytes from the given buffer.
+    Be careful of changing the buffer while it is being iterated by the
+    stream.<br>
+</div>
+
+<pre><a href="#VALchannel" id="VALchannel"><span class="keyword">val</span> channel</a> : <code class="type">Pervasives.in_channel -&gt; (char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Evaluates to a stream that retrieves bytes from the given channel. If the
+    channel cannot be read, the next read of the stream results in raising
+    <code class="code"><span class="constructor">Sys_error</span></code>.
+<p>
+
+    Note that this input source is synchronous because <code class="code">Pervasives.in_channel</code>
+    reads are blocking. For non-blocking channels, see <a href="Markup_lwt_unix.html"><code class="code">Markup_lwt_unix</code></a>.<br>
+</p></div>
+
+<pre><a href="#VALfile" id="VALfile"><span class="keyword">val</span> file</a> : <code class="type">string -&gt; (char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> * (unit -&gt; unit)</code></pre><div class="info ">
+<code class="code">file&nbsp;path</code> opens the file at <code class="code">path</code>, then evaluates to a pair <code class="code">s,&nbsp;close</code>,
+    where reading from stream <code class="code">s</code> retrieves successive bytes from the file, and
+    calling <code class="code">close&nbsp;()</code> closes the file.
+<p>
+
+    The file is closed automatically if <code class="code">s</code> is read to completion, or if reading
+    <code class="code">s</code> raises an exception. It is not necessary to call <code class="code">close&nbsp;()</code> in these
+    cases.
+</p><p>
+
+    If the file cannot be opened, raises <code class="code"><span class="constructor">Sys_error</span></code> immediately. If the file
+    cannot be read, reading the stream raises <code class="code"><span class="constructor">Sys_error</span></code>.<br>
+</p></div>
+
+<pre><a href="#VALfn" id="VALfn"><span class="keyword">val</span> fn</a> : <code class="type">(unit -&gt; char option) -&gt; (char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+<code class="code">fn&nbsp;f</code> is a stream that retrives bytes by calling <code class="code">f&nbsp;()</code>. If the call
+    results in <code class="code"><span class="constructor">Some</span>&nbsp;c</code>, the stream emits <code class="code">c</code>. If the call results in <code class="code"><span class="constructor">None</span></code>,
+    the stream is considered to have ended.
+<p>
+
+    This is actually an alias for <a href="index.html#VALstream"><code class="code">stream</code></a>, restricted to type <code class="code">char</code>.<br>
+</p></div>
+
+<h2 id="2_Outputdestinations"><a href="#2_Outputdestinations">Output destinations</a></h2>
+
+<pre><a href="#VALto_string" id="VALto_string"><span class="keyword">val</span> to_string</a> : <code class="type">(char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; string</code></pre><div class="info ">
+Eagerly retrieves bytes from the given stream and assembles a string.<br>
+</div>
+
+<pre><a href="#VALto_buffer" id="VALto_buffer"><span class="keyword">val</span> to_buffer</a> : <code class="type">(char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; Buffer.t</code></pre><div class="info ">
+Eagerly retrieves bytes from the given stream and places them into a
+    buffer.<br>
+</div>
+
+<pre><a href="#VALto_channel" id="VALto_channel"><span class="keyword">val</span> to_channel</a> : <code class="type">Pervasives.out_channel -&gt; (char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; unit</code></pre><div class="info ">
+Eagerly retrieves bytes from the given stream and writes them to the given
+    channel. If writing fails, raises <code class="code"><span class="constructor">Sys_error</span></code>.<br>
+</div>
+
+<pre><a href="#VALto_file" id="VALto_file"><span class="keyword">val</span> to_file</a> : <code class="type">string -&gt; (char, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; unit</code></pre><div class="info ">
+Eagerly retrieves bytes from the given stream and writes them to the given
+    file. If writing fails, or the file cannot be opened, raises <code class="code"><span class="constructor">Sys_error</span></code>.
+    Note that the file is truncated (cleared) before writing. If you wish to
+    append to file, open it with the appropriate flags and use <code class="code">to_channel</code> on
+    the resulting channel.<br>
+</div>
+
+<h2 id="2_Streamoperations"><a href="#2_Streamoperations">Stream operations</a></h2>
+
+<pre><a href="#VALstream" id="VALstream"><span class="keyword">val</span> stream</a> : <code class="type">(unit -&gt; 'a option) -&gt; ('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+<code class="code">stream&nbsp;f</code> creates a stream that repeatedly calls <code class="code">f&nbsp;()</code>. Each time <code class="code">f&nbsp;()</code>
+    evaluates to <code class="code"><span class="constructor">Some</span>&nbsp;v</code>, the next item in the stream is <code class="code">v</code>. The first time
+    <code class="code">f&nbsp;()</code> evaluates to <code class="code"><span class="constructor">None</span></code>, the stream ends.<br>
+</div>
+
+<pre><a href="#VALnext" id="VALnext"><span class="keyword">val</span> next</a> : <code class="type">('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; 'a option</code></pre><div class="info ">
+Retrieves the next item in the stream, if any, and removes it from the
+    stream.<br>
+</div>
+
+<pre><a href="#VALpeek" id="VALpeek"><span class="keyword">val</span> peek</a> : <code class="type">('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; 'a option</code></pre><div class="info ">
+Retrieves the next item in the stream, if any, but does not remove the item
+    from the stream.<br>
+</div>
+
+<pre><a href="#VALtransform" id="VALtransform"><span class="keyword">val</span> transform</a> : <code class="type"><br>       ('a -&gt; 'b -&gt; 'c list * 'a option) -&gt;<br>       'a -&gt; ('b, 's) <a href="index.html#TYPEstream">stream</a> -&gt; ('c, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+<code class="code">transform&nbsp;f&nbsp;init&nbsp;s</code> lazily creates a stream by repeatedly applying
+    <code class="code">f&nbsp;acc&nbsp;v</code>, where <code class="code">acc</code> is an accumulator whose initial value is <code class="code">init</code>, and
+    <code class="code">v</code> is consecutive values of <code class="code">s</code>. Each time, <code class="code">f&nbsp;acc&nbsp;v</code> evaluates to a pair
+    <code class="code">(vs,&nbsp;maybe_acc')</code>. The values <code class="code">vs</code> are added to the result stream. If
+    <code class="code">maybe_acc'</code> is <code class="code"><span class="constructor">Some</span>&nbsp;acc'</code>, the accumulator is set to <code class="code">acc'</code>. Otherwise, if
+    <code class="code">maybe_acc'</code> is <code class="code"><span class="constructor">None</span></code>, the result stream ends.<br>
+</div>
+
+<pre><a href="#VALfold" id="VALfold"><span class="keyword">val</span> fold</a> : <code class="type">('a -&gt; 'b -&gt; 'a) -&gt; 'a -&gt; ('b, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; 'a</code></pre><div class="info ">
+<code class="code">fold&nbsp;f&nbsp;init&nbsp;s</code> eagerly folds over the items <code class="code">v</code>, <code class="code">v'</code>, <code class="code">v''</code>, ... of <code class="code">s</code>,
+    i.e. evaluates <code class="code">f&nbsp;(f&nbsp;(f&nbsp;init&nbsp;v)&nbsp;v')&nbsp;v''</code>...<br>
+</div>
+
+<pre><a href="#VALmap" id="VALmap"><span class="keyword">val</span> map</a> : <code class="type">('a -&gt; 'b) -&gt; ('a, 's) <a href="index.html#TYPEstream">stream</a> -&gt; ('b, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+<code class="code">map&nbsp;f&nbsp;s</code> lazily applies <code class="code">f</code> to each item of <code class="code">s</code>, and produces the resulting
+    stream.<br>
+</div>
+
+<pre><a href="#VALfilter" id="VALfilter"><span class="keyword">val</span> filter</a> : <code class="type">('a -&gt; bool) -&gt; ('a, 's) <a href="index.html#TYPEstream">stream</a> -&gt; ('a, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+<code class="code">filter&nbsp;f&nbsp;s</code> is <code class="code">s</code> without the items for which <code class="code">f</code> evaluates to <code class="code">false</code>.
+    <code class="code">filter</code> is lazy.<br>
+</div>
+
+<pre><a href="#VALfilter_map" id="VALfilter_map"><span class="keyword">val</span> filter_map</a> : <code class="type">('a -&gt; 'b option) -&gt; ('a, 's) <a href="index.html#TYPEstream">stream</a> -&gt; ('b, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+<code class="code">filter_map&nbsp;f&nbsp;s</code> lazily applies <code class="code">f</code> to each item <code class="code">v</code> of <code class="code">s</code>. If <code class="code">f&nbsp;v</code>
+    evaluates to <code class="code"><span class="constructor">Some</span>&nbsp;v'</code>, the result stream has <code class="code">v'</code>. If <code class="code">f&nbsp;v</code> evaluates to
+    <code class="code"><span class="constructor">None</span></code>, no item corresponding to <code class="code">v</code> appears in the result stream.<br>
+</div>
+
+<pre><a href="#VALiter" id="VALiter"><span class="keyword">val</span> iter</a> : <code class="type">('a -&gt; unit) -&gt; ('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; unit</code></pre><div class="info ">
+<code class="code">iter&nbsp;f&nbsp;s</code> eagerly applies <code class="code">f</code> to each item of <code class="code">s</code>, i.e. evaluates
+    <code class="code">f&nbsp;v;&nbsp;f&nbsp;v';&nbsp;f&nbsp;v''</code>...<br>
+</div>
+
+<pre><a href="#VALdrain" id="VALdrain"><span class="keyword">val</span> drain</a> : <code class="type">('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; unit</code></pre><div class="info ">
+<code class="code">drain&nbsp;s</code> eagerly consumes <code class="code">s</code>. This is useful for observing side effects,
+    such as parsing errors, when you don't care about the parsing signals
+    themselves. It is equivalent to <code class="code">iter&nbsp;ignore&nbsp;s</code>.<br>
+</div>
+
+<pre><a href="#VALof_list" id="VALof_list"><span class="keyword">val</span> of_list</a> : <code class="type">'a list -&gt; ('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Produces a (lazy) stream from the given list.<br>
+</div>
+
+<pre><a href="#VALto_list" id="VALto_list"><span class="keyword">val</span> to_list</a> : <code class="type">('a, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; 'a list</code></pre><div class="info ">
+Eagerly converts the given stream to a list.<br>
+</div>
+
+<h2 id="2_Utility"><a href="#2_Utility">Utility</a></h2>
+
+<pre><a href="#VALcontent" id="VALcontent"><span class="keyword">val</span> content</a> : <code class="type"><br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ], 's) <a href="index.html#TYPEstream">stream</a> -&gt;<br>       (<a href="index.html#TYPEcontent_signal">content_signal</a>, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+Converts a <a href="index.html#TYPEsignal"><code class="code">signal</code></a> stream into a <a href="index.html#TYPEcontent_signal"><code class="code">content_signal</code></a> stream by filtering out
+    all signals besides <code class="code"><span class="keywordsign">`</span><span class="constructor">Start_element</span></code>, <code class="code"><span class="keywordsign">`</span><span class="constructor">End_element</span></code>, and <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code>.<br>
+</div>
+
+<pre><a href="#VALtree" id="VALtree"><span class="keyword">val</span> tree</a> : <code class="type"><br>       ?text:(string list -&gt; 'a) -&gt;<br>       ?element:(<a href="index.html#TYPEname">name</a> -&gt; (<a href="index.html#TYPEname">name</a> * string) list -&gt; 'a list -&gt; 'a) -&gt;<br>       ?comment:(string -&gt; 'a) -&gt;<br>       ?pi:(string -&gt; string -&gt; 'a) -&gt;<br>       ?xml:(<a href="index.html#TYPExml_declaration">xml_declaration</a> -&gt; 'a) -&gt;<br>       ?doctype:(<a href="index.html#TYPEdoctype">doctype</a> -&gt; 'a) -&gt;<br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ], <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a> -&gt; 'a option</code></pre><div class="multiline-member info">
+This function's type signature may look intimidating, but it is actually
+    easy to use. It is best introduced by example:
+<p>
+
+</p><pre class="codepre"><code class="code"><span class="keyword">type</span> my_dom = <span class="constructor">Text</span> <span class="keyword">of</span> string <span class="keywordsign">|</span> <span class="constructor">Element</span> <span class="keyword">of</span> name * my_dom list
+
+<span class="string">"&lt;p&gt;HTML5 is &lt;em&gt;easy&lt;/em&gt; to parse"</span>
+|&gt; string
+|&gt; parse_html
+|&gt; signals
+|&gt; tree
+  ~text:(<span class="keyword">fun</span> ss <span class="keywordsign">-&gt;</span> <span class="constructor">Text</span> (<span class="constructor">String</span>.concat <span class="string">""</span> ss))
+  ~element:(<span class="keyword">fun</span> (name, _) children <span class="keywordsign">-&gt;</span> <span class="constructor">Element</span> (name, children))
+</code></pre>
+<p>
+
+    results in the structure
+</p><p>
+
+</p><pre class="codepre"><code class="code"><span class="constructor">Element</span> (<span class="string">"p"</span> [
+  <span class="constructor">Text</span> <span class="string">"HTML5 is "</span>;
+  <span class="constructor">Element</span> (<span class="string">"em"</span>, [<span class="constructor">Text</span> <span class="string">"easy"</span>]);
+  <span class="constructor">Text</span> <span class="string">" to parse"</span>])
+</code></pre>
+<p>
+
+    Formally, <code class="code">tree</code> assembles a tree data structure of type <code class="code"><span class="keywordsign">'</span>a</code> from a signal
+    stream. The stream is parsed according to the following grammar:
+</p><p>
+
+</p><pre class="codepre"><code class="code">stream  ::= node*
+node    ::= element <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">Text</span> <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">Comment</span> <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">PI</span> <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">Xml</span> <span class="keywordsign">|</span> <span class="keywordsign">`</span><span class="constructor">Doctype</span>
+element ::= <span class="keywordsign">`</span><span class="constructor">Start_element</span> node* <span class="keywordsign">`</span><span class="constructor">End_element</span>
+</code></pre>
+<p>
+
+    Each time <code class="code">trees</code> matches a production of <code class="code">node</code>, it calls the corresponding
+    function to convert the node into your tree type <code class="code"><span class="keywordsign">'</span>a</code>. For example, when
+    <code class="code">trees</code> matches <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span>&nbsp;ss</code>, it calls <code class="code">~text&nbsp;ss</code>, if <code class="code">~text</code> is supplied.
+    Similarly, when <code class="code">trees</code> matches <code class="code">element</code>, it calls
+    <code class="code">~element&nbsp;name&nbsp;attributes&nbsp;children</code>, if <code class="code">~element</code> is supplied.
+</p><p>
+
+    See <a href="index.html#VALtrees"><code class="code">trees</code></a> if the input stream might have multiple top-level trees. This
+    function <code class="code">tree</code> only retrieves the first one.<br>
+</p></div>
+
+<pre><a href="#VALtrees" id="VALtrees"><span class="keyword">val</span> trees</a> : <code class="type"><br>       ?text:(string list -&gt; 'a) -&gt;<br>       ?element:(<a href="index.html#TYPEname">name</a> -&gt; (<a href="index.html#TYPEname">name</a> * string) list -&gt; 'a list -&gt; 'a) -&gt;<br>       ?comment:(string -&gt; 'a) -&gt;<br>       ?pi:(string -&gt; string -&gt; 'a) -&gt;<br>       ?xml:(<a href="index.html#TYPExml_declaration">xml_declaration</a> -&gt; 'a) -&gt;<br>       ?doctype:(<a href="index.html#TYPEdoctype">doctype</a> -&gt; 'a) -&gt;<br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ], 's) <a href="index.html#TYPEstream">stream</a> -&gt; ('a, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+Like <a href="index.html#VALtree"><code class="code">tree</code></a>, but converts all top-level trees, not only the first one. The
+    trees are emitted on the resulting stream, in the sequence that they appear
+    in the input.<br>
+</div>
+
+<pre><a href="#TYPEnode" id="TYPEnode"><span class="keyword">type</span> <code class="type">'a</code> node</a> = <code class="type"><br>       [ `Comment of string<br>       | `Doctype of <a href="index.html#TYPEdoctype">doctype</a><br>       | `Element of <a href="index.html#TYPEname">name</a> * (<a href="index.html#TYPEname">name</a> * string) list * 'a list<br>       | `PI of string * string<br>       | `Text of string<br>       | `Xml of <a href="index.html#TYPExml_declaration">xml_declaration</a> ]</code> </pre>
+<div class="multiline-member info">
+See <a href="index.html#VALfrom_tree"><code class="code">from_tree</code></a> below.<br>
+</div>
+
+
+<pre><a href="#VALfrom_tree" id="VALfrom_tree"><span class="keyword">val</span> from_tree</a> : <code class="type">('a -&gt; 'a <a href="index.html#TYPEnode">node</a>) -&gt; 'a -&gt; (<a href="index.html#TYPEsignal">signal</a>, <a href="index.html#TYPEsync">sync</a>) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Deconstructs tree data structures of type <code class="code"><span class="keywordsign">'</span>a</code> into signal streams. The
+    function argument is applied to each data structure node. For example,
+<p>
+
+</p><pre class="codepre"><code class="code"><span class="keyword">type</span> my_dom = <span class="constructor">Text</span> <span class="keyword">of</span> string <span class="keywordsign">|</span> <span class="constructor">Element</span> <span class="keyword">of</span> string * my_dom list
+
+<span class="keyword">let</span> dom =
+  <span class="constructor">Element</span> (<span class="string">"p"</span>, [
+    <span class="constructor">Text</span> <span class="string">"HTML5 is "</span>;
+    <span class="constructor">Element</span> (<span class="string">"em"</span>, [<span class="constructor">Text</span> <span class="string">"easy"</span>]);
+    <span class="constructor">Text</span> <span class="string">" to parse"</span>])
+
+dom |&gt; from_tree (<span class="keyword">function</span>
+  <span class="keywordsign">|</span> <span class="constructor">Text</span> s <span class="keywordsign">-&gt;</span> <span class="keywordsign">`</span><span class="constructor">Text</span> s
+  <span class="keywordsign">|</span> <span class="constructor">Element</span> (name, children) <span class="keywordsign">-&gt;</span> <span class="keywordsign">`</span><span class="constructor">Element</span> ((<span class="string">""</span>, name), [], children))
+</code></pre>
+<p>
+
+    results in the signal stream
+</p><p>
+
+</p><pre class="codepre"><code class="code"><span class="keywordsign">`</span><span class="constructor">Start_element</span> ((<span class="string">""</span>, <span class="string">"p"</span>), [])
+<span class="keywordsign">`</span><span class="constructor">Text</span> [<span class="string">"HTML5 is "</span>]
+<span class="keywordsign">`</span><span class="constructor">Start_element</span> ((<span class="string">""</span>, <span class="string">"em"</span>), [])
+<span class="keywordsign">`</span><span class="constructor">Text</span> [<span class="string">"easy"</span>]
+<span class="keywordsign">`</span><span class="constructor">End_element</span>
+<span class="keywordsign">`</span><span class="constructor">Text</span> <span class="string">" to parse"</span>
+<span class="keywordsign">`</span><span class="constructor">End_element</span>
+</code></pre><br>
+</div>
+
+<pre><a href="#VALelements" id="VALelements"><span class="keyword">val</span> elements</a> : <code class="type"><br>       (<a href="index.html#TYPEname">name</a> -&gt; (<a href="index.html#TYPEname">name</a> * string) list -&gt; bool) -&gt;<br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ] as 'a, 's) <a href="index.html#TYPEstream">stream</a> -&gt;<br>       (('a, 's) <a href="index.html#TYPEstream">stream</a>, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+<code class="code">elements&nbsp;f&nbsp;s</code> scans the signal stream <code class="code">s</code> for
+    <code class="code"><span class="keywordsign">`</span><span class="constructor">Start_element</span>&nbsp;(name,&nbsp;attributes)</code> signals that satisfy
+    <code class="code">f&nbsp;name&nbsp;attributes</code>. Each such matching signal is the beginning of a
+    substream that ends with the corresponding <code class="code"><span class="keywordsign">`</span><span class="constructor">End_element</span></code> signal. The result
+    of <code class="code">elements&nbsp;f&nbsp;s</code> is the stream of these substreams.
+<p>
+
+    Matches don't nest. If there is a matching element contained in another
+    matching element, only the top one results in a substream.
+</p><p>
+
+    Code using <code class="code">elements</code> does not have to read each substream to completion, or
+    at all. However, once the using code has tried to get the next substream, it
+    should not try to read a previous one.<br>
+</p></div>
+
+<pre><a href="#VALtext" id="VALtext"><span class="keyword">val</span> text</a> : <code class="type">([&lt; <a href="index.html#TYPEsignal">signal</a> ], 's) <a href="index.html#TYPEstream">stream</a> -&gt; (char, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Extracts all the text in a signal stream by discarding all markup. For each
+    <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span>&nbsp;ss</code> signal, the result stream has the bytes of the strings <code class="code">ss</code>, and
+    all other signals are ignored.<br>
+</div>
+
+<pre><a href="#VALtrim" id="VALtrim"><span class="keyword">val</span> trim</a> : <code class="type">([&gt; `Text of string list ] as 'a, 's) <a href="index.html#TYPEstream">stream</a> -&gt; ('a, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Trims whitespace in a signal stream. For each signal <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span>&nbsp;ss</code>, transforms
+    <code class="code">ss</code> so that the result strings <code class="code">ss'</code> satisfy
+<p>
+
+</p><pre class="codepre"><code class="code"><span class="constructor">String</span>.concat <span class="string">""</span> ss' = <span class="constructor">String</span>.trim (<span class="constructor">String</span>.concat <span class="string">""</span> ss)
+</code></pre>
+<p>
+
+    All signals for which <code class="code"><span class="constructor">String</span>.concat&nbsp;<span class="string">""</span>&nbsp;ss'&nbsp;=&nbsp;<span class="string">""</span></code> are then dropped.<br>
+</p></div>
+
+<pre><a href="#VALnormalize_text" id="VALnormalize_text"><span class="keyword">val</span> normalize_text</a> : <code class="type">([&gt; `Text of string list ] as 'a, 's) <a href="index.html#TYPEstream">stream</a> -&gt; ('a, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Concatenates adjacent <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code> signals, then eliminates all empty strings,
+    then all <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span>&nbsp;[]</code> signals. Signals besides <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code> are unaffected. Note
+    that signal streams emitted by the parsers already have normalized text.
+    This function is useful when you are inserting text into a signal stream
+    after parsing, or generating streams from scratch, and would like to clean
+    up the <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code> signals.<br>
+</div>
+
+<pre><a href="#VALpretty_print" id="VALpretty_print"><span class="keyword">val</span> pretty_print</a> : <code class="type"><br>       ([&gt; <a href="index.html#TYPEcontent_signal">content_signal</a> ] as 'a, 's) <a href="index.html#TYPEstream">stream</a> -&gt;<br>       ('a, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+Adjusts the whitespace in the <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code> signals in the given stream so that
+    the output appears nicely-indented when the stream is converted to bytes and
+    written.<br>
+</div>
+
+<pre><a href="#VALhtml5" id="VALhtml5"><span class="keyword">val</span> html5</a> : <code class="type">([&lt; <a href="index.html#TYPEsignal">signal</a> ], 's) <a href="index.html#TYPEstream">stream</a> -&gt; (<a href="index.html#TYPEsignal">signal</a>, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+Converts a signal stream into an HTML5 signal stream by stripping any
+    document type declarations, XML declarations, and processing instructions,
+    and prefixing the HTML5 doctype declaration. This is useful when converting
+    between XHTML and HTML.<br>
+</div>
+
+<pre><a href="#VALxhtml" id="VALxhtml"><span class="keyword">val</span> xhtml</a> : <code class="type"><br>       ?dtd:[&lt; `Frameset_1_0 | `Strict_1_0 | `Strict_1_1 | `Transitional_1_0 ] -&gt;<br>       ([&lt; <a href="index.html#TYPEsignal">signal</a> ], 's) <a href="index.html#TYPEstream">stream</a> -&gt; (<a href="index.html#TYPEsignal">signal</a>, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="multiline-member info">
+Similar to <a href="index.html#VALhtml5"><code class="code">html5</code></a>, but does not strip processing instructions, and
+    prefixes an XHTML document type declaration and an XML declaration. The
+    <code class="code">~dtd</code> argument specifies which DTD to refer to in the doctype declaration.
+    The default is <code class="code"><span class="keywordsign">`</span><span class="constructor">Strict_1_1</span></code>.<br>
+</div>
+
+<pre><a href="#VALxhtml_entity" id="VALxhtml_entity"><span class="keyword">val</span> xhtml_entity</a> : <code class="type">string -&gt; string option</code></pre><div class="info ">
+Translates XHTML entities. This function is for use with the <code class="code">~entity</code>
+    argument of <a href="index.html#VALparse_xml"><code class="code">parse_xml</code></a> when parsing XHTML.<br>
+</div>
+
+<pre><a href="#VALstrings_to_bytes" id="VALstrings_to_bytes"><span class="keyword">val</span> strings_to_bytes</a> : <code class="type">(string, 's) <a href="index.html#TYPEstream">stream</a> -&gt; (char, 's) <a href="index.html#TYPEstream">stream</a></code></pre><div class="info ">
+<code class="code">strings_to_bytes&nbsp;s</code> is the stream of all the bytes of all strings in
+    <code class="code">s</code>.<br>
+</div>
+
+<pre><a href="#VALcompare_locations" id="VALcompare_locations"><span class="keyword">val</span> compare_locations</a> : <code class="type"><a href="index.html#TYPElocation">location</a> -&gt; <a href="index.html#TYPElocation">location</a> -&gt; int</code></pre><div class="info ">
+Orders locations according to their appearance in an input stream, i.e.
+    first by line, and then, for locations on the same line, by column.<br>
+</div>
+
+<h2 id="2_Namespaces"><a href="#2_Namespaces">Namespaces</a></h2>
+
+<pre><span class="keyword">module</span> <a href="Markup.Ns.html">Ns</a>: <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info">
+Common namespace URIs.
+</div>
+
+<h2 id="2_Asynchronousinterface"><a href="#2_Asynchronousinterface">Asynchronous interface</a></h2>
+
+<pre><span class="keyword">module type</span> <a href="Markup.ASYNCHRONOUS.html">ASYNCHRONOUS</a> = <code class="code"><span class="keyword">sig</span></code> .. <code class="code"><span class="keyword">end</span></code></pre><div class="info">
+Markup.ml interface for monadic I/O libraries such as Lwt and Async.
+</div>
+
+<h2 id="2_Conformancestatus"><a href="#2_Conformancestatus">Conformance status</a></h2>
+<p>
+
+    The HTML parser seeks to implement
+    <a href="https://www.w3.org/TR/html5/syntax.html"> section 8 of the HTML5
+    specification</a>. That section describes a parser, part of a full-blown user
+    agent, that is building up a DOM representation of an HTML document.
+    Markup.ml is neither inherently part of a user agent, nor does it build up a
+    DOM representation. With respect to section 8 of HTML5, Markup.ml is
+    concerned with only the syntax. When that section requires that the user
+    agent perform an action, Markup.ml emits enough information for a
+    hypothetical user agent based on it to be able to decide to perform this
+    action. Likewise, Markup.ml seeks to emit enough information for a
+    hypothetical user agent to build up a conforming DOM.
+</p><p>
+
+    The XML parser seeks to be a non-validating implementation of the
+    <a href="https://www.w3.org/TR/xml/"> XML</a> and <a href="https://www.w3.org/TR/xml-names/">
+    Namespaces in XML</a> specifications.
+</p><p>
+
+    This rest of this section lists known deviations from HTML5, XML, and
+    Namespaces in XML. Some of these deviations are meant to be corrected in
+    future versions of Markup.ml, while others will probably remain. The latter
+    satisfy some or all of the following properties:
+</p><ul>
+<li>They require non-local adjustment, especially of past nodes. For example,
+      adjusting the start signal of the root node mid-way through the signal
+      stream is difficult for a one-pass parser.</li>
+<li>They are minor. Users implementing less than a conforming browser
+      typically don't care about them. They typically have to do with obscure
+      error recovery. There are no deviations affecting the parsing of
+      well-formed input.</li>
+<li>They can easily be corrected by code written over Markup.ml that builds up
+      a DOM or maintains other auxiliary data structures during parsing.</li>
+</ul>
+
+    <h3 id="3_Tobecorrected">To be corrected:</h3>
+<ul>
+<li>XML: There is no attribute value normalization.</li>
+<li>HTML: <em>foster parenting</em> is not implemented, because it requires
+      non-local adjustments.</li>
+<li>HTML: Quirks mode is not honored. This affects the interaction between
+      automatic closing of <code class="code">p</code> elements and opening of <code class="code">table</code> elements.</li>
+<li>HTML: The parser has non-standard recovery from unmatched closing <code class="code">form</code>
+      tags in <a href=" https://github.com/aantron/markup.ml/commit/0bf4f1b"> some
+      situations</a>.</li>
+<li>HTML: The parser ignores interactions between <code class="code">form</code> and <code class="code">template</code>.</li>
+<li>HTML: The form translation for <code class="code">isindex</code> is completely ignored. <code class="code">isindex</code>
+      is handled as an unknown element.</li>
+</ul>
+
+    <h3 id="3_Toremain">To remain:</h3>
+<ul>
+<li>HTML: Except when detecting encodings, the parser does not try to read
+      <code class="code">&lt;meta&gt;</code> tags for encoding declarations. The user of Markup.ml should read
+      these, if necessary. They are part of the emitted signal stream.</li>
+<li>HTML: <code class="code">noscript</code> elements are always parsed, as are <code class="code">script</code> elements. For
+      conforming behavior, if the user of Markup.ml "supports scripts," the user
+      should serialize the content of <code class="code">noscript</code> to a <code class="code"><span class="keywordsign">`</span><span class="constructor">Text</span></code> signal using
+      <code class="code">write_html</code>.</li>
+<li>HTML: Elements such as <code class="code">title</code> that belong in <code class="code">head</code>, but are found
+      between <code class="code">head</code> and <code class="code">body</code>, are not moved into <code class="code">head</code>.</li>
+<li>HTML: <code class="code">&lt;html&gt;</code> tags found in the body do not have their attributes added
+      to the <code class="code"><span class="keywordsign">`</span><span class="constructor">Start_element</span>&nbsp;<span class="string">"html"</span></code> signal emitted at the beginning of the
+      document.</li>
+</ul>
+
+<div class="footer">
+  Copyright © 2016 Anton Bachin. Released under the BSD 2-clause license.
+  See
+  <a href="https://github.com/aantron/markup.ml/blob/master/LICENSE.md">
+    LICENSE
+  </a>
+  <br>
+  This page is part of the documentation for
+  <a class="protect" href="https://github.com/aantron/markup.ml">Markup.ml</a>.
+</div>
+</body></html>
