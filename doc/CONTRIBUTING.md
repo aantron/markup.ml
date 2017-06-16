@@ -184,8 +184,11 @@ implementing. It may also be useful to see the [conformance status][conformance]
 - [`Markup_error`][error] – parsing and serialization error type. Markup.ml does
   not throw exceptions, because all errors are recoverable.
 - [`Markup.namespace`][namespace] – namespace URI to prefix conversion and back.
-- [`Markup_entities`][entities], [`Markup_trie`][trie] – HTML entities and a
-  trie for incrementally searching them.
+- [`Markup_entities`][entities] – checked-in auto-generated HTML5 entity list.
+  The source for this file is `src/entities.json`, and the generator is
+  `src/translate_entities.ml`. Neither of these latter two files is part of the
+  built Markup.ml, nor of the build process.
+- [`Markup_trie`][trie] – trie for incrementally searching the entity list.
 - [`Markup_kstream`][kstream] – above-mentioned CPS streams.
 - [`Markup_text`][text] – some utilities for `Markup_html_tokenizer` and
   `Markup_xml_tokenizer`; see below.
