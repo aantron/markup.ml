@@ -909,8 +909,9 @@ val preprocess_input_stream :
       adjusting the start signal of the root node mid-way through the signal
       stream is difficult for a one-pass parser.
     - They are minor. Users implementing less than a conforming browser
-      typically don't care about them, and they typically have to do with
-      obscure error recovery.
+      typically don't care about them. They typically have to do with obscure
+      error recovery. There are no deviations affecting the parsing of
+      well-formed input.
     - They can easily be corrected by code written over Markup.ml that builds up
       a DOM or maintains other auxiliary data structures during parsing.
 
