@@ -106,7 +106,7 @@ let () =
     let%lwt _, body = Cohttp_lwt_unix.Client.get (Uri.of_string url) in
 
     (* Adapt response to a Markup.ml stream. *)
-    let body = body |> Cohttp_lwt_body.to_stream |> Markup_lwt.lwt_stream in
+    let body = body |> Cohttp_lwt.Body.to_stream |> Markup_lwt.lwt_stream in
 
     (* Set up a lazy stream of h3 elements. *)
     let h3s = Markup.(body
@@ -130,16 +130,15 @@ This prints
 it, do:
 
 ```sh
-ocamlfind opt -linkpkg \
-    -package cohttp.lwt -package lwt.unix -package lwt.ppx \
-    -package markup.lwt -package lambdasoup \
+ocamlfind opt -linkpkg -package lwt.ppx,cohttp.lwt,markup.lwt,lambdasoup \
     scrape.ml && ./a.out
 ```
 
 You can get all the necessary packages by
 
 ```
-opam install lwt ssl cohttp lambdasoup markup
+opam install lwt_ssl
+opam install cohttp-lwt-unix lambdasoup markup
 ```
 
 <br/>
