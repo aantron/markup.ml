@@ -1,6 +1,6 @@
 opam-version: "1.2"
-name: "markup"
-version: "0.7.5"
+version: "dev"
+
 maintainer: "Anton Bachin <antonbachin@yahoo.com>"
 authors: "Anton Bachin <antonbachin@yahoo.com>"
 homepage: "https://github.com/aantron/markup.ml"
@@ -8,14 +8,18 @@ doc: "http://aantron.github.io/markup.ml"
 bug-reports: "https://github.com/aantron/markup.ml/issues"
 dev-repo: "https://github.com/aantron/markup.ml.git"
 license: "BSD"
+
 depends: [
-  "uutf" {>= "1.0.0"}
-  "uchar"
-  "ocamlfind" {build}
   "ocamlbuild" {build}
+  "ocamlfind" {build}
   "ounit" {test}
+  "uchar"
+  "uutf" {>= "1.0.0"}
 ]
-depopts: ["lwt"]
+depopts: [
+  "lwt"
+]
+
 build: [
   [make "build"]
 ]
@@ -25,5 +29,6 @@ build-test: [
 build-doc: [
   [make "docs"]
 ]
+
 install: [make "ocamlfind-install"]
 remove: ["ocamlfind" "remove" "markup"]
