@@ -1,7 +1,10 @@
 scratch/
 _build/
 bisect*.out
-test/coverage
+_coverage
+*.install
+*.merlin
+*.sexp
 doc/markup.odocl
 doc/html
 doc/publish

@@ -1,107 +1,63 @@
-LIB := markup
-VERSION := 0.7.5
-
-if_package = ! ocamlfind query $(1) > /dev/null 2> /dev/null || ( $(2) )
-
-OCAML_VERSION := \
-	$(shell ocamlc -version | grep -E -o '^[0-9]+\.[0-9]+' | sed 's/\.//')
-
-ifeq ($(shell test $(OCAML_VERSION) -ge 403 && echo true),true)
-FLAMBDA_TAGS := \
-	-tag-line '<src/*>: optimize(3)'
-endif
-
-ifeq ($(shell test $(OCAML_VERSION) -ge 402 && echo true),true)
-SAFE_STRING := ,-safe-string
-ifeq ($(shell ocamlfind query bisect_ppx > /dev/null 2> /dev/null && \
-              echo true),true)
-TEST_TAGS := \
-	-tag-line '<src/*>: package(bisect_ppx)' \
-	-tag-line '<test/*.native>: package(bisect_ppx)'
-endif
-endif
-
-ifeq ($(shell test $(OCAML_VERSION) -ge 400 && echo true),true)
-BIN_ANNOT := ,-bin-annot
-endif
-
-CFLAGS := \
-	-cflags -g,-w,+A-4-9-44-45-48-58,-warn-error,+A-3$(BIN_ANNOT)$(SAFE_STRING)
-
-OCAMLBUILD := ocamlbuild -use-ocamlfind -j 0 -no-links
-
 .PHONY : build
 build :
-	$(OCAMLBUILD) $(CFLAGS) $(FLAMBDA_TAGS) $(LIB).cma $(LIB).cmxa
-	$(call if_package,lwt,\
-	  	$(OCAMLBUILD) $(CFLAGS) $(FLAMBDA_TAGS) $(LIB)_lwt.cma $(LIB)_lwt.cmxa)
-	$(call if_package,lwt.unix,\
-	  	$(OCAMLBUILD) $(CFLAGS) $(FLAMBDA_TAGS) \
-	  		$(LIB)_lwt_unix.cma $(LIB)_lwt_unix.cmxa)
+	ocaml src/configure.ml
+	jbuilder build --dev
 
+# This is not part of the ordinary build process. The output file,
+# markup_entities.ml, is checked into git.
 .PHONY : entities
 entities :
-	$(OCAMLBUILD) -quiet $(CFLAGS) translate_entities.native -- \
-		> src/markup_entities.ml
+	jbuilder build --dev src/translate_entities/translate_entities.exe
+	_build/default/src/translate_entities/translate_entities.exe \
+	  > src/markup/markup_entities.ml
 
-COVERAGE := test/coverage
-run_test = \
-	$(OCAMLBUILD) $(CFLAGS) $(TEST_TAGS) $(COVERAGE_PPXOPT) $(1) && \
-	ulimit -s 256 && \
-	_build/test/$(1)
-
-.PHONY : unit-tests
-unit-tests :
-	@rm -f bisect*.out
-	@$(call run_test,test.native)
-	@echo
-	@$(call if_package,lwt,$(call run_test,test_lwt.native) -runner sequential)
+COVERAGE := _coverage
 
 .PHONY : test
-test :
-	@make unit-tests ; \
-	RESULT=$$? ; \
-	which bisect-ppx-report > /dev/null 2> /dev/null && make bisect-report \
-		|| true ; \
-	exit $$RESULT
+test : build
+	jbuilder runtest --dev --no-buffer -j 1
 
-.PHONY : bisect-report
-bisect-report :
-	@bisect-ppx-report -I _build -html $(COVERAGE) bisect*.out
-	@echo
-	@bisect-ppx-report -I _build -summary-only -text - bisect*.out | tail -n 1 \
-		| sed 's/ - total/Coverage/'
-	@echo "See $(COVERAGE)/index.html for coverage report"
+.PHONY : coverage
+coverage : clean
+	BISECT_ENABLE=yes jbuilder build --dev
+	jbuilder runtest --dev --no-buffer -j 1
+	bisect-ppx-report \
+	  -I _build/default/ -html $(COVERAGE)/ -text - -summary-only \
+	  _build/default/test/bisect*.out _build/default/test/*/bisect*.out
+	@echo See $(COVERAGE)/index.html
 
 .PHONY : performance-test
 performance-test :
-	@$(OCAMLBUILD) $(CFLAGS) performance_markup.native --
-	@$(call if_package,netstring,\
-	  $(OCAMLBUILD) $(CFLAGS) performance_nethtml.native --)
-	@$(call if_package,xmlm,\
-	  $(OCAMLBUILD) $(CFLAGS) performance_xmlm.native --)
+	jbuilder build --dev test/performance/performance_markup.exe
+	_build/default/test/performance/performance_markup.exe
+	jbuilder build --dev test/performance/performance_nethtml.exe
+	_build/default/test/performance/performance_nethtml.exe
+	jbuilder build --dev test/performance/performance_xmlm.exe
+	_build/default/test/performance/performance_xmlm.exe
 
 .PHONY : js-test
 js-test :
-	$(call if_package,js_of_ocaml,$(OCAMLBUILD) $(CLFAGS) test_js_of_ocaml.byte)
-	$(call if_package,js_of_ocaml,\
-	  	js_of_ocaml _build/test/js_of_ocaml/test_js_of_ocaml.byte)
-
-DEP_TEST_DIR := test/dependency
-dependency_test = \
-	cd $(DEP_TEST_DIR) && \
-	$(OCAMLBUILD) $(1).native -- && \
-	$(OCAMLBUILD) $(1).byte --
+	jbuilder build --dev test/js_of_ocaml/test_js_of_ocaml.bc.js
 
 .PHONY : dependency-test
 dependency-test :
-	cd $(DEP_TEST_DIR) && $(OCAMLBUILD) -clean
-	$(call dependency_test,dep_core)
-	$(call if_package,lwt,$(call dependency_test,dep_lwt))
-	$(call if_package,lwt.unix,$(call dependency_test,dep_lwt_unix))
+	jbuilder build --dev test/dependency/dep_core.exe
+	_build/default/test/dependency/dep_core.exe
+	jbuilder build --dev test/dependency/dep_lwt.exe
+	_build/default/test/dependency/dep_lwt.exe
+	jbuilder build --dev test/dependency/dep_lwt_unix.exe
+	_build/default/test/dependency/dep_lwt_unix.exe
+
+# Everything from here to "clean" is inactive, pending porting to odoc.
+OCAML_VERSION := \
+	$(shell ocamlc -version | grep -E -o '^[0-9]+\.[0-9]+' | sed 's/\.//')
+
+OCAMLBUILD := ocamlbuild -use-ocamlfind -j 0 -no-links
 
 HTML := doc/html
 DOCFLAGS := -docflags -colorize-code
+
+if_package = ! ocamlfind query $(1) > /dev/null 2> /dev/null || ( $(2) )
 
 .PHONY : docs
 docs : docs-odocl
@@ -159,63 +115,8 @@ check-doc-prereqs :
 	@ocamlfind query lambdasoup > /dev/null 2> /dev/null \
 		|| (echo "\nLambda Soup not installed" && false)
 
-need_package = \
-	ocamlfind query $(1) > /dev/null 2> /dev/null \
-		|| echo "Missing package '$(1)' (opam install $(2))"
-
-.PHONY : all-tests
-all-tests :
-	@$(call need_package,oUnit,ounit)
-	@test $(OCAML_VERSION) -lt 402 || $(call need_package,bisect_ppx,bisect_ppx)
-	@$(call need_package,lwt,lwt)
-	@$(call need_package,lwt.unix,lwt)
-	@$(call need_package,netstring,ocamlnet)
-	@$(call need_package,xmlm,xmlm)
-	@$(call need_package,lambdasoup,lambdasoup)
-	@echo
-	make uninstall install
-	@echo
-	make dependency-test
-	@echo
-	make build
-	@echo
-	make test
-	@echo
-	make js-test
-	@echo
-	make performance-test
-	@echo
-	make docs
-
-OUTPUT := _build/src
-generated = \
-	$(OUTPUT)/$(1).cma $(OUTPUT)/$(1).cmxa $(OUTPUT)/$(1).a $(OUTPUT)/$(1).cmi \
-	$(OUTPUT)/$(1).mli $(OUTPUT)/$(1).cmti $(OUTPUT)/$(1).cmt
-INSTALL := \
-	$(call generated,$(LIB)) \
-	$(call generated,$(LIB)_lwt) \
-	$(call generated,$(LIB)_lwt_unix) \
-	$(shell find $(OUTPUT) -name '*.cmx')
-PACKAGE := markup
-
-.PHONY : ocamlfind-install
-ocamlfind-install :
-	ocamlfind install $(PACKAGE) src/META -optional $(INSTALL)
-
-.PHONY : ocamlfind-uninstall
-ocamlfind-uninstall :
-	ocamlfind remove $(PACKAGE)
-
-.PHONY : install
-install :
-	opam pin add . -y
-
-.PHONY : uninstall
-uninstall :
-	opam pin remove $(PACKAGE) -y
-
 .PHONY : clean
 clean :
-	$(OCAMLBUILD) -clean
-	rm -rf bisect*.out $(COVERAGE) $(HTML) $(PUBLISH) $(DOC_ZIP)
-	cd $(DEP_TEST_DIR) && $(OCAMLBUILD) -clean
+	rm -rf $(HTML) $(PUBLISH) $(DOC_ZIP)
+	jbuilder clean
+	rm -rf $(COVERAGE)

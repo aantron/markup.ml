@@ -1,6 +1,3 @@
-(* This file is part of Markup.ml, released under the BSD 2-clause license. See
-   doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
-
 (* Copyright © 2014 W3C® (MIT, ERCIM, Keio, Beihang). This software or document
    includes material copied from or derived from W3C Recommendation HTML5
    [https://www.w3.org/TR/2014/REC-html5-20141028/]. *)

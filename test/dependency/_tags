@@ -1,3 +1,0 @@
-<dep_core.*>: package(markup)
-<dep_lwt.*>: package(markup.lwt)
-<dep_lwt_unix.*>: package(markup.lwt.unix)

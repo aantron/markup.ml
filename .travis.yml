@@ -1,11 +1,10 @@
 language: c
 
 env:
-  - PPA=avsm/ocaml41+opam12 SWITCH=system
   - PPA=avsm/ocaml42+opam12 SWITCH=system
   - PPA=avsm/ocaml42+opam12 SWITCH=4.03.0
   - PPA=avsm/ocaml42+opam12 SWITCH=4.04.2
-  - PPA=avsm/ocaml42+opam12 SWITCH=4.05.0+rc1+flambda DOCS=yes COVERALLS=yes
+  - PPA=avsm/ocaml42+opam12 SWITCH=4.05.0+rc1+flambda COVERALLS=yes PERFORMANCE=yes
 
 before_script:
   - sudo add-apt-repository -y ppa:$PPA
@@ -17,13 +16,16 @@ before_script:
 
 script:
   - opam install -y ounit lwt js_of_ocaml
-  - "[ -z $COVERALLS ] || opam install -y bisect_ppx ocveralls"
-  - make install
-  - make dependency-test
+  - opam pin add -y --no-action markup .
+  - opam install -y --deps-only markup
+  - "[ -z $COVERALLS ] || opam install -y ocveralls"
   - make test
-  - "[ -z $COVERALLS ] || ocveralls --prefix _build bisect*.out --send"
-  - make performance-test
+  - make coverage
+  - "[ -z $COVERALLS ] || ocveralls --prefix _build/default _build/default/test/bisect*.out _build/default/test/*/bisect*.out --send"
   - make js-test
+  - make dependency-test
+  - "[ -z $PERFORMANCE ] || opam install -y xmlm ocamlnet"
+  - "[ -z $PERFORMANCE ] || make performance-test"
   - "[ -z $DOCS ] || opam install -y lambdasoup"
   - "[ -z $DOCS ] || make clean docs"
 

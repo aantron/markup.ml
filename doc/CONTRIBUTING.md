@@ -41,23 +41,19 @@ remove the pin.
 <a id="building"></a>
 ## Building and testing
 
-To test the code, you need to have package `ounit`. Then, simply run `make test`
-to build the library and run unit tests. If you also have `bisect_ppx`
-installed, a coverage report will be generated. There are several other kinds of
-testing:
+To test the code, you need to have packages `ounit` and `lwt` installed. Then,
+simply run `make test` to build the library and run unit tests. To generate a
+coverage report, install package `bisect_ppx`, and run `make coverage`. There
+are several other kinds of testing:
 
 - `make performance-test` measures time for Markup.ml to parse some XML and HTML
-  files. If you have Ocamlnet and/or Xmlm installed, those libraries will also
-  be measured, for comparison.
+  files. You should have `ocamlnet` and `xmlm` installed. Those libraries will
+  also be measured, for comparison.
 - `make js-test` checks that `Markup_lwt` can be linked into a `js_of_ocaml`
   program, i.e. that it is not accidentally pulling in any Unix dependencies.
 - `make dependency-test` pins and installs Markup.ml using OPAM, then builds
   some small programs that depend on Markup.ml. This tests correct installation
-  and that no dependencies are missing. To get the most out of this test, it
-  should be done on an OPAM switch that has Lwt but does not have Uutf.
-
-All tests can be run with `make all-tests`. This also generates the
-documentation, to make sure that it is not broken.
+  and that no dependencies are missing.
 
 
 

@@ -12,7 +12,7 @@ open Markup_common
 open Markup_lwt
 open Markup_lwt_unix
 
-let self = "test/test_lwt.ml"
+let self = "./test_lwt.ml"
 
 let suite =
   "markup_lwt" >::: Test_asynchronous.tests @ [

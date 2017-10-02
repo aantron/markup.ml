@@ -6,9 +6,9 @@ open OUnit2
 open Markup_common
 open Markup
 
-let self = "test/test_stream_io.ml"
-let no_file = "test/no_such_file"
-let directory = "test"
+let self = "./test_stream_io.ml"
+let no_file = "./no_such_file"
+let directory = "."
 
 let exn = Failure ("failure")
 let fails = fun () -> raise exn
