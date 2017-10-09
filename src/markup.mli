@@ -188,8 +188,7 @@ end
     module {!Encoding}. *)
 
 (** Common Internet encodings such as UTF-8 and UTF-16; also includes some less
-    popular encodings that are sometimes necessary for parsing XML encoding
-    declarations. *)
+    popular encodings that are sometimes used for XML. *)
 module Encoding :
 sig
   type t
@@ -760,32 +759,22 @@ end
 
 (**/**)
 
-(** Markup.ml interface for monadic I/O libraries such as Lwt and Async. This
-    signature is included in the signature of {!Markup_lwt}, with type ['a io]
-    replaced by ['a Lwt.t]. To use the functions in this interface, use
-    {!Markup_lwt}. A [Markup_async] module has not (yet) been implemented.
+(** Markup.ml interface for monadic I/O libraries such as Lwt and Async.
 
-    All of the functions here correspond directly to functions in {!Markup} with
-    the same name. See that module for details on each function.
+    This signature is implemented by {!Markup_lwt}, with a few additions.
 
-    The difference is that functions here can take ['a io] (i.e. ['a Lwt.t])
-    threads instead of plain functions as arguments. As a consequence, all of
-    them evaluate to either [async] streams, or to threads of type ['a io].
+    Each function here corresponds directly to the function in the basic module
+    {!Markup} that has the same name. So, see {!Markup} for details.
 
-    Note that several functions in {!Markup} can take [async] streams as
-    {e arguments}, such as {!Markup.map}, {!Markup.parse_xml}, or
-    {!Markup.trim}. Where those functions, like {!Markup.trim}, don't take
-    another function as argument, they are not duplicated in this signature.
-    {!Markup.map} and {!Markup.parse_xml} {e are} provided here because some of
-    their function arguments are replaced by ['a io] threads.
-
-    All functions here accept both [sync] and [async] streams as arguments. *)
+    The only difference is that functions here, all of which are higher-order
+    functions, take a function as argument that returns an ['a io] promise,
+    rather than returning an already-computed value. *)
 module type ASYNCHRONOUS =
 sig
-  (** {2 Threads} *)
+  (** {2 Promises} *)
 
   type 'a io
-  (** Thread type. Replaced by ['a Lwt.t] in {!Markup_lwt}. *)
+  (** Promise type. Replaced by ['a Lwt.t] in {!Markup_lwt}. *)
 
   (** {2 Encodings} *)
 
