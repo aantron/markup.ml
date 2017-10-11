@@ -1,17 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-module Common = Markup_common
-module Kstream = Markup_kstream
-module Stream_io = Markup_stream_io
-module Input = Markup_input
-module Detect = Markup_detect
-module Xml_tokenizer = Markup_xml_tokenizer
-module Xml_writer = Markup_xml_writer
-module Html_tokenizer = Markup_html_tokenizer
-module Html_parser = Markup_html_parser
-module Html_writer = Markup_html_writer
-module Utility = Markup_utility
+
 
 let (|>) = Common.(|>)
 
@@ -75,7 +65,7 @@ let of_list = Kstream.of_list
 type location = Common.location
 let compare_locations = Common.compare_locations
 
-module Error = Markup_error
+module Error = Error
 
 
 
@@ -115,12 +105,12 @@ module Cps =
 struct
   let parse_xml
       report ?encoding namespace entity context source =
-    let with_encoding (encoding : Markup_encoding.t) k =
+    let with_encoding (encoding : Encoding.t) k =
       source
       |> encoding ~report
       |> Input.preprocess Common.is_valid_xml_char report
       |> Xml_tokenizer.tokenize report entity
-      |> Markup__xml_parser.parse context namespace report
+      |> Xml_parser.parse context namespace report
       |> k
     in
 
@@ -141,7 +131,7 @@ struct
     |> Utility.strings_to_bytes
 
   let parse_html report ?encoding context source =
-    let with_encoding (encoding : Markup_encoding.t) k =
+    let with_encoding (encoding : Encoding.t) k =
       source
       |> encoding ~report
       |> Input.preprocess Common.is_valid_html_char report
@@ -206,7 +196,7 @@ sig
 
   module Encoding :
   sig
-    type t = Markup_encoding.t
+    type t = Encoding.t
 
     val decode :
       ?report:(location -> Error.t -> unit io) -> t ->
@@ -274,9 +264,9 @@ struct
 
   module Encoding =
   struct
-    include Markup_encoding
+    include Encoding
 
-    let decode ?(report = fun _ _ -> IO.return ()) (f : Markup_encoding.t) s =
+    let decode ?(report = fun _ _ -> IO.return ()) (f : Encoding.t) s =
       f ~report:(wrap_report report) s
   end
 

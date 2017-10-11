@@ -1,11 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
-module Error = Markup_error
-module Common = Markup_common
-module Kstream = Markup_kstream
-module Text = Markup_text
+open Common
 
 type token =
   [ `Xml of xml_declaration
@@ -187,7 +183,7 @@ let tokenize report resolve_reference (input, get_location) =
     let finish () =
       if Buffer.length name_buffer = 0 then k' None
       else
-        let emit () = 
+        let emit () =
           k' (Some (Buffer.contents name_buffer, Buffer.contents value_buffer))
         in
 

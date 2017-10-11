@@ -3,9 +3,9 @@
 
 open OUnit2
 open Test_support
-open Markup_common
-module Error = Markup_error
-module Kstream = Markup_kstream
+open Markup__Common
+module Error = Markup__Error
+module Kstream = Markup__Kstream
 
 let doctype
     ?name ?public_identifier ?system_identifier ?(force_quirks = false) () =
@@ -23,10 +23,10 @@ let expect ?state ?(foreign = false) text signals =
 
   let stream, set_state, set_foreign =
     text
-    |> Markup_stream_io.string
-    |> Markup_encoding.utf_8
-    |> Markup_input.preprocess is_valid_html_char Error.ignore_errors
-    |> Markup_html_tokenizer.tokenize report
+    |> Markup__Stream_io.string
+    |> Markup__Encoding.utf_8
+    |> Markup__Input.preprocess is_valid_html_char Error.ignore_errors
+    |> Markup__Html_tokenizer.tokenize report
   in
 
   set_foreign (fun () -> foreign);

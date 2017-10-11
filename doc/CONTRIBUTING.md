@@ -87,7 +87,7 @@ it can, perhaps transitively, trigger some I/O, and call `throw` or `k` only
 later, when the I/O completes.
 
 Due to pervasive use of CPS, there are two useful type aliases defined in
-[`Markup_common`][common]:
+[`Markup.Common`][common]:
 
 ```ocaml
 type 'a cont = 'a -> unit
@@ -166,7 +166,7 @@ suggested by the XML specification.
 The modules can be arranged in the following categories. Where a module directly
 implements a box from the diagram, it is indicated in boldface.
 
-Until the modules dealing with Lwt, only `Markup_stream_io` does I/O. The rest
+Until the modules dealing with Lwt, only `Markup.Stream_io` does I/O. The rest
 of the modules are pure with respect to I/O.
 
 Almost everything is based directly on specifications. Most functions are
@@ -176,42 +176,42 @@ implementing. It may also be useful to see the [conformance status][conformance]
 
 #### Helpers
 
-- [`Markup_common`][common] – shared definitions, compiler compatibility, etc.
-- [`Markup_error`][error] – parsing and serialization error type. Markup.ml does
+- [`Markup.Common`][common] – shared definitions, compiler compatibility, etc.
+- [`Markup.Error`][error] – parsing and serialization error type. Markup.ml does
   not throw exceptions, because all errors are recoverable.
-- [`Markup.namespace`][namespace] – namespace URI to prefix conversion and back.
-- [`Markup_entities`][entities] – checked-in auto-generated HTML5 entity list.
+- [`Markup.Namespace`][namespace] – namespace URI to prefix conversion and back.
+- [`Markup.Entities`][entities] – checked-in auto-generated HTML5 entity list.
   The source for this file is `src/entities.json`, and the generator is
   `src/translate_entities.ml`. Neither of these latter two files is part of the
   built Markup.ml, nor of the build process.
-- [`Markup_trie`][trie] – trie for incrementally searching the entity list.
-- [`Markup_kstream`][kstream] – above-mentioned CPS streams.
-- [`Markup_text`][text] – some utilities for `Markup_html_tokenizer` and
-  `Markup_xml_tokenizer`; see below.
+- [`Markup.Trie`][trie] – trie for incrementally searching the entity list.
+- [`Markup.Kstream`][kstream] – above-mentioned CPS streams.
+- [`Markup.Text`][text] – some utilities for `Markup.Html_tokenizer` and
+  `Markup.Xml_tokenizer`; see below.
 
 #### I/O
 
-- [`Markup_stream_io`][stream_io] – make byte streams from files, strings, etc.,
+- [`Markup.Stream_io`][stream_io] – make byte streams from files, strings, etc.,
   write byte streams to strings, etc. – the first stage of parsing and the last
   stage of serialization (**Network** in the diagram). This uses the I/O
   functions in `Pervasives`.
 
 #### Encodings
 
-- [`Markup_encoding`][encoding] – byte streams to Unicode character streams
+- [`Markup.Encoding`][encoding] – byte streams to Unicode character streams
   (**Byte Stream Decoder** in the diagram). For UTF-8, this is a wrapper around
   `uutf`.
-- [`Markup_detect`][detect] – prescans byte streams to detect encodings.
-- [`Markup_input`][input] – Unicode streams to "preprocessed" Unicode streams –
+- [`Markup.Detect`][detect] – prescans byte streams to detect encodings.
+- [`Markup.Input`][input] – Unicode streams to "preprocessed" Unicode streams –
   in HTML5 parlance, this just means normalizing CR-LF to CR, and attaching
   locations (**Input Stream Preprocessor** in the diagram).
 
 #### HTML parsing
 
-- [`Markup_html_tokenizer`][html_tokenizer] – preprocessed Unicode streams to
+- [`Markup.Html_tokenizer`][html_tokenizer] – preprocessed Unicode streams to
   HTML lexeme streams (**Tokenizer** in the diagram). HTML lexemes are things
   like start tags, end tags, and runs of text.
-- [`Markup_html_parser`][html_parser] – HTML lexeme streams to HTML signal
+- [`Markup.Html_parser`][html_parser] – HTML lexeme streams to HTML signal
   streams (**Tree Construction** in the diagram). Signal streams are things like
   "start an element," "start another element as its child," "now end the child,"
   "now end the root element." They are basically a left-to-right traversal of a
@@ -219,44 +219,44 @@ implementing. It may also be useful to see the [conformance status][conformance]
 
 #### XML parsing
 
-- [`Markup_xml_tokenizer`][xml_tokenizer] – as for HTML above, but for XML.
-- [`Markup_xml_parser`][xml_parser] - as for HTML above, but for XML.
+- [`Markup.Xml_tokenizer`][xml_tokenizer] – as for HTML above, but for XML.
+- [`Markup.Xml_parser`][xml_parser] - as for HTML above, but for XML.
 
 #### HTML writing
 
-- [`Markup_html_writer`][html_writer] – HTML signal streams back to
+- [`Markup.Html_writer`][html_writer] – HTML signal streams back to
   UTF-8-encoded byte streams.
 
 #### XML writing
 
-- [`Markup_xml_writer`][xml_writer] - as for HTML above, but for XML.
+- [`Markup.Xml_writer`][xml_writer] - as for HTML above, but for XML.
 
 #### User-friendly APIs
 
-- [`Markup_utility`][utility] – convenience functions on signal streams for the
+- [`Markup.Utility`][utility] – convenience functions on signal streams for the
   user.
 - [`Markup`][main], [`Markup_lwt`][lwt], [`Markup_lwt_unix`][lwt_unix] – the
   public interface for operating all of the above machinery without having to
   touch CPS.
 
-[common]: https://github.com/aantron/markup.ml/blob/master/src/markup_common.ml
-[error]: https://github.com/aantron/markup.ml/blob/master/src/markup_error.ml
-[namespace]: https://github.com/aantron/markup.ml/blob/master/src/markup_namespace.mli
-[entities]: https://github.com/aantron/markup.ml/blob/master/src/markup_entities.ml
-[trie]: https://github.com/aantron/markup.ml/blob/master/src/markup_trie.ml
-[kstream]: https://github.com/aantron/markup.ml/blob/master/src/markup_kstream.mli
-[stream_io]: https://github.com/aantron/markup.ml/blob/master/src/markup_stream_io.ml
-[encoding]: https://github.com/aantron/markup.ml/blob/master/src/markup_encoding.ml
-[input]: https://github.com/aantron/markup.ml/blob/master/src/markup_input.mli
-[html_tokenizer]: https://github.com/aantron/markup.ml/blob/master/src/markup_html_tokenizer.mli
-[html_parser]: https://github.com/aantron/markup.ml/blob/master/src/markup_html_parser.mli
-[html_writer]: https://github.com/aantron/markup.ml/blob/master/src/markup_html_writer.mli
-[xml_tokenizer]: https://github.com/aantron/markup.ml/blob/master/src/markup_xml_tokenizer.mli
-[xml_parser]: https://github.com/aantron/markup.ml/blob/master/src/markup__xml_parser.mli
-[xml_writer]: https://github.com/aantron/markup.ml/blob/master/src/markup_xml_writer.mli
-[text]: https://github.com/aantron/markup.ml/blob/master/src/markup_text.ml
-[detect]: https://github.com/aantron/markup.ml/blob/master/src/markup_detect.mli
-[utility]: https://github.com/aantron/markup.ml/blob/master/src/markup_utility.ml
+[common]: https://github.com/aantron/markup.ml/blob/master/src/common.ml
+[error]: https://github.com/aantron/markup.ml/blob/master/src/error.ml
+[namespace]: https://github.com/aantron/markup.ml/blob/master/src/namespace.mli
+[entities]: https://github.com/aantron/markup.ml/blob/master/src/entities.ml
+[trie]: https://github.com/aantron/markup.ml/blob/master/src/trie.ml
+[kstream]: https://github.com/aantron/markup.ml/blob/master/src/kstream.mli
+[stream_io]: https://github.com/aantron/markup.ml/blob/master/src/stream_io.ml
+[encoding]: https://github.com/aantron/markup.ml/blob/master/src/encoding.ml
+[input]: https://github.com/aantron/markup.ml/blob/master/src/input.mli
+[html_tokenizer]: https://github.com/aantron/markup.ml/blob/master/src/html_tokenizer.mli
+[html_parser]: https://github.com/aantron/markup.ml/blob/master/src/html_parser.mli
+[html_writer]: https://github.com/aantron/markup.ml/blob/master/src/html_writer.mli
+[xml_tokenizer]: https://github.com/aantron/markup.ml/blob/master/src/xml_tokenizer.mli
+[xml_parser]: https://github.com/aantron/markup.ml/blob/master/src/xml_parser.mli
+[xml_writer]: https://github.com/aantron/markup.ml/blob/master/src/xml_writer.mli
+[text]: https://github.com/aantron/markup.ml/blob/master/src/text.ml
+[detect]: https://github.com/aantron/markup.ml/blob/master/src/detect.mli
+[utility]: https://github.com/aantron/markup.ml/blob/master/src/utility.ml
 [main]: https://github.com/aantron/markup.ml/blob/master/src/markup.mli
 [lwt]: https://github.com/aantron/markup.ml/blob/master/src/markup_lwt.mli
 [lwt_unix]: https://github.com/aantron/markup.ml/blob/master/src/markup_lwt_unix.mli

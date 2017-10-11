@@ -1,8 +1,8 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
-module Kstream = Markup_kstream
+open Markup__Common
+module Kstream = Markup__Kstream
 
 (* Lwt.Infix not available for Lwt 2.4.6 (Ocaml 4.00). *)
 let (>>=) = Lwt.(>>=)

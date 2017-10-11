@@ -1,11 +1,8 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
+open Common
 open Token_tag
-module Common = Markup_common
-module Trie = Markup_trie
-module Kstream = Markup_kstream
 
 type token =
   [ `Doctype of doctype
@@ -53,7 +50,7 @@ let named_entity_trie =
     Array.fold_left (fun trie (name, characters) ->
       Trie.add name characters trie)
       trie
-      Markup_entities.entities
+      Entities.entities
   end
 
 type doctype_buffers =
@@ -1203,7 +1200,7 @@ let tokenize report (input, get_location) =
             next_n 7 input !throw (fun _ ->
             doctype_state l')
 
-          | _ -> 
+          | _ ->
             peek_n 7 input !throw (function
               | [_, 0x5B; _, 0x43; _, 0x44; _, 0x41;
                  _, 0x54; _, 0x41; _, 0x5B] ->

@@ -1,14 +1,9 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
+open Common
 open Token_tag
-open Markup_kstream
-module Error = Markup_error
-module Kstream = Markup_kstream
-module Text = Markup_text
-module Namespace = Markup_namespace
-module Html_tokenizer = Markup_html_tokenizer
+open Kstream
 
 
 

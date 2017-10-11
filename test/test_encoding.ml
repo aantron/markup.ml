@@ -4,14 +4,14 @@
 open OUnit2
 open Test_support
 
-open Markup_common
-open Markup_kstream
-open Markup_stream_io
-open Markup_encoding
+open Markup__Common
+open Markup__Kstream
+open Markup__Stream_io
+open Markup__Encoding
 
 let ok = wrong_k "failed"
 
-let test_ucs_4 (f : Markup_encoding.t) name s1 s2 bad_bytes =
+let test_ucs_4 (f : Markup__Encoding.t) name s1 s2 bad_bytes =
   expect_error (1, 2) (`Decoding_error (bad_bytes, name))
   begin fun report ->
     let chars = s1 |> string |> f ~report in

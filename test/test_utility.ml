@@ -4,9 +4,9 @@
 open OUnit2
 open Test_support
 
-open Markup_common
+open Markup__Common
 open Markup
-module Kstream = Markup_kstream
+module Kstream = Markup__Kstream
 
 let start_element name = `Start_element (("", name), [])
 
@@ -30,7 +30,7 @@ let tests = [
   ("utility.strings_to_bytes" >:: fun _ ->
     ["foo"; "bar"]
     |> Kstream.of_list
-    |> Markup_utility.strings_to_bytes
+    |> Markup__Utility.strings_to_bytes
     |> fun s ->
       Kstream.to_list s ok (assert_equal ['f'; 'o'; 'o'; 'b'; 'a'; 'r']));
 

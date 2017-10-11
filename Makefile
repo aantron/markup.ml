@@ -3,13 +3,13 @@ build :
 	ocaml src/configure.ml
 	jbuilder build --dev
 
-# This is not part of the ordinary build process. The output file,
-# markup_entities.ml, is checked into git.
+# This is not part of the ordinary build process. The output file, entities.ml,
+# is checked into git.
 .PHONY : entities
 entities :
 	jbuilder build --dev src/translate_entities/translate_entities.exe
 	_build/default/src/translate_entities/translate_entities.exe \
-	  > src/markup/markup_entities.ml
+	  > src/markup/entities.ml
 
 COVERAGE := _coverage
 

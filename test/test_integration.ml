@@ -3,7 +3,7 @@
 
 open OUnit2
 
-open Markup_common
+open Markup__Common
 open Markup
 
 let tests = [

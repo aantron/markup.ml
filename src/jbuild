@@ -4,7 +4,6 @@
  ((name markup)
   (public_name markup)
   (synopsis "Error-recovering functional HTML5 and XML parsers")
-  (wrapped false)
   (modules (:standard \ configure))
   (preprocess (pps (bisect_ppx -conditional)))
   (libraries (uutf))

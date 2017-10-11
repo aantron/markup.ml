@@ -1,10 +1,9 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
-open Markup_kstream
+open Common
+open Kstream
 open Token_tag
-module Namespace = Markup_namespace
 
 let is_whitespace_only strings = List.for_all is_whitespace_only strings
 

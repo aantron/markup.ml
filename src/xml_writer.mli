@@ -1,6 +1,10 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
+open Common
 
-val write : [< signal ] Markup_kstream.t -> string Markup_kstream.t
+val write :
+  Error.write_handler ->
+  (string -> string option) ->
+  [< signal ] Kstream.t ->
+    string Kstream.t

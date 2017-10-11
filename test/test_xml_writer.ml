@@ -3,7 +3,7 @@
 
 open OUnit2
 open Test_support
-open Markup_common
+open Markup__Common
 
 let no_prefixes = fun _ -> None
 
@@ -11,8 +11,8 @@ let expect ?(prefix = no_prefixes) id signals strings =
   let report, iterate, ended = expect_strings id strings in
 
   signals
-  |> Markup_kstream.of_list
-  |> Markup_xml_writer.write report prefix
+  |> Markup__Kstream.of_list
+  |> Markup__Xml_writer.write report prefix
   |> iter iterate;
 
   ended ()

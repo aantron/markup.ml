@@ -3,8 +3,8 @@
 
 open OUnit2
 open Test_support
-open Markup_common
-module Error = Markup_error
+open Markup__Common
+module Error = Markup__Error
 
 let xml_decl version encoding standalone =
   `Xml {version; encoding; standalone}
@@ -26,10 +26,10 @@ let expect ?(entity = no_custom_entities) text signals =
   let report, iterate, ended = expect_signals token_to_string text signals in
 
   text
-  |> Markup_stream_io.string
-  |> Markup_encoding.utf_8
-  |> Markup_input.preprocess is_valid_xml_char Error.ignore_errors
-  |> Markup_xml_tokenizer.tokenize report entity
+  |> Markup__Stream_io.string
+  |> Markup__Encoding.utf_8
+  |> Markup__Input.preprocess is_valid_xml_char Error.ignore_errors
+  |> Markup__Xml_tokenizer.tokenize report entity
   |> iter iterate;
 
   ended ()

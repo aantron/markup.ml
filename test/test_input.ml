@@ -4,11 +4,11 @@
 open OUnit2
 open Test_support
 
-open Markup_common
-open Markup_kstream
-open Markup_stream_io
-open Markup_encoding
-open Markup_input
+open Markup__Common
+open Markup__Kstream
+open Markup__Stream_io
+open Markup__Encoding
+open Markup__Input
 
 let ok = wrong_k "failed"
 
@@ -73,7 +73,7 @@ let tests = [
   ("input.bom" >:: fun _ ->
     [0xFEFF; 0x66]
     |> of_list
-    |> preprocess is_valid_xml_char Error.ignore_errors
+    |> preprocess is_valid_xml_char Markup__Error.ignore_errors
     |> fst
     |> fun s -> to_list s ok (assert_equal [(1, 1), 0x66]))
 ]

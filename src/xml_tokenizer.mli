@@ -1,7 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
+open Common
 
 type token =
   [ `Xml of xml_declaration
@@ -14,7 +14,7 @@ type token =
   | `EOF ]
 
 val tokenize :
-  Markup_error.parse_handler ->
+  Error.parse_handler ->
   (string -> string option) ->
-  (location * int) Markup_kstream.t * (unit -> location) ->
-    (location * token) Markup_kstream.t
+  (location * int) Kstream.t * (unit -> location) ->
+    (location * token) Kstream.t

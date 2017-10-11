@@ -1,15 +1,9 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup_common
-open Markup_kstream
-open Markup_encoding
-module Common = Markup_common
-module Kstream = Markup_kstream
-module Stream_io = Markup_stream_io
-module Encoding = Markup_encoding
-module Input = Markup_input
-module Xml_tokenizer = Markup_xml_tokenizer
+open Common
+open Kstream
+open Encoding
 
 let name_to_encoding = function
   | "utf-8" -> Some utf_8
@@ -61,18 +55,18 @@ let normalize_name for_html s =
   match String.lowercase (trim_string s) with
   | "unicode-1-1-utf-8" | "utf-8" | "utf8" ->
     "utf-8"
-  
+
   | "866" | "cp866" | "csibm866" | "ibm866" ->
     "ibm866"
-  
+
   | "csisolatin2" | "iso-8859-2" | "iso-ir-101" | "iso8859-2" | "iso88592"
   | "iso_8859-2" | "iso_8859-2:1987" | "l2" | "latin2" ->
     "iso-8859-2"
-  
+
   | "csisolatin3" | "iso-8859-3" | "iso-ir-109" | "iso8859-3" | "iso88593"
   | "iso_8859-3" | "iso_8859-3:1988" | "l3" | "latin3" ->
     "iso-8859-3"
-  
+
   | "csisolatin4" | "iso-8859-4" | "iso-ir-110" | "iso8859-4" | "iso88594"
   | "iso_8859-4" | "iso_8859-4:1988" | "l4" | "latin4" ->
     "iso-8859-4"
