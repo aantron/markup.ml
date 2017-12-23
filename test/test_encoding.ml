@@ -83,6 +83,13 @@ let tests = [
     next_option chars ok (assert_equal None);
     next_option chars ok (assert_equal None));
 
+  ("encoding.iso_8859_15" >:: fun _ ->
+    let chars = string "foo\xa0" |> iso_8859_15 in
+    next_n 4 chars
+    ok (assert_equal (List.map Char.code ['f'; 'o'; 'o'; '\xa0']));
+    next_option chars ok (assert_equal None);
+    next_option chars ok (assert_equal None));
+
   ("encoding.us_ascii" >:: fun _ ->
     let s = "foo\xa0bar" in
     expect_error (1, 4) (`Decoding_error ("\xa0", "us-ascii"))

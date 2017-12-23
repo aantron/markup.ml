@@ -10,6 +10,7 @@ let name_to_encoding = function
   | "utf-16be" -> Some utf_16be
   | "utf-16le" -> Some utf_16le
   | "iso-8859-1" -> Some iso_8859_1
+  | "iso-8859-15" -> Some iso_8859_15
   | "us-ascii" -> Some us_ascii
   | "windows-1251" -> Some windows_1251
   | "windows-1252" -> Some windows_1252

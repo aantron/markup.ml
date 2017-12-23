@@ -37,6 +37,17 @@ let tests = [
       ("<!DOCTYPE html><html><head></head><body><p><em>foo</em></p>" ^
        "<p><em>bar</em></p></body></html>"));
 
+  ("integration.html.encoding" >:: fun _ ->
+    "<!DOCTYPE html><html><head><meta http-equiv='content-type' content='text/html' charset='iso-8859-15'></head><body><p><em>\xA0\xA4foo<p>bar"
+    |> string
+    |> parse_html
+    |> signals
+    |> write_html
+    |> to_string
+    |> assert_equal
+      ("<!DOCTYPE html><html><head><meta http-equiv=\"content-type\" content=\"text/html\" charset=\"iso-8859-15\"></head><body><p><em>&nbsp;\xE2\x82\xACfoo</em></p>" ^
+       "<p><em>bar</em></p></body></html>"));
+
   ("integration.html.context-disambiguation" >:: fun _ ->
     "<a></a>"
     |> string
