@@ -77,16 +77,17 @@ let tests = [
     end);
 
   ("encoding.iso_8859_1" >:: fun _ ->
-    let chars = string "foo\xa0" |> iso_8859_1 in
-    next_n 4 chars
-    ok (assert_equal (List.map Char.code ['f'; 'o'; 'o'; '\xa0']));
+    let chars = string "foo\xa0\xa4" |> iso_8859_1 in
+    next_n 5 chars
+      ok (assert_equal (List.map Char.code ['f'; 'o'; 'o'; '\xa0'; '\xa4']));
     next_option chars ok (assert_equal None);
     next_option chars ok (assert_equal None));
 
   ("encoding.iso_8859_15" >:: fun _ ->
-    let chars = string "foo\xa0" |> iso_8859_15 in
+    let chars = string "foo\xa0\xa4" |> iso_8859_15 in
     next_n 4 chars
-    ok (assert_equal (List.map Char.code ['f'; 'o'; 'o'; '\xa0']));
+      ok (assert_equal (List.map Char.code ['f'; 'o'; 'o'; '\xa0']));
+    next_option chars ok (assert_equal (Some 0x20AC));
     next_option chars ok (assert_equal None);
     next_option chars ok (assert_equal None));
 
