@@ -108,7 +108,9 @@ let tests = [
       (Some "shift_jis");
     check "<meta http-equiv='content-type' content='charset=shift_jis foo'>"
       (Some "shift_jis");
-    check "<meta http-equiv='content-type' content='text/html' charset='iso-8859-15'>"
+    check
+      ("<meta http-equiv='content-type' content='text/html' " ^
+       "charset='iso-8859-15'>")
       (Some "iso-8859-15");
     check "<meta http-equiv='content-type' content='charset=\"\"'>" None;
     check "<meta>" None;
