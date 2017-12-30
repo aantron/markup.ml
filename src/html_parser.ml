@@ -1040,6 +1040,17 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   set_foreign (fun () ->
     Stack.current_element_is_foreign context open_elements);
 
+  let if_stack_has_other_than names =
+    let rec iterate = function
+      | [] -> None
+      | {element_name = ns, name; _}::more ->
+              if (ns = `HTML && list_mem_string name names) then
+                    iterate more
+              else Some name
+    in
+    iterate !open_elements
+  in
+
   let report_if_stack_has_other_than names k =
     let rec iterate = function
       | [] -> k ()
@@ -1679,23 +1690,32 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     | l, `End {name = "body"} ->
       if not @@ Stack.in_scope open_elements "body" then
         report l (`Unmatched_end_tag "body") !throw mode
-      else
-        report_if_stack_has_other_than
+      else begin
+          match if_stack_has_other_than
           ["dd"; "dt"; "li"; "optgroup"; "option"; "p"; "rb"; "rp"; "rt";
            "rtc"; "tbody"; "td"; "tfoot"; "th"; "thead"; "tr"; "body";
-           "html"] (fun () ->
-        close_element l "body" after_body_mode)
+           "html"] with
+          | Some name ->
+              report l (`Unmatched_end_tag name) !throw mode
+          | None ->
+            close_element l "body" after_body_mode
+      end
 
     | l, `End {name = "html"} as v ->
       if not @@ Stack.in_scope open_elements "body" then
         report l (`Unmatched_end_tag "html") !throw mode
-      else
-        report_if_stack_has_other_than
+      else begin
+          match if_stack_has_other_than
           ["dd"; "dt"; "li"; "optgroup"; "option"; "p"; "rb"; "rp"; "rt";
            "rtc"; "tbody"; "td"; "tfoot"; "th"; "thead"; "tr"; "body";
-           "html"] (fun () ->
-        push tokens v;
-        close_element l "body" after_body_mode)
+           "html"]
+      with
+          | Some name ->
+            report l (`Unmatched_end_tag name) !throw mode
+          | None ->
+            push tokens v;
+            close_element l "body" after_body_mode
+    end
 
     | l, `Start ({name =
         "address" | "article" | "aside" | "blockquote" | "center" |

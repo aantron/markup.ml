@@ -1105,6 +1105,27 @@ let tests = [
         1, 37, E (`Misnested_tag ("html", "html"));
         1, 43, E (`Bad_content "html")]);
 
+  ("html.parser.neested-html-in-body" >:: fun _ ->
+    expect "<html><body><div><html><body></body><span></span></html></div><p></body></html>"
+      [ 1, 1, S (start_element "html");
+        1, 7, S (start_element "head");
+        1, 7, S  `End_element;
+        1, 7, S (start_element "body");
+        1, 13, S (start_element "div");
+        1, 18, E (`Misnested_tag ("html", "body"));
+        1, 24, E (`Misnested_tag ("body", "body"));
+        1, 30, E (`Unmatched_end_tag "div");
+        1, 37, S (start_element "span");
+        1, 43, S  `End_element;
+        1, 50, E (`Unmatched_end_tag "div");
+        1, 57, S  `End_element;
+        1, 63, S (start_element "p");
+        1, 66, S  `End_element;
+        1, 66, S  `End_element;
+        1, 73, S  `End_element;
+    ];
+  );
+
   ("html.parser.frameset-in-body" >:: fun _ ->
     expect ~context:(Some (`Fragment "body")) "<frameset><p>"
       [ 1,  1, E (`Misnested_tag ("frameset", "body"));
