@@ -1695,7 +1695,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
            "rtc"; "tbody"; "td"; "tfoot"; "th"; "thead"; "tr"; "body";
            "html"] (fun () ->
         push tokens v;
-        close_element l "body" after_body_mode)
+        after_body_mode ())
 
     | l, `Start ({name =
         "address" | "article" | "aside" | "blockquote" | "center" |
@@ -2612,8 +2612,8 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       | _, `Start {name = "html"} as v ->
         in_body_mode_rules "html" after_body_mode v
 
-      | l, `End {name = "html"} ->
-        close_element l "html" after_after_body_mode
+      | _, `End {name = "html"} ->
+        after_after_body_mode ()
 
       | l, `EOF ->
         emit_end l
@@ -2717,8 +2717,9 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       | l, `EOF ->
         emit_end l
 
-      | l, _ ->
-        report l (`Bad_content "html") !throw after_after_body_mode
+      | l, _ as v ->
+        push tokens v;
+        report l (`Bad_content "html") !throw in_body_mode
     end
 
   (* 8.2.5.4.23. *)

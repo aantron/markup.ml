@@ -40,7 +40,7 @@ let tests = [
         1, 28, S  `End_element;
         1, 35, S (start_element "body");
         1, 41, S  `End_element;
-        1, 48, S  `End_element];
+        1, 55, S  `End_element];
 
     expect ~prefix:true " <!--foo--> <!DOCTYPE html>"
       [ 1,  2, S (`Comment "foo");
@@ -72,8 +72,8 @@ let tests = [
         1, 22, S (start_element "head");
         1, 22, S  `End_element;
         1, 22, S (start_element "body");
-        1, 22, S  `End_element;
-        1, 22, S  `End_element];
+        1, 29, S  `End_element;
+        1, 29, S  `End_element];
 
     expect "<!DOCTYPE html><head></head>"
       [ 1,  1, S  doctype;
@@ -437,8 +437,8 @@ let tests = [
         1,  1, S (start_element "head");
         1,  1, S  `End_element;
         1,  1, S (start_element "body");
-        1,  7, S  `End_element;
-        1,  7, S  `End_element]);
+        1, 14, S  `End_element;
+        1, 14, S  `End_element]);
 
   ("html.parser.junk-in-body" >:: fun _ ->
     expect "<body>\x00<!DOCTYPE html><html><meta><body></body>"
@@ -454,6 +454,24 @@ let tests = [
         1, 35, E (`Misnested_tag ("body", "body"));
         1, 41, S  `End_element;
         1, 48, S  `End_element]);
+
+  ("html.parser.nested-html-in-body" >:: fun _ ->
+    expect "<div><html></html>foo</div><div>bar</div>"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "body");
+        1,  1, S (start_element "div");
+        1,  6, E (`Misnested_tag ("html", "body"));
+        1,  1, E (`Unmatched_start_tag "div");
+        1, 19, E (`Bad_content "html");
+        1, 19, S (`Text ["foo"]);
+        1, 22, S  `End_element;
+        1, 28, S (start_element "div");
+        1, 33, S (`Text ["bar"]);
+        1, 36, S  `End_element;
+        1, 42, S  `End_element;
+        1, 42, S  `End_element]);
 
   ("html.parser.foreign" >:: fun _ ->
     expect "<body><svg><g/></svg></body>"
@@ -546,8 +564,8 @@ let tests = [
         1,  7, S (start_element "head");
         1,  7, S  `End_element;
         1,  7, S (start_element "body");
-        1,  7, S  `End_element;
-        1,  7, S  `End_element]);
+        1, 14, S  `End_element;
+        1, 14, S  `End_element]);
 
   ("html.parser.foreign-context" >:: fun _ ->
     expect ~context:None "<g/>"
