@@ -39,7 +39,7 @@ let tests = [
         1, 22, S (start_element "head");
         1, 28, S  `End_element;
         1, 35, S (start_element "body");
-        1, 41, S  `End_element;
+        1, 55, S  `End_element;
         1, 55, S  `End_element];
 
     expect ~prefix:true " <!--foo--> <!DOCTYPE html>"
@@ -90,7 +90,7 @@ let tests = [
         1, 16, S (start_element "head");
         1, 16, S  `End_element;
         1, 16, S (start_element "body");
-        1, 22, S  `End_element;
+        1, 29, S  `End_element;
         1, 29, S  `End_element];
 
     expect "<!DOCTYPE html><p></p>"
@@ -224,7 +224,7 @@ let tests = [
         1,  1, S (start_element "body");
         1,  7, S (`Comment "foo");
         1, 17, S (`Text [" bar"]);
-        1, 21, S  `End_element;
+        1, 28, S  `End_element;
         1, 28, S  `End_element]);
 
   ("html.parser.body.whitespace" >:: fun _ ->
@@ -452,7 +452,7 @@ let tests = [
         1, 29, S (start_element "meta");
         1, 29, S  `End_element;
         1, 35, E (`Misnested_tag ("body", "body"));
-        1, 41, S  `End_element;
+        1, 48, S  `End_element;
         1, 48, S  `End_element]);
 
   ("html.parser.nested-html-in-body" >:: fun _ ->
@@ -473,6 +473,27 @@ let tests = [
         1, 42, S  `End_element;
         1, 42, S  `End_element]);
 
+  ("html.parser.nested-html-with-body-in-body" >:: fun _ ->
+    expect "<p><html><body><p></body><br><p>"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "body");
+        1,  1, S (start_element "p");
+        1,  4, E (`Misnested_tag ("html", "body"));
+        1, 10, E (`Misnested_tag ("body", "body"));
+        1, 16, S  `End_element;
+        1, 16, S (start_element "p");
+        1, 26, E (`Bad_document ("content after body"));
+        1, 26, S (start_element "br");
+        1, 26, S  `End_element;
+        1, 30, S  `End_element;
+        1, 30, S (start_element "p");
+        1, 33, S  `End_element;
+        1, 33, S  `End_element;
+        1, 33, S  `End_element]
+  );
+
   ("html.parser.foreign" >:: fun _ ->
     expect "<body><svg><g/></svg></body>"
       [ 1,  1, S (start_element "html");
@@ -483,7 +504,7 @@ let tests = [
         1, 12, S (`Start_element ((svg_ns, "g"), []));
         1, 12, S  `End_element;
         1, 16, S  `End_element;
-        1, 22, S  `End_element;
+        1, 29, S  `End_element;
         1, 29, S  `End_element]);
 
   ("html.parser.reconstruct-active-formatting-elements" >:: fun _ ->
@@ -807,7 +828,7 @@ let tests = [
   ("html.parser.body.fragment" >:: fun _ ->
     expect ~context:None "<body></body>"
       [ 1,  1, S (start_element "body");
-        1,  7, S  `End_element]);
+        1, 14, S  `End_element]);
 
   ("html.parser.body.content-truncated" >:: fun _ ->
     expect ~context:None "<p></body></html>foo"
@@ -1135,8 +1156,8 @@ let tests = [
         1, 10, E (`Misnested_tag ("frameset", "body"));
         1, 20, S  `End_element;
         1, 20, S (start_element "p");
-        1, 23, S  `End_element;
-        1, 23, S  `End_element];
+        1, 30, S  `End_element;
+        1, 30, S  `End_element];
 
     expect ~context:None "<p><frameset><p>"
       [ 1,  1, S (start_element "p");

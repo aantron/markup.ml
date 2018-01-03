@@ -1684,7 +1684,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           ["dd"; "dt"; "li"; "optgroup"; "option"; "p"; "rb"; "rp"; "rt";
            "rtc"; "tbody"; "td"; "tfoot"; "th"; "thead"; "tr"; "body";
            "html"] (fun () ->
-        close_element l "body" after_body_mode)
+        after_body_mode ())
 
     | l, `End {name = "html"} as v ->
       if not @@ Stack.in_scope open_elements "body" then
