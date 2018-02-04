@@ -27,12 +27,9 @@ coverage : clean
 
 .PHONY : performance-test
 performance-test :
-	jbuilder build --dev test/performance/performance_markup.exe
-	_build/default/test/performance/performance_markup.exe
-	jbuilder build --dev test/performance/performance_nethtml.exe
-	_build/default/test/performance/performance_nethtml.exe
-	jbuilder build --dev test/performance/performance_xmlm.exe
-	_build/default/test/performance/performance_xmlm.exe
+	jbuilder exec --dev test/performance/performance_markup.exe
+	jbuilder exec --dev test/performance/performance_nethtml.exe
+	jbuilder exec --dev test/performance/performance_xmlm.exe
 
 .PHONY : js-test
 js-test :
@@ -40,12 +37,9 @@ js-test :
 
 .PHONY : dependency-test
 dependency-test :
-	jbuilder build --dev test/dependency/dep_core.exe
-	_build/default/test/dependency/dep_core.exe
-	jbuilder build --dev test/dependency/dep_lwt.exe
-	_build/default/test/dependency/dep_lwt.exe
-	jbuilder build --dev test/dependency/dep_lwt_unix.exe
-	_build/default/test/dependency/dep_lwt_unix.exe
+	jbuilder exec --dev test/dependency/dep_core.exe
+	jbuilder exec --dev test/dependency/dep_lwt.exe
+	jbuilder exec --dev test/dependency/dep_lwt_unix.exe
 
 # Everything from here to "clean" is inactive, pending porting to odoc.
 OCAML_VERSION := \
