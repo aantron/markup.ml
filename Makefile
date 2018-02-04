@@ -7,9 +7,8 @@ build :
 # is checked into git.
 .PHONY : entities
 entities :
-	jbuilder build --dev src/translate_entities/translate_entities.exe
-	_build/default/src/translate_entities/translate_entities.exe \
-	  > src/markup/entities.ml
+	jbuilder exec --dev src/translate_entities/translate_entities.exe \
+	  > src/entities.ml
 
 COVERAGE := _coverage
 

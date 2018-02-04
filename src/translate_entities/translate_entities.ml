@@ -22,7 +22,7 @@ let () =
   print_string "(string * [ `One of int | `Two of int * int ]) array";
   print_string " = [|\n  ";
 
-  Yojson.Basic.from_file "src/markup/entities.json"
+  Yojson.Basic.from_file "src/entities.json"
   |> to_assoc
   |> List.map (fun (k, v) ->
     let k = String.sub k 1 (String.length k - 2) in

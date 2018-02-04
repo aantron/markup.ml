@@ -13,7 +13,7 @@ depends: [
   # Bisect_ppx is used only during development. The dependency should be removed
   # when making a release.
   "bisect_ppx" {>= "1.3.0"}
-  "jbuilder" {build & >= "1.0+beta13"}
+  "jbuilder" {build & >= "1.0+beta17"}
   "ounit" {test}
   "uchar"
   "uutf" {>= "1.0.0"}
