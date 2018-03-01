@@ -3,7 +3,8 @@
 (library
  ((name performance_common)
   (modules performance_common)
-  (flags (:standard -w +A))))
+  (flags (:standard -w +A))
+  (libraries (unix))))
 
 (executable
  ((name performance_markup)
