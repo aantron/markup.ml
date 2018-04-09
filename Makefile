@@ -47,7 +47,7 @@ OCAML_VERSION := \
 
 OCAMLBUILD := ocamlbuild -use-ocamlfind -j 0 -no-links
 
-HTML := doc/html
+HTML := docs/html
 DOCFLAGS := -docflags -colorize-code
 
 if_package = ! ocamlfind query $(1) > /dev/null 2> /dev/null || ( $(2) )
@@ -78,7 +78,7 @@ docs-odocl :
 	$(call if_package,lwt,echo Markup_lwt >> $(ODOCL))
 	$(call if_package,lwt.unix,echo Markup_lwt_unix >> $(ODOCL))
 
-PUBLISH := doc/publish
+PUBLISH := docs/publish
 
 .PHONY : publish-docs
 publish-docs : check-doc-prereqs docs
@@ -92,7 +92,7 @@ publish-docs : check-doc-prereqs docs
 		&& git commit -m 'Markup.ml documentation.' \
 		&& git push -uf github master:gh-pages
 
-DOC_ZIP := doc/$(LIB)-$(VERSION)-doc.zip
+DOC_ZIP := docs/$(LIB)-$(VERSION)-doc.zip
 
 .PHONY : package-docs
 package-docs : check-doc-prereqs docs
