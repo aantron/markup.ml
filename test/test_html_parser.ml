@@ -539,6 +539,16 @@ let tests = [
         1, 29, S  `End_element;
         1, 29, S  `End_element]);
 
+  ("html.parser.foreign.svg-followed-by-html" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body"))
+      "<svg><feTile></feTile></svg><b></b>"
+      [ 1,  1, S (`Start_element ((svg_ns, "svg"), []));
+        1,  6, S (`Start_element ((svg_ns, "feTile"), []));
+        1, 14, S  `End_element;
+        1, 23, S  `End_element;
+        1, 29, S (start_element "b");
+        1, 32, S  `End_element]);
+
   ("html.parser.reconstruct-active-formatting-elements" >:: fun _ ->
     expect "<p><em><strong>foo<p>bar"
       [ 1,  1, S (start_element "html");

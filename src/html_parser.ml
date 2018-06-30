@@ -1199,7 +1199,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     in
 
     let element_entry =
-      Element.create ~is_html_integration_point (namespace, tag_name) location
+      Element.create ~is_html_integration_point (namespace, name) location
     in
     open_elements := element_entry::!open_elements;
 
