@@ -30,6 +30,3 @@ build: [
   ["ocaml" "src/configure.ml"]
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
-build-test: [
-  ["jbuilder" "runtest" "-p" name]
-]
