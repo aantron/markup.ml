@@ -27,6 +27,5 @@ depopts: [
 # earlier.
 
 build: [
-  ["ocaml" "src/configure.ml"]
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
