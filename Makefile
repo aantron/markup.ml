@@ -1,6 +1,5 @@
 .PHONY : build
 build :
-	ocaml src/configure.ml
 	jbuilder build --dev
 
 # This is not part of the ordinary build process. The output file, entities.ml,
