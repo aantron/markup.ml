@@ -1,6 +1,0 @@
-(jbuild_version 1)
-
-(executable
- ((name test_js_of_ocaml)
-  (libraries (markup markup.lwt))
-  (flags (:standard -w +A-44))))

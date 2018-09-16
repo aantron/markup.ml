@@ -1,24 +1,24 @@
 .PHONY : build
 build :
-	jbuilder build --dev
+	dune build
 
 # This is not part of the ordinary build process. The output file, entities.ml,
 # is checked into git.
 .PHONY : entities
 entities :
-	jbuilder exec --dev src/translate_entities/translate_entities.exe \
+	dune exec src/translate_entities/translate_entities.exe \
 	  > src/entities.ml
 
 COVERAGE := _coverage
 
 .PHONY : test
 test : build
-	jbuilder runtest --dev --no-buffer -j 1
+	dune runtest --no-buffer -j 1
 
 .PHONY : coverage
 coverage : clean
-	BISECT_ENABLE=yes jbuilder build --dev
-	jbuilder runtest --dev --no-buffer -j 1
+	BISECT_ENABLE=yes dune build
+	dune runtest --no-buffer -j 1
 	bisect-ppx-report \
 	  -I _build/default/ -html $(COVERAGE)/ -text - -summary-only \
 	  _build/default/test/bisect*.out _build/default/test/*/bisect*.out
@@ -26,19 +26,19 @@ coverage : clean
 
 .PHONY : performance-test
 performance-test :
-	jbuilder exec --dev test/performance/performance_markup.exe
-	jbuilder exec --dev test/performance/performance_nethtml.exe
-	jbuilder exec --dev test/performance/performance_xmlm.exe
+	dune exec test/performance/performance_markup.exe
+	dune exec test/performance/performance_nethtml.exe
+	dune exec test/performance/performance_xmlm.exe
 
 .PHONY : js-test
 js-test :
-	jbuilder build --dev test/js_of_ocaml/test_js_of_ocaml.bc.js
+	dune build test/js_of_ocaml/test_js_of_ocaml.bc.js
 
 .PHONY : dependency-test
 dependency-test :
-	jbuilder exec --dev test/dependency/dep_core.exe
-	jbuilder exec --dev test/dependency/dep_lwt.exe
-	jbuilder exec --dev test/dependency/dep_lwt_unix.exe
+	dune exec test/dependency/dep_core.exe
+	dune exec test/dependency/dep_lwt.exe
+	dune exec test/dependency/dep_lwt_unix.exe
 
 # Everything from here to "clean" is inactive, pending porting to odoc.
 OCAML_VERSION := \
@@ -110,5 +110,5 @@ check-doc-prereqs :
 .PHONY : clean
 clean :
 	rm -rf $(HTML) $(PUBLISH) $(DOC_ZIP)
-	jbuilder clean
+	dune clean
 	rm -rf $(COVERAGE)

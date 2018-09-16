@@ -1,6 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name test_support)
- (libraries (markup oUnit))
- (flags (:standard -w +A-44))))
