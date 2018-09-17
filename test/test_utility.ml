@@ -219,7 +219,6 @@ let tests = [
       start_element "div";
       `Text ["\n"; " "];
       start_element "p";
-      `Text ["\n"; " "];
       `End_element;
       `Text ["\n"];
       `End_element;

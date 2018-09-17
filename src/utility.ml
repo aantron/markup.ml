@@ -309,9 +309,23 @@ let pretty_print signals =
     next signals throw e begin fun signal ->
       match signal with
       | `Start_element (name, _) when not @@ is_phrasing_element name ->
-        list
-          [`Text [indent indentation]; signal; `Text ["\n"]]
-          (flow (indentation + 1)) throw e k
+        (* If the next signal is `End_element, don't insert a line break. This
+           is mainly for collapsing inherently empty tags like <meta> and
+           <br>. *)
+        peek_expected signals throw begin fun next_signal ->
+          match next_signal with
+          | `End_element ->
+            next_expected signals throw begin fun _ ->
+              list
+                [`Text [indent indentation]; signal; next_signal; `Text ["\n"]]
+                (flow indentation) throw e k
+            end
+
+          | _ ->
+            list
+              [`Text [indent indentation]; signal; `Text ["\n"]]
+              (flow (indentation + 1)) throw e k
+        end
 
       | `End_element ->
         list
