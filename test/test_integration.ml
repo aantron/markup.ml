@@ -69,8 +69,8 @@ let tests = [
     |> write_xml
     |> to_string
     |> assert_equal
-      ("<root>\n  foo\n  <nested>\n    bar\n  </nested>\n" ^
-       "  <nested>\n    baz\n  </nested>\n</root>\n"));
+      ("<root>\n foo\n <nested>\n  bar\n </nested>\n" ^
+       " <nested>\n  baz\n </nested>\n</root>\n"));
 
   ("integration.locations" >:: fun _ ->
     let parser = "<root>foo</root>" |> string |> parse_xml in

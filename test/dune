@@ -6,4 +6,4 @@
 (alias
  (name runtest)
  (package markup)
- (action (run %{exe:test.exe})))
+ (action (run %{exe:test.exe} -runner sequential)))

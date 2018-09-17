@@ -666,15 +666,26 @@ val text : ([< signal ], 's) stream -> (char, 's) stream
     [`Text ss] signal, the result stream has the bytes of the strings [ss], and
     all other signals are ignored. *)
 
-val trim : ([> `Text of string list ] as 'a, 's) stream -> ('a, 's) stream
-(** Trims whitespace in a signal stream. For each signal [`Text ss], transforms
-    [ss] so that the result strings [ss'] satisfy
+val trim : ([> content_signal ] as 'a, 's) stream -> ('a, 's) stream
+(** Trims insignificant whitespace in an HTML signal stream. Whitespace around
+    flow ("block") content does not matter, but whitespace in phrasing
+    ("inline") content does. So, if the input stream is
 
 {[
-String.concat "" ss' = String.trim (String.concat "" ss)
+<div>
+ <p>
+  <em>foo</em> bar
+ </p>
+</div>
 ]}
 
-    All signals for which [String.concat "" ss' = ""] are then dropped. *)
+    passing it through [Markup.trim] will result in
+
+{[
+<div><p><em>foo</em> bar</p></div>
+]}
+
+    Note that whitespace around the [</em>] tag was preserved. *)
 
 val normalize_text :
   ([> `Text of string list ] as 'a, 's) stream -> ('a, 's) stream
@@ -688,7 +699,29 @@ val normalize_text :
 val pretty_print : ([> content_signal ] as 'a, 's) stream -> ('a, 's) stream
 (** Adjusts the whitespace in the [`Text] signals in the given stream so that
     the output appears nicely-indented when the stream is converted to bytes and
-    written. *)
+    written.
+
+    This function is aware of the significance of whitespace in HTML, so it
+    avoids changing the whitespace in phrasing ("inline") content. For example,
+    pretty printing
+
+{[
+<div><p><em>foo</em>bar</p></div>
+]}
+
+    results in
+
+{[
+<div>
+ <p>
+  <em>foo</em>bar
+ </p>
+</div>
+]}
+
+    Note that no whitespace was inserted around [<em>] and [</em>], because
+    doing so would create a word break that wasn't present in the original
+    stream. *)
 
 val html5 : ([< signal ], 's) stream -> (signal, 's) stream
 (** Converts a signal stream into an HTML5 signal stream by stripping any

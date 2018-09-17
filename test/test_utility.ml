@@ -8,7 +8,15 @@ open Markup__Common
 open Markup
 module Kstream = Markup__Kstream
 
-let start_element name = `Start_element (("", name), [])
+let doctype =
+  `Doctype
+    {Markup.doctype_name = Some "html";
+     public_identifier   = None;
+     system_identifier   = None;
+     raw_text            = None;
+     force_quirks        = false}
+
+let start_element name = `Start_element ((Markup.Ns.html, name), [])
 
 let ok = wrong_k "failed"
 
@@ -76,8 +84,10 @@ let tests = [
       Element ("p", [Text "foo"; Element ("em", [Text "bar"]); Text "baz"]) in
     dom
     |> from_tree (function
-      | Element (name, children) -> `Element (("", name), [], children)
-      | Text s -> `Text s)
+      | Element (name, children) ->
+        `Element ((Markup.Ns.html, name), [], children)
+      | Text s ->
+        `Text s)
     |> to_list
     |> assert_equal [
       start_element "p";
@@ -101,25 +111,49 @@ let tests = [
     |> assert_equal "foobarbaz");
 
   ("utility.trim" >:: fun _ ->
-    [`Text ["\n"];
-     start_element "a";
-     `Text ["\n  content\n  "];
+    [start_element "div";
+     `Text ["\n "];
+     start_element "p";
+     `Text ["\n  "];
+     start_element "em";
+     `Text ["foo"];
      `End_element;
-     `Text ["\n\n"];
-     start_element "a";
-     `Text ["\n"; "\n"];
+     `Text [" bar\n "];
      `End_element;
-     `Text [" "; "\n"; " more content "; "\n"; "\n"]]
+     `Text ["\n "];
+     start_element "pre";
+     `Text ["\n baz \n "];
+     `End_element;
+     `Text ["\n"];
+     `End_element]
+    |> of_list
+    |> trim
+    |> to_list
+    |> assert_equal
+    [start_element "div";
+     start_element "p";
+     start_element "em";
+     `Text ["foo"];
+     `End_element;
+     `Text [" bar"];
+     `End_element;
+     start_element "pre";
+     `Text ["\n baz \n "];
+     `End_element;
+     `End_element]);
+
+  ("utility.trim.doctype" >:: fun _ ->
+    [doctype;
+     `Text ["\n"];
+     start_element "div";
+     `End_element]
     |> of_list
     |> trim
     |> to_list
     |> assert_equal [
-      start_element "a";
-      `Text ["content"];
-      `End_element;
-      start_element "a";
-      `End_element;
-      `Text ["more content"]]);
+      doctype;
+      start_element "div";
+      `End_element]);
 
   ("utility.normalize_text" >:: fun _ ->
     [`Text [""];
@@ -139,25 +173,54 @@ let tests = [
       `Text ["foo"; "bar"; "baz"; "quux"]]);
 
   ("utility.pretty_print" >:: fun _ ->
-    [`Text ["foo"];
-     start_element "a";
-     `Text [" bar "];
-     `Text [" baz "];
-     start_element "b";
-     `Text ["quux"];
+    [start_element "div";
+     start_element "p";
+     start_element "em";
+     `Text ["foo"];
+     `End_element;
+     `Text ["bar"];
+     `End_element;
+     start_element "pre";
+     `Text ["\n baz \n "];
      `End_element;
      `End_element]
     |> of_list
     |> pretty_print
     |> to_list
     |> assert_equal [
-      `Text ["foo"; "\n"];
-      start_element "a";
-      `Text ["\n"; "  "; "bar "; " baz"; "\n"; "  "];
-      start_element "b";
-      `Text ["\n"; "    "; "quux"; "\n"; "  "];
+     start_element "div";
+     `Text ["\n"; " "];
+     start_element "p";
+     `Text ["\n"; "  "];
+     start_element "em";
+     `Text ["foo"];
+     `End_element;
+     `Text ["bar"; "\n"; " "];
+     `End_element;
+     `Text ["\n"; " "];
+     start_element "pre";
+     `Text ["\n baz \n "];
+     `End_element;
+     `Text ["\n"];
+     `End_element;
+     `Text ["\n"]]);
+
+  ("utility.pretty_print.doctype" >:: fun _ ->
+    [doctype;
+     start_element "div";
+     start_element "p";
+     `End_element;
+     `End_element]
+    |> of_list
+    |> pretty_print
+    |> to_list
+    |> assert_equal [
+      doctype;
+      start_element "div";
+      `Text ["\n"; " "];
+      start_element "p";
       `End_element;
       `Text ["\n"];
       `End_element;
-      `Text ["\n"]])
+      `Text ["\n"]]);
 ]
