@@ -187,28 +187,6 @@ let text s =
   |> unwrap_lists
   |> strings_to_bytes
 
-let trim s =
-  let rec trim_string_list trim = function
-    | [] -> []
-    | s::more ->
-      match trim s with
-      | "" -> trim_string_list trim more
-      | s -> s::more
-  in
-
-  s |> filter_map (fun v _ k ->
-    match v with
-    | `Text ss ->
-      ss
-      |> trim_string_list trim_string_left
-      |> List.rev
-      |> trim_string_list trim_string_right
-      |> List.rev
-      |> (function
-        | [] -> k None
-        | ss -> k (Some (`Text ss)))
-    | _ -> k (Some v))
-
 let normalize_text s =
   let rec match_text acc throw e k =
     next_option s throw begin function
@@ -236,32 +214,140 @@ let normalize_text s =
 
   make match_other
 
-let tab_width = 2
+let is_phrasing_element (namespace, element_name) =
+  if namespace <> html_ns then
+    false
+  else
+    match element_name with
+    | "a" | "abbr" | "b" | "bdi" | "bdo" | "br" | "button" | "cite" | "code"
+    | "data" | "dfn" | "em" | "i" | "img" | "input" | "kbd" | "label" | "mark"
+    | "pre" | "q" | "rb" | "rt" | "ruby" | "s" | "samp" | "select" | "small"
+    | "span" | "strong" | "sub" | "sup" | "textarea" | "time" | "u" | "var"
+    | "wbr" ->
+      true
+    | _ ->
+      false
 
-let pretty_print s =
-  let s = s |> normalize_text |> trim in
+let rec trim_string_list trim = function
+  | [] -> []
+  | s::more ->
+    match trim s with
+    | "" -> trim_string_list trim more
+    | s -> s::more
+
+let trim signals =
+  let signals = normalize_text signals in
+
+  let signals_and_flow : ('signal * bool) Kstream.t =
+    Kstream.transform begin fun phrasing_nesting_level signal _throw k ->
+      match signal with
+      | `Start_element (name, _) ->
+        if phrasing_nesting_level > 0 then
+          k ([signal, false], Some (phrasing_nesting_level + 1))
+        else
+          if is_phrasing_element name then
+            k ([signal, false], Some 1)
+          else
+            k ([signal, true], Some 0)
+
+      | `End_element ->
+        if phrasing_nesting_level > 0 then
+          k ([signal, false], Some (phrasing_nesting_level - 1))
+        else
+          k ([signal, true], Some 0)
+
+      | _ ->
+        k ([signal, false], Some phrasing_nesting_level)
+    end 0 signals
+  in
+
+  let signals =
+    Kstream.transform begin fun saw_flow_tag (signal, is_flow_tag) throw k ->
+      match signal with
+      | `Text ss ->
+        let ss =
+          if saw_flow_tag then
+            trim_string_list Common.trim_string_left ss
+          else
+            ss
+        in
+
+        Kstream.peek_option signals_and_flow throw (fun maybe_signal ->
+        let ss =
+          match maybe_signal with
+          | Some (_, true) ->
+            ss
+            |> List.rev
+            |> trim_string_list Common.trim_string_right
+            |> List.rev
+          | _ ->
+            ss
+        in
+
+        k ([`Text ss], Some false))
+
+      | _ ->
+        k ([signal], Some is_flow_tag)
+    end true signals_and_flow
+  in
+
+  normalize_text signals
+
+let tab_width = 1
+
+let pretty_print signals =
+  let signals = trim signals in
 
   let indent n =
     let n = if n < 0 then 0 else n in
     String.make (n * tab_width) ' '
   in
 
-  let rec current_state = ref (fun throw e k -> row 0 throw e k)
+  let rec current_state = ref (fun throw e k -> flow 0 throw e k)
 
-  and row depth throw e k =
-    next s throw e begin fun v ->
-      match v with
-      | `Start_element _ ->
-        list [`Text [indent depth]; v; `Text ["\n"]]
-          (row (depth + 1)) throw e k
+  and flow indentation throw e k =
+    next signals throw e begin fun signal ->
+      match signal with
+      | `Start_element (name, _) when not @@ is_phrasing_element name ->
+        list
+          [`Text [indent indentation]; signal; `Text ["\n"]]
+          (flow (indentation + 1)) throw e k
 
       | `End_element ->
-        list [`Text [indent (depth - 1)]; v; `Text ["\n"]]
-          (row (depth - 1)) throw e k
+        list
+          [`Text [indent (indentation - 1)]; signal; `Text ["\n"]]
+          (flow (indentation - 1)) throw e k
 
       | _ ->
-        list [`Text [indent depth]; v; `Text ["\n"]]
-          (row depth) throw e k
+        push signals signal;
+        list
+          [`Text [indent indentation]]
+          (phrasing indentation 0) throw e k
+    end
+
+  and phrasing indentation phrasing_nesting_level throw e k =
+    next signals throw e begin fun signal ->
+      match signal with
+      | `Start_element (name, _) when is_phrasing_element name ->
+        list
+          [signal]
+          (phrasing indentation (phrasing_nesting_level + 1)) throw e k
+
+      | `End_element when phrasing_nesting_level > 0 ->
+        list
+          [signal]
+          (phrasing indentation (phrasing_nesting_level - 1)) throw e k
+
+      | `Text _ ->
+        list
+          [signal]
+          (phrasing indentation phrasing_nesting_level) throw e k
+
+      | _ ->
+        push signals signal;
+        list
+          [`Text ["\n"]]
+          (flow indentation) throw e k
     end
 
   and list signals state throw e k =
