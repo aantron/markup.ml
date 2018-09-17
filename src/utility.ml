@@ -318,11 +318,16 @@ let pretty_print signals =
           [`Text [indent (indentation - 1)]; signal; `Text ["\n"]]
           (flow (indentation - 1)) throw e k
 
-      | _ ->
+      | `Start_element _ | `Text _ ->
         push signals signal;
         list
           [`Text [indent indentation]]
           (phrasing indentation 0) throw e k
+
+      | _ ->
+        list
+          [signal]
+          (flow indentation) throw e k
     end
 
   and phrasing indentation phrasing_nesting_level throw e k =

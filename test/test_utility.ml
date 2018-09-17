@@ -8,6 +8,14 @@ open Markup__Common
 open Markup
 module Kstream = Markup__Kstream
 
+let doctype =
+  `Doctype
+    {Markup.doctype_name = Some "html";
+     public_identifier   = None;
+     system_identifier   = None;
+     raw_text            = None;
+     force_quirks        = false}
+
 let start_element name = `Start_element ((Markup.Ns.html, name), [])
 
 let ok = wrong_k "failed"
@@ -134,6 +142,19 @@ let tests = [
      `End_element;
      `End_element]);
 
+  ("utility.trim.doctype" >:: fun _ ->
+    [doctype;
+     `Text ["\n"];
+     start_element "div";
+     `End_element]
+    |> of_list
+    |> trim
+    |> to_list
+    |> assert_equal [
+      doctype;
+      start_element "div";
+      `End_element]);
+
   ("utility.normalize_text" >:: fun _ ->
     [`Text [""];
      start_element "a";
@@ -183,4 +204,24 @@ let tests = [
      `Text ["\n"];
      `End_element;
      `Text ["\n"]]);
+
+  ("utility.pretty_print.doctype" >:: fun _ ->
+    [doctype;
+     start_element "div";
+     start_element "p";
+     `End_element;
+     `End_element]
+    |> of_list
+    |> pretty_print
+    |> to_list
+    |> assert_equal [
+      doctype;
+      start_element "div";
+      `Text ["\n"; " "];
+      start_element "p";
+      `Text ["\n"; " "];
+      `End_element;
+      `Text ["\n"];
+      `End_element;
+      `Text ["\n"]]);
 ]
