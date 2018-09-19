@@ -1,6 +1,6 @@
-# Markup.ml &nbsp; [![version 0.7.7][version]][releases] [![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
+# Markup.ml &nbsp; [![version 0.8.0][version]][releases] [![Travis status][travis-img]][travis] [![Coverage][coveralls-img]][coveralls]
 
-[version]:       https://img.shields.io/badge/version-0.7.7-blue.svg
+[version]:       https://img.shields.io/badge/version-0.8.0-blue.svg
 [travis]:        https://travis-ci.org/aantron/markup.ml/branches
 [travis-img]:    https://img.shields.io/travis/aantron/markup.ml/master.svg
 [coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
