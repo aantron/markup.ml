@@ -1,5 +1,5 @@
 opam-version: "1.2"
-version: "dev"
+version: "0.5.0"
 
 maintainer: "Anton Bachin <antonbachin@yahoo.com>"
 authors: "Anton Bachin <antonbachin@yahoo.com>"
