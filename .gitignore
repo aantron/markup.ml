@@ -1,4 +1,5 @@
 scratch/
+_opam/
 _build/
 bisect*.out
 _coverage
