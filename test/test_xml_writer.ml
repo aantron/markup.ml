@@ -29,6 +29,9 @@ let tests = [
   ("xml.writer.text-escaping" >:: fun _ ->
     expect "text escaping" [`Text ["<foo&bar>"]] [S "&lt;foo&amp;bar&gt;"]);
 
+  ("xml.writer.raw" >:: fun _ ->
+    expect "raw" [`Raw "<foo>&nbsp;</foo>"] [S "<foo>&nbsp;</foo>"]);
+
   ("xml.writer.xml-declaration" >:: fun _ ->
     expect "version only"
       [`Xml {version = "1.0"; encoding = None; standalone = None}]

@@ -23,6 +23,7 @@ let ok = wrong_k "failed"
 type dom =
   | Text of string
   | Element of string * dom list
+  | Raw of string
 
 let tests = [
   ("utility.content" >:: fun _ ->
@@ -34,6 +35,13 @@ let tests = [
     |> write_xml
     |> to_string
     |> assert_equal "<p>foo</p>");
+
+  ("utility.content.raw" >:: fun _ ->
+    [`Raw "foo"; `Text ["bar"]]
+    |> of_list
+    |> content
+    |> to_list
+    |> assert_equal [`Raw "foo"; `Text ["bar"]]);
 
   ("utility.strings_to_bytes" >:: fun _ ->
     ["foo"; "bar"]
@@ -50,6 +58,7 @@ let tests = [
      `Text ["bar"];
      `End_element;
      `Text ["baz"];
+     `Raw "dropped";
      `End_element]
     |> of_list
     |> tree
@@ -81,13 +90,23 @@ let tests = [
 
   ("utility.from_tree" >:: fun _ ->
     let dom =
-      Element ("p", [Text "foo"; Element ("em", [Text "bar"]); Text "baz"]) in
+      Element ("p", [
+        Text "foo";
+        Element ("em", [
+          Text "bar"
+        ]);
+        Text "baz";
+        Raw "&nbsp;";
+      ])
+    in
     dom
     |> from_tree (function
       | Element (name, children) ->
         `Element ((Markup.Ns.html, name), [], children)
       | Text s ->
-        `Text s)
+        `Text s
+      | Raw s ->
+        `Raw s)
     |> to_list
     |> assert_equal [
       start_element "p";
@@ -96,6 +115,7 @@ let tests = [
       `Text ["bar"];
       `End_element;
       `Text ["baz"];
+      `Raw "&nbsp;";
       `End_element]);
 
   ("utility.text" >:: fun _ ->
@@ -104,6 +124,7 @@ let tests = [
      `Text ["foo"];
      start_element "a";
      `Text ["bar"; "baz"];
+     `Raw "dropped";
      `End_element]
     |> of_list
     |> text
@@ -118,7 +139,9 @@ let tests = [
      start_element "em";
      `Text ["foo"];
      `End_element;
-     `Text [" bar\n "];
+     `Text [" bar "];
+     `Raw "quux";
+     `Text [" \n "];
      `End_element;
      `Text ["\n "];
      start_element "pre";
@@ -135,7 +158,8 @@ let tests = [
      start_element "em";
      `Text ["foo"];
      `End_element;
-     `Text [" bar"];
+     `Text [" bar "];
+     `Raw "quux";
      `End_element;
      start_element "pre";
      `Text ["\n baz \n "];
@@ -179,6 +203,7 @@ let tests = [
      `Text ["foo"];
      `End_element;
      `Text ["bar"];
+     `Raw "quux";
      `End_element;
      start_element "pre";
      `Text ["\n baz \n "];
@@ -195,7 +220,9 @@ let tests = [
      start_element "em";
      `Text ["foo"];
      `End_element;
-     `Text ["bar"; "\n"; " "];
+     `Text ["bar"];
+     `Raw "quux";
+     `Text ["\n"; " "];
      `End_element;
      `Text ["\n"; " "];
      start_element "pre";
@@ -232,6 +259,7 @@ let tests = [
      `Comment "foo";
      start_element "p";
      `Text ["foo"];
+     `Raw "bar";
      `End_element]
     |> of_list
     |> html5
@@ -241,6 +269,7 @@ let tests = [
       `Comment "foo";
       start_element "p";
       `Text ["foo"];
+      `Raw "bar";
       `End_element]);
 
   ("utility.xhtml" >:: fun _ ->
@@ -251,6 +280,7 @@ let tests = [
      `Comment "foo";
      start_element "p";
      `Text ["foo"];
+     `Raw "bar";
      `End_element]
     |> of_list
     |> xhtml
@@ -269,5 +299,6 @@ let tests = [
       `Comment "foo";
      start_element "p";
      `Text ["foo"];
+     `Raw "bar";
      `End_element]);
 ]

@@ -28,6 +28,10 @@ let tests = [
     expect "text escaping" [`Text ["<foo&bar>\xc2\xa0baz"]]
       [S "&lt;foo&amp;bar&gt;&nbsp;baz"]);
 
+  ("html.writer.raw" >:: fun _ ->
+    expect "raw" [`Raw "<p>&nbsp;</p>"]
+      [S "<p>&nbsp;</p>"]);
+
   ("html.writer.doctype" >:: fun _ ->
     let doctype =
       {doctype_name      = Some "html";
