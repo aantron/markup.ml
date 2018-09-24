@@ -5,7 +5,7 @@ open OUnit2
 open Test_support
 
 open Markup__Common
-open Markup
+open! Markup
 module Kstream = Markup__Kstream
 
 let doctype =
@@ -223,4 +223,51 @@ let tests = [
       `Text ["\n"];
       `End_element;
       `Text ["\n"]]);
+
+  ("utility.html5" >:: fun _ ->
+    [doctype;
+     doctype;
+     `PI ("foo", "bar");
+     `Xml {Markup.version = "1.0"; encoding = Some "utf-8"; standalone = None};
+     `Comment "foo";
+     start_element "p";
+     `Text ["foo"];
+     `End_element]
+    |> of_list
+    |> html5
+    |> to_list
+    |> assert_equal [
+      doctype;
+      `Comment "foo";
+      start_element "p";
+      `Text ["foo"];
+      `End_element]);
+
+  ("utility.xhtml" >:: fun _ ->
+    [doctype;
+     doctype;
+     `PI ("foo", "bar");
+     `Xml {Markup.version = "1.0"; encoding = Some "utf-8"; standalone = None};
+     `Comment "foo";
+     start_element "p";
+     `Text ["foo"];
+     `End_element]
+    |> of_list
+    |> xhtml
+    |> to_list
+    |> assert_equal [
+      `Xml {Markup.version = "1.0"; encoding = Some "utf-8"; standalone = None};
+      `Doctype {
+        Markup.doctype_name = None;
+        public_identifier = None;
+        system_identifier = None;
+        raw_text = Some
+          ("html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" " ^
+           "\"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\"");
+        force_quirks = false};
+      `PI ("foo", "bar");
+      `Comment "foo";
+     start_element "p";
+     `Text ["foo"];
+     `End_element]);
 ]

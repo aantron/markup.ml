@@ -385,8 +385,8 @@ let pretty_print signals =
 let html5 s =
   let remove_markup v _ k =
     match v with
-    | `Doctype _ | `Xml _ | `PI _ as v -> k (Some v)
-    | `Text _ | `Start_element _ | `End_element | `Comment _ -> k None
+    | `Doctype _ | `Xml _ | `PI _ -> k None
+    | `Text _ | `Start_element _ | `End_element | `Comment _ as v -> k (Some v)
   in
 
   s
@@ -422,8 +422,9 @@ let xhtml ?dtd s =
 
   let remove_markup v _ k =
     match v with
-    | `Doctype _ | `Xml _ as v -> k (Some v)
-    | `Text _ | `Start_element _ | `End_element | `Comment _ | `PI _ -> k None
+    | `Doctype _ | `Xml _ -> k None
+    | `Text _ | `Start_element _ | `End_element | `Comment _ | `PI _ as v ->
+      k (Some v)
   in
 
   s
