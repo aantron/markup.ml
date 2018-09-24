@@ -769,7 +769,7 @@ struct
         subtree_buffer.position.children <-
           (l, Comment s)::subtree_buffer.position.children
 
-      | `Xml _ | `Doctype _ -> ()
+      | `Xml _ | `Doctype _ | `Raw _ -> ()
       end;
 
       false

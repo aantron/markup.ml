@@ -51,7 +51,7 @@ let write report prefix signals =
             match s with
             | _, `End_element -> k' true
             | _, (`Text _ | `Start_element _ | `Comment _ | `PI _ | `Doctype _ |
-                  `Xml _) -> push signals s; k' false))
+                  `Xml _ | `Raw _) -> push signals s; k' false))
         (fun self_closing ->
           Namespace.Writing.push (fun () -> report (signal, i))
             namespaces name attributes
@@ -121,6 +121,9 @@ let write report prefix signals =
 
       | _, `Comment s ->
         emit_list ["<!--"; s; "-->"] throw e k
+
+      | _, `Raw s ->
+        emit_list [s] throw e k
     end
 
   in

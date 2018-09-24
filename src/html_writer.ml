@@ -112,7 +112,7 @@ let write signals =
               next_option signals throw (fun _ ->
               emit_list tag throw e k)
             | `Start_element _ | `Text _ | `Comment _ | `PI _ | `Xml _
-            | `Doctype _ ->
+            | `Doctype _ | `Raw _ ->
               open_elements := tag_name::!open_elements;
               emit_list tag throw e k)
         else begin
@@ -123,7 +123,7 @@ let write signals =
               | Some (`Text ss) when starts_with_newline ss ->
                 emit_list (tag @ ["\n"]) throw e k
               | Some (`Text _ | `Start_element _ | `End_element | `Comment _ |
-                      `PI _ | `Doctype _ | `Xml _)
+                      `PI _ | `Doctype _ | `Xml _ | `Raw _)
               | None -> emit_list tag throw e k)
           else
             emit_list tag throw e k
@@ -156,6 +156,9 @@ let write signals =
 
       | `Doctype _ | `Xml _ ->
         next_signal throw e k
+
+      | `Raw s ->
+        emit_list [s] throw e k
     end
 
   in

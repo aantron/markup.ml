@@ -7,7 +7,8 @@ open Kstream
 let content s =
   let filter signal _ k =
     match signal with
-    | `Start_element _ | `End_element | `Text _ as signal -> k (Some signal)
+    | `Start_element _ | `End_element | `Text _ | `Raw _ as signal ->
+      k (Some signal)
     | `Comment _ | `PI _ | `Doctype _ | `Xml _ -> k None
   in
   filter_map filter s
@@ -79,6 +80,9 @@ let trees ?text ?element ?comment ?pi ?xml ?doctype s =
         | None -> match_node throw k none
         | Some comment -> k (comment s)
         end
+
+      | `Raw _ ->
+        match_node throw k none
     end
 
   and match_content acc throw k =
@@ -100,7 +104,8 @@ type 'a node =
   | `Doctype of doctype
   | `Xml of xml_declaration
   | `PI of string * string
-  | `Comment of string ]
+  | `Comment of string
+  | `Raw of string ]
 
 let from_tree f node =
   let rec traverse acc node =
@@ -112,7 +117,7 @@ let from_tree f node =
 
     | `Text s -> (`Text [s])::acc
 
-    | `Doctype _ | `Xml _ | `PI _ | `Comment _ as node ->
+    | `Doctype _ | `Xml _ | `PI _ | `Comment _ | `Raw _ as node ->
       node::acc
   in
 
@@ -150,7 +155,8 @@ let elements select s =
                     finished := index;
                   k signal
 
-                | `Text _ | `Comment _ | `PI _ | `Doctype _ | `Xml _ -> k signal
+                | `Text _ | `Comment _ | `PI _ | `Doctype _ | `Xml _ | `Raw _ ->
+                  k signal
               end)
           |> make
           |> k
@@ -169,7 +175,7 @@ let elements select s =
         scan throw e k
 
       | `Text _ | `Start_element _ | `End_element | `Comment _ | `PI _
-      | `Doctype _ | `Xml _ ->
+      | `Doctype _ | `Xml _ | `Raw _ ->
         scan throw e k
     end
   in
@@ -181,7 +187,7 @@ let text s =
     match v with
     | `Text ss -> k (Some ss)
     | `Start_element _ | `End_element | `Comment _ | `PI _ | `Doctype _
-    | `Xml _ -> k None
+    | `Xml _ | `Raw _ -> k None
   in
   filter_map filter s
   |> unwrap_lists
@@ -332,7 +338,7 @@ let pretty_print signals =
           [`Text [indent (indentation - 1)]; signal; `Text ["\n"]]
           (flow (indentation - 1)) throw e k
 
-      | `Start_element _ | `Text _ ->
+      | `Start_element _ | `Text _ | `Raw _ ->
         push signals signal;
         list
           [`Text [indent indentation]]
@@ -357,7 +363,7 @@ let pretty_print signals =
           [signal]
           (phrasing indentation (phrasing_nesting_level - 1)) throw e k
 
-      | `Text _ ->
+      | `Text _ | `Raw _ ->
         list
           [signal]
           (phrasing indentation phrasing_nesting_level) throw e k
@@ -386,7 +392,8 @@ let html5 s =
   let remove_markup v _ k =
     match v with
     | `Doctype _ | `Xml _ | `PI _ -> k None
-    | `Text _ | `Start_element _ | `End_element | `Comment _ as v -> k (Some v)
+    | `Text _ | `Start_element _ | `End_element | `Comment _ | `Raw _ as v ->
+      k (Some v)
   in
 
   s
@@ -423,7 +430,8 @@ let xhtml ?dtd s =
   let remove_markup v _ k =
     match v with
     | `Doctype _ | `Xml _ -> k None
-    | `Text _ | `Start_element _ | `End_element | `Comment _ | `PI _ as v ->
+    | `Text _ | `Start_element _ | `End_element | `Comment _ | `PI _
+    | `Raw _ as v ->
       k (Some v)
   in
 

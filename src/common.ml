@@ -63,12 +63,14 @@ type signal =
   | `Xml of xml_declaration
   | `Doctype of doctype
   | `PI of string * string
-  | `Comment of string ]
+  | `Comment of string
+  | `Raw of string ]
 
 type content_signal =
   [ `Start_element of name * (name * string) list
   | `End_element
-  | `Text of string list ]
+  | `Text of string list
+  | `Raw of string ]
 
 type general_token =
   [ `Xml of xml_declaration
@@ -226,6 +228,9 @@ let signal_to_string = function
 
   | `PI (target, s) ->
     Printf.sprintf "<?%s %s?>" target s
+
+  | `Raw s ->
+    s
 
 let token_to_string = function
   | `Xml x ->

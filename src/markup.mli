@@ -254,7 +254,8 @@ type signal =
   | `Doctype of doctype
   | `Xml of xml_declaration
   | `PI of string * string
-  | `Comment of string ]
+  | `Comment of string
+  | `Raw of string ]
 (** Parsing signals. The parsers emit them according to the following grammar:
 
 {[
@@ -299,7 +300,8 @@ content ::= `Text | element | `PI | `Comment
 type content_signal =
   [ `Start_element of name * (name * string) list
   | `End_element
-  | `Text of string list ]
+  | `Text of string list
+  | `Raw of string ]
 (** A restriction of type {!signal} to only elements and text, i.e. no comments,
     processing instructions, or declarations. This can be useful for pattern
     matching in applications that only care about the content and element
@@ -611,7 +613,8 @@ type 'a node =
   | `Doctype of doctype
   | `Xml of xml_declaration
   | `PI of string * string
-  | `Comment of string ]
+  | `Comment of string
+  | `Raw of string ]
 (** See {!from_tree} below. *)
 
 val from_tree : ('a -> 'a node) -> 'a -> (signal, sync) stream
