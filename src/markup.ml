@@ -151,9 +151,9 @@ struct
     Kstream.construct constructor
     |> stream_to_parser
 
-  let write_html signals =
+  let write_html ?escape_attribute ?escape_text signals =
     signals
-    |> Html_writer.write
+    |> Html_writer.write ?escape_attribute ?escape_text
     |> Utility.strings_to_bytes
 end
 
@@ -222,7 +222,10 @@ sig
     ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser
 
-  val write_html : ([< signal ], _) stream -> (char, async) stream
+  val write_html :
+  ?escape_attribute:(string -> string) ->
+  ?escape_text:(string -> string) ->
+  ([< signal ], _) stream -> (char, async) stream
 
   val fn : (unit -> char option io) -> (char, async) stream
 
@@ -296,8 +299,8 @@ struct
 
     Cps.parse_html (wrap_report report) ?encoding context source
 
-  let write_html signals =
-    Cps.write_html signals
+  let write_html ?escape_attribute ?escape_text signals =
+    Cps.write_html ?escape_attribute ?escape_text signals
 
   let to_string bytes = Stream_io.to_string bytes |> IO.of_cps
   let to_buffer bytes = Stream_io.to_buffer bytes |> IO.of_cps
