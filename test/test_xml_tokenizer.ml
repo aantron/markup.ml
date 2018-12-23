@@ -591,6 +591,16 @@ let tests = [
         1,  1, S (`Start (tag "foo" ["b!ar", ""]));
         1, 14, S  `EOF]);
 
+  ("xml.tokenizer.good-attribute-name" >:: fun _ ->
+    expect "<foo -bar=''>"
+      [ 1,  6, E (`Bad_token ("-", "attribute", "invalid start character"));
+        1,  1, S (`Start (tag "foo" ["-bar", ""]));
+        1, 14, S  `EOF];
+
+    expect "<foo b-ar=''>"
+      [ 1,  1, S (`Start (tag "foo" ["b-ar", ""]));
+        1, 14, S  `EOF]);
+
   ("xml.tokenizer.bad-attribute-whitespace" >:: fun _ ->
     expect "<foo bar  =  'baz'>"
       [ 1,  9, E (`Bad_token (" ", "attribute", "whitespace not allowed here"));
