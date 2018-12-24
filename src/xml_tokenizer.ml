@@ -232,7 +232,7 @@ let tokenize report resolve_reference (input, get_location) =
           consume_whitespace equals_state)
 
         | l, c ->
-          report_if (not @@ is_name_start_char c) l (fun () ->
+          report_if (not @@ is_name_char c) l (fun () ->
             `Bad_token (char c, "attribute", "invalid name character"))
             !throw (fun () ->
           add_utf_8 name_buffer c;
