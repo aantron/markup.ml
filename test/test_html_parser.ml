@@ -445,6 +445,39 @@ let tests = [
         1, 40, S  `End_element;
         1, 40, S  `End_element]);
 
+  ("html.parser.datalist" >:: fun _ ->
+    expect "<datalist><option><option></datalist>"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "body");
+        1,  1, S (start_element "datalist");
+        1, 11, S (start_element "option");
+        1, 19, S  `End_element;
+        1, 19, S (start_element "option");
+        1, 27, S  `End_element;
+        1, 27, S  `End_element;
+        1, 38, S  `End_element;
+        1, 38, S  `End_element]);
+
+  ("html.parser.datalist.whitespace" >:: fun _ ->
+    expect "<datalist>\n<option>\n<option>\n</datalist>"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "body");
+        1,  1, S (start_element "datalist");
+        1, 11, S (`Text ["\n"]);
+        2,  1, S (start_element "option");
+        2,  9, S (`Text ["\n"]);
+        3,  1, S  `End_element;
+        3,  1, S (start_element "option");
+        3,  9, S (`Text ["\n"]);
+        4,  1, S  `End_element;
+        4,  1, S  `End_element;
+        4, 12, S  `End_element;
+        4, 12, S  `End_element]);
+
   ("html.parser.truncated-body" >:: fun _ ->
     expect "<body>"
       [ 1,  1, S (start_element "html");
