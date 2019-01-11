@@ -49,7 +49,7 @@ open Kstream
 let literal_text_elements =
   ["style"; "script"; "xmp"; "iframe"; "noembed"; "noframes"; "plaintext"]
 
-let write signals =
+let write ?(escape_attribute=escape_attribute) ?(escape_text=escape_text) signals =
   let open_elements = ref [] in
 
   let in_literal_text_element () =

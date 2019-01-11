@@ -412,8 +412,14 @@ foo</bar>
 
  *)
 
-val write_html : ([< signal ], 's) stream -> (char, 's) stream
-(** Similar to {!write_xml}, but emits HTML5 instead of XML. *)
+val write_html :
+  ?escape_attribute:(string -> string) ->
+  ?escape_text:(string -> string) ->
+  ([< signal ], 's) stream -> (char, 's) stream
+(** Similar to {!write_xml}, but emits HTML5 instead of XML.
+    If [~escape_attribute] and/or [~escape_text] are provided,
+    they are used instead of default escaping functions.
+*)
 
 
 
@@ -846,7 +852,10 @@ sig
     ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser
 
-  val write_html : ([< signal ], _) stream -> (char, async) stream
+  val write_html :
+    ?escape_attribute:(string -> string) ->
+    ?escape_text:(string -> string) ->
+    ([< signal ], _) stream -> (char, async) stream
 
   (** {2 I/O} *)
 

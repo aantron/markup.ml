@@ -3,4 +3,7 @@
 
 open Common
 
-val write : [< signal ] Kstream.t -> string Kstream.t
+val write :
+  ?escape_attribute:(string -> string) ->
+  ?escape_text:(string -> string) ->
+  [< signal ] Kstream.t -> string Kstream.t
