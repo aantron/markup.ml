@@ -381,7 +381,7 @@ let tokenize report (input, get_location) =
                 match_named (Some (w, m)) (v::(replace @ matched)) [] trie text
               | Trie.Yes m ->
                 let w = Buffer.contents text in
-                finish (Some (w, m)) (v::matched) [])
+                finish (Some (w, m)) (v::(replace @ matched)) [])
         in
         match_named
           None [] [] (Lazy.force named_entity_trie) (Buffer.create 16))
