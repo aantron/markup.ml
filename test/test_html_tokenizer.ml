@@ -884,6 +884,12 @@ let tests = [
         1,  1, S (`Start (tag "foo" ["bar", "&lt="]));
         1, 17, S  `EOF];
 
+    expect "<foo bar='&image='>"
+      [ 1, 11, E (`Bad_token ("&image=", "attribute",
+                              "unterminated entity reference followed by '='"));
+        1,  1, S (`Start (tag "foo" ["bar", "&image="]));
+        1, 20, S  `EOF];
+
     expect "<foo bar=&amp;>"
       [ 1,  1, S (`Start (tag "foo" ["bar", "&"]));
         1, 16, S  `EOF];
