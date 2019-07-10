@@ -1,7 +1,7 @@
 (* This file is part of Markup.ml, released under the BSD 2-clause license. See
    doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
 
-(* Aliases for reducing the number of deprecation warings. *)
+(* Aliases for reducing the number of deprecation warnings. *)
 module String =
 struct
   include String

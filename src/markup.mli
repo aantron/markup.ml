@@ -434,7 +434,7 @@ val buffer : Buffer.t -> (char, sync) stream
     Be careful of changing the buffer while it is being iterated by the
     stream. *)
 
-val channel : Pervasives.in_channel -> (char, sync) stream
+val channel : in_channel -> (char, sync) stream
 (** Evaluates to a stream that retrieves bytes from the given channel. If the
     channel cannot be read, the next read of the stream results in raising
     [Sys_error].
@@ -472,7 +472,7 @@ val to_buffer : (char, sync) stream -> Buffer.t
 (** Eagerly retrieves bytes from the given stream and places them into a
     buffer. *)
 
-val to_channel : Pervasives.out_channel -> (char, sync) stream -> unit
+val to_channel : out_channel -> (char, sync) stream -> unit
 (** Eagerly retrieves bytes from the given stream and writes them to the given
     channel. If writing fails, raises [Sys_error]. *)
 

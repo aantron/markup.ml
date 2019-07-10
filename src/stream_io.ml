@@ -37,7 +37,7 @@ let channel c =
     end
     else
       let result =
-        try Count (Pervasives.input c buffer 0 buffer_length)
+        try Count (input c buffer 0 buffer_length)
         with exn -> Exn exn
       in
       match result with
@@ -54,7 +54,7 @@ let channel c =
   |> make
 
 let file f =
-  let c = Pervasives.open_in f in
+  let c = open_in f in
   let s = channel c in
 
   let s' =
@@ -89,7 +89,7 @@ let to_channel c s throw k =
   iter write s throw k
 
 let to_file f s throw k =
-  let c = Pervasives.open_out f in
+  let c = open_out f in
   to_channel c s
     (fun exn -> close_out_noerr c; throw exn)
     (fun () -> close_out_noerr c; k ())
