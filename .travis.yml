@@ -10,8 +10,8 @@ env:
   - SWITCH=4.08.0
 
 before_script:
-  - wget https://github.com/ocaml/opam/releases/download/2.0.0/opam-2.0.0-x86_64-linux
-  - sudo mv opam-2.0.0-x86_64-linux /usr/local/bin/opam
+  - wget https://github.com/ocaml/opam/releases/download/2.0.4/opam-2.0.4-x86_64-linux
+  - sudo mv opam-2.0.4-x86_64-linux /usr/local/bin/opam
   - sudo chmod a+x /usr/local/bin/opam
   - "opam init -y --compiler=$SWITCH --disable-sandboxing"
   - eval `opam env`
