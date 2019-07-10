@@ -18,6 +18,7 @@ before_script:
   - ocaml -version
 
 script:
+  - opam lint
   - opam install -y ounit lwt js_of_ocaml
   - opam pin add -y --no-action markup .
   - opam install -y --deps-only markup
