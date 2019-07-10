@@ -28,11 +28,12 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 
-description: "Markup.ml provides an HTML parser and an XML parser. The parsers
-are wrapped in a simple interface: they are functions that transform byte
-streams to parsing signal streams. Streams can be manipulated in various ways,
-such as processing by fold, filter, and map, assembly into DOM tree structures,
-or serialization back to HTML or XML.
+description: """
+Markup.ml provides an HTML parser and an XML parser. The parsers are wrapped in
+a simple interface: they are functions that transform byte streams to parsing
+signal streams. Streams can be manipulated in various ways, such as processing
+by fold, filter, and map, assembly into DOM tree structures, or serialization
+back to HTML or XML.
 
 Both parsers are based on their respective standards. The HTML parser, in
 particular, is based on the state machines defined in HTML5.
@@ -45,4 +46,4 @@ Apart from this, the parsers are streaming (do not build up a document in
 memory), non-blocking (can be used with threading libraries), lazy (do not
 consume input unless the signal stream is being read), and process the input in
 a single pass. They automatically detect the character encoding of the input
-stream, and convert everything to UTF-8."
+stream, and convert everything to UTF-8."""
