@@ -179,7 +179,7 @@ of [easy issues][easy].
 
 ## License
 
-Markup.ml is distributed under the [BSD license][license]. The Markup.ml source
+Markup.ml is distributed under the [MIT license][license]. The Markup.ml source
 distribution includes a copy of the HTML5 entity list, which is distributed
 under the [W3C document license][w3c-license].
 

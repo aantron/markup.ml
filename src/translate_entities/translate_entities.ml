@@ -1,5 +1,5 @@
-(* This file is part of Markup.ml, released under the BSD 2-clause license. See
-   doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
+(* This file is part of Markup.ml, released under the MIT license. See
+   LICENSE.md for details, or visit https://github.com/aantron/markup.ml. *)
 
 (* This is run to generate entities.ml. It is not part of the normal build
    process, as entities.ml is checked into the source repository. It is only

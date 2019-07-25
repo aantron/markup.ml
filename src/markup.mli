@@ -1,5 +1,5 @@
-(* This file is part of Markup.ml, released under the BSD 2-clause license. See
-   doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
+(* This file is part of Markup.ml, released under the MIT license. See
+   LICENSE.md for details, or visit https://github.com/aantron/markup.ml. *)
 
 (** Error-recovering streaming HTML and XML parsers and writers.
 
@@ -77,7 +77,7 @@ val write_xml  : signal stream -> char stream
 
     Markup.ml is developed on {{:https://github.com/aantron/markup.ml} GitHub}
     and distributed under the
-    {{:https://github.com/aantron/markup.ml/blob/master/LICENSE.md} BSD
+    {{:https://github.com/aantron/markup.ml/blob/master/LICENSE.md} MIT
     license}. This documentation is for version 0.8.1 of the library.
     Documentation for older versions can be found on the
     {{: https://github.com/aantron/markup.ml/releases} releases page}. *)

@@ -1,5 +1,5 @@
-(* This file is part of Markup.ml, released under the BSD 2-clause license. See
-   doc/LICENSE for details, or visit https://github.com/aantron/markup.ml. *)
+(* This file is part of Markup.ml, released under the MIT license. See
+   LICENSE.md for details, or visit https://github.com/aantron/markup.ml. *)
 
 (* Tries. These aren't fully functional nor fully mutable. To accumulate a trie,
    it is necessary to retain the latest result of [add]. However, previous tries
