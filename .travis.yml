@@ -15,8 +15,8 @@ matrix:
     - env: COMPILER=ocaml-variants.4.09.0+beta1 REPOSITORIES=--repositories=default,beta=git+https://github.com/ocaml/ocaml-beta-repository.git
 
 before_script:
-  - wget https://github.com/ocaml/opam/releases/download/2.0.4/opam-2.0.4-x86_64-linux
-  - sudo mv opam-2.0.4-x86_64-linux /usr/local/bin/opam
+  - wget https://github.com/ocaml/opam/releases/download/2.0.5/opam-2.0.5-x86_64-linux
+  - sudo mv opam-2.0.5-x86_64-linux /usr/local/bin/opam
   - sudo chmod a+x /usr/local/bin/opam
   - opam init -y --bare --disable-sandboxing --disable-shell-hook
   - "opam switch create . $COMPILER $REPOSITORIES --no-install"
