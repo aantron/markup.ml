@@ -18,6 +18,7 @@ before_script:
   - wget https://github.com/ocaml/opam/releases/download/2.0.5/opam-2.0.5-x86_64-linux
   - sudo mv opam-2.0.5-x86_64-linux /usr/local/bin/opam
   - sudo chmod a+x /usr/local/bin/opam
+  - "[ -d _opam/bin ] || rm -rf _opam"
   - opam init -y --bare --disable-sandboxing --disable-shell-hook
   - "opam switch create . $COMPILER $REPOSITORIES --no-install"
   - eval `opam env`
@@ -39,6 +40,11 @@ script:
   - "[ -z $PERFORMANCE ] || make performance-test"
   - "[ -z $DOCS ] || opam install -y lambdasoup"
   - "[ -z $DOCS ] || make clean docs"
+
+cache:
+  directories:
+    - $HOME/.opam
+    - ./_opam
 
 notifications:
   email:
