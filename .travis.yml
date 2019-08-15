@@ -18,9 +18,8 @@ before_script:
   - wget https://github.com/ocaml/opam/releases/download/2.0.5/opam-2.0.5-x86_64-linux
   - sudo mv opam-2.0.5-x86_64-linux /usr/local/bin/opam
   - sudo chmod a+x /usr/local/bin/opam
-  - "[ -d _opam/bin ] || rm -rf _opam"
   - opam init -y --bare --disable-sandboxing --disable-shell-hook
-  - "opam switch create . $COMPILER $REPOSITORIES --no-install"
+  - "[ -d _opam/bin ] || (rm -rf _opam && opam switch create . $COMPILER $REPOSITORIES --no-install)"
   - eval `opam env`
   - opam --version
   - ocaml -version
@@ -30,10 +29,10 @@ script:
   - opam install -y ounit lwt js_of_ocaml
   - opam pin add -y --no-action markup .
   - opam install -y --deps-only markup
-  - "[ -z $COVERALLS ] || opam install -y ocveralls"
   - make test
   - make coverage
-  - "[ -z $COVERALLS ] || ocveralls --prefix _build/default _build/default/test/bisect*.out _build/default/test/*/bisect*.out --send"
+  - "[ -z $COVERALLS ] || bisect-ppx-report -I _build/default/ --coveralls coverage.json --service-name travis-ci --service-job-id $TRAVIS_JOB_ID `find . -name 'bisect*.out'`"
+  - "[ -z $COVERALLS ] || curl -L -F json_file=@./coverage.json https://coveralls.io/api/v1/jobs"
   - make js-test
   - make dependency-test
   - "[ -z $PERFORMANCE ] || opam install -y xmlm ocamlnet"
