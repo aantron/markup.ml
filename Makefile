@@ -21,7 +21,7 @@ coverage : clean
 	dune runtest --no-buffer -j 1
 	bisect-ppx-report \
 	  -I _build/default/ --html $(COVERAGE)/ --text - --summary-only \
-	  _build/default/test/bisect*.out _build/default/test/*/bisect*.out
+	  `find _build -name '*.out'`
 	@echo See $(COVERAGE)/index.html
 
 .PHONY : performance-test
