@@ -1,7 +1,6 @@
 (* This file is part of Markup.ml, released under the MIT license. See
    LICENSE.md for details, or visit https://github.com/aantron/markup.ml. *)
 
-open Markup__Common
 module Kstream = Markup__Kstream
 
 (* Lwt.Infix not available for Lwt 2.4.6 (Ocaml 4.00). *)

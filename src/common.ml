@@ -5,13 +5,13 @@
 module String =
 struct
   include String
-  let lowercase = lowercase
+  let lowercase = lowercase [@ocaml.warning "-3"]
 end
 
 module Char =
 struct
   include Char
-  let lowercase = lowercase
+  let lowercase = lowercase [@ocaml.warning "-3"]
 end
 
 type 'a cont = 'a -> unit
@@ -25,9 +25,6 @@ let compare_locations (line, column) (line', column') =
   | order -> order
 
 type name = string * string
-
-let (|>) x f = f x
-let (@@) f x = f x
 
 let xml_ns = "http://www.w3.org/XML/1998/namespace"
 let xmlns_ns = "http://www.w3.org/2000/xmlns/"

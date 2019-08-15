@@ -3,10 +3,6 @@
 
 
 
-let (|>) = Common.(|>)
-
-
-
 module type IO =
 sig
   type 'a t

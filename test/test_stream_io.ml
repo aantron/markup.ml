@@ -2,8 +2,6 @@
    LICENSE.md for details, or visit https://github.com/aantron/markup.ml. *)
 
 open OUnit2
-
-open Markup__Common
 open Markup
 
 let self = "./test_stream_io.ml"
