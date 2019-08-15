@@ -18,12 +18,16 @@ depends: [
   "uchar"
   "uutf" {>= "1.0.0"}
 
-  "bisect_ppx" {dev & >= "1.3.0"}
+  "bisect_ppx" {dev & >= "1.5.0"}
   "ounit" {dev}
 ]
 # Markup.ml implicitly requires OCaml 4.02.3, as this is a contraint of Dune.
 # Without that, Markup.ml implicitly requires OCaml 4.01.0, as this is a
 # constraint of Uutf. Without *that*, Markup.ml works on OCaml 3.11 or earlier.
+
+pin-depends: [
+  ["bisect_ppx.git" "git+https://github.com/aantron/bisect_ppx.git"]
+]
 
 build: [
   ["dune" "build" "-p" name "-j" jobs]
