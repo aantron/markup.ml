@@ -19,10 +19,9 @@ test : build
 coverage : clean
 	BISECT_ENABLE=yes dune build
 	dune runtest --no-buffer -j 1
-	bisect-ppx-report \
-	  -I _build/default/ --html $(COVERAGE)/ --text - --summary-only \
-	  `find _build -name '*.out'`
-	@echo See $(COVERAGE)/index.html
+	bisect-ppx-report html --expect src/ --do-not-expect src/translate_entities/
+	bisect-ppx-report summary
+	@echo See _coverage/index.html
 
 .PHONY : performance-test
 performance-test :

@@ -31,8 +31,7 @@ script:
   - opam install -y --deps-only markup
   - make test
   - make coverage
-  - "[ -z $COVERALLS ] || bisect-ppx-report -I _build/default/ --coveralls coverage.json --service-name travis-ci --service-job-id $TRAVIS_JOB_ID `find . -name 'bisect*.out'`"
-  - "[ -z $COVERALLS ] || curl -L -F json_file=@./coverage.json https://coveralls.io/api/v1/jobs"
+  - "[ -z $COVERALLS ] || bisect-ppx-report send-to Coveralls"
   - make js-test
   - make dependency-test
   - "[ -z $PERFORMANCE ] || opam install -y xmlm ocamlnet"
