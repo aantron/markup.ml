@@ -78,7 +78,7 @@ val write_xml  : signal stream -> char stream
     Markup.ml is developed on {{:https://github.com/aantron/markup.ml} GitHub}
     and distributed under the
     {{:https://github.com/aantron/markup.ml/blob/master/LICENSE.md} MIT
-    license}. This documentation is for version 0.8.1 of the library.
+    license}. This documentation is for version 0.8.2 of the library.
     Documentation for older versions can be found on the
     {{: https://github.com/aantron/markup.ml/releases} releases page}. *)
 
