@@ -895,8 +895,9 @@ let tests = [
         1, 61, S  `End_element;
         1, 72, S  `End_element]);
 
-  ("html.parser.noscript.content" >:: fun _ ->
-    expect ~context:None "<noscript> \t\n<!--foo--> foo</noscript>"
+  ("html.parser.noscript.head.content" >:: fun _ ->
+    expect ~context:(Some (`Fragment "head"))
+      "<noscript> \t\n<!--foo--> foo</noscript>"
       [ 1,  1, S (start_element "noscript");
         1, 11, S (`Text [" \t\n"]);
         2,  1, S (`Comment "foo");
@@ -907,6 +908,23 @@ let tests = [
         2, 15, E (`Unmatched_end_tag "noscript");
         2, 12, S (`Text ["foo"]);
         2, 26, S  `End_element]);
+
+  ("html.parser.noscript.inferred.content" >:: fun _ ->
+    expect ~context:None "<noscript> \t\n<!--foo--> foo</noscript>"
+      [ 1,  1, S (start_element "noscript");
+        1, 11, S (`Text [" \t\n"]);
+        2,  1, S (`Comment "foo");
+        2, 11, S (`Text [" foo"]);
+        2, 15, S  `End_element]);
+
+  ("html.parser.noscript-script.inferred.content" >:: fun _ ->
+    expect ~context:None "<script>foo</script><noscript>bar</noscript>"
+      [ 1,  1, S (start_element "script");
+        1,  9, S (`Text ["foo"]);
+        1, 12, S  `End_element;
+        1, 21, S (start_element "noscript");
+        1, 31, S (`Text ["bar"]);
+        1, 34, S  `End_element]);
 
   ("html.parser.head.fragment" >:: fun _ ->
     expect ~context:None "<base>"

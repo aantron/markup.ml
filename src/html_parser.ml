@@ -183,7 +183,7 @@ struct
           k (`Fragment "html")
         | _, `Start {name =
             "base" | "basefont" | "bgsound" | "link" | "meta" | "noframes" |
-            "noscript" | "script" | "style" | "template" | "title"} ->
+            "style" | "template" | "title"} ->
           k (`Fragment "head")
         | _, `Start {name = "frame"} -> k (`Fragment "frameset")
         | _, `Start {name = "li"} -> k (`Fragment "ul")
