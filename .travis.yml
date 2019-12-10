@@ -10,10 +10,6 @@ env:
   - COMPILER=4.07.1
   - COMPILER=4.09.0
 
-matrix:
-  allow_failures:
-    - env: COMPILER=4.09.0
-
 before_script:
   - wget https://github.com/ocaml/opam/releases/download/2.0.5/opam-2.0.5-x86_64-linux
   - sudo mv opam-2.0.5-x86_64-linux /usr/local/bin/opam
