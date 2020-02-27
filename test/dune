@@ -1,6 +1,6 @@
 (executable
  (name test)
- (libraries markup oUnit test_support)
+ (libraries markup ounit2 test_support)
  (flags (:standard -w +A-44-48)))
 
 (alias

@@ -1,6 +1,6 @@
 (executable
  (name test_lwt)
- (libraries lwt.unix markup-lwt.unix oUnit test_support)
+ (libraries lwt.unix markup-lwt.unix ounit2 test_support)
  (flags (:standard -w +A-44)))
 
 (alias

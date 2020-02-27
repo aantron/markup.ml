@@ -19,7 +19,7 @@ depends: [
   "uutf" {>= "1.0.0"}
 
   "bisect_ppx" {dev & >= "2.0.0"}
-  "ounit" {dev}
+  "ounit2" {dev}
 ]
 # Markup.ml implicitly requires OCaml 4.02.3, as this is a contraint of Dune.
 
