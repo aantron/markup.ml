@@ -13,12 +13,11 @@ COVERAGE := _coverage
 
 .PHONY : test
 test : build
-	dune runtest --no-buffer -j 1
+	dune runtest
 
 .PHONY : coverage
-coverage : clean
-	BISECT_ENABLE=yes dune build
-	dune runtest --no-buffer -j 1
+coverage :
+	BISECT_ENABLE=yes dune runtest --force
 	bisect-ppx-report html --expect src/ --do-not-expect src/translate_entities/
 	bisect-ppx-report summary
 	@echo See _coverage/index.html
