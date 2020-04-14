@@ -590,11 +590,16 @@ node    ::= element | `Text | `Comment | `PI | `Xml | `Doctype
 element ::= `Start_element node* `End_element
 ]}
 
-    Each time [trees] matches a production of [node], it calls the corresponding
+    Each time [tree] matches a production of [node], it calls the corresponding
     function to convert the node into your tree type ['a]. For example, when
-    [trees] matches [`Text ss], it calls [~text ss], if [~text] is supplied.
-    Similarly, when [trees] matches [element], it calls
+    [tree] matches [`Text ss], it calls [~text ss], if [~text] is supplied.
+    Similarly, when [tree] matches [element], it calls
     [~element name attributes children], if [~element] is supplied.
+
+    [tree] returns [None] when its input signal stream is empty. In terms of the
+    original input bytes, this can correspond to either an empty input, or a
+    non-empty input which the parser's error recovery completely discarded,
+    producing no signals.
 
     See {!trees} if the input stream might have multiple top-level trees. This
     function [tree] only retrieves the first one. *)
