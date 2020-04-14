@@ -569,7 +569,7 @@ type my_dom = Text of string | Element of name * my_dom list
 |> signals
 |> tree
   ~text:(fun ss -> Text (String.concat "" ss))
-  ~element:(fun (name, _) children -> Element (name, children))
+  ~element:(fun (_ns, name) _attrs children -> Element (name, children))
 ]}
 
     results in the structure
