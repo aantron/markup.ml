@@ -141,6 +141,42 @@ let tests = [
      `Text ["\n baz \n "];
      `End_element;
      `End_element]);
+  
+  ("utility.trim whitespace between start and end elements" >:: fun _ ->
+    [start_element "div";
+     start_element "em";
+     `Text ["\n"];
+     `End_element;
+     `Text ["\n"];
+     `End_element]
+    |> of_list
+    |> trim
+    |> to_list
+    |> assert_equal
+    [start_element "div";
+     start_element "em";
+     (*`Text ["\n"];*)
+     `End_element;
+     `End_element]);
+
+  ("utility.trim whitespace comment" >:: fun _ ->
+    [start_element "div";
+     start_element "em";
+     `End_element;
+     `Text ["\n"];
+     `Comment "a comment";
+     `Text ["\n"];
+     `End_element]
+    |> of_list
+    |> trim
+    |> to_list
+    |> assert_equal
+    [start_element "div";
+     start_element "em";
+     `End_element;
+     (*`Text ["\n"];*)
+     `Comment "a comment";
+     `End_element]);
 
   ("utility.trim.doctype" >:: fun _ ->
     [doctype;
