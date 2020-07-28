@@ -129,7 +129,7 @@ sig
     | `Unmatched_start_tag of string
     | `Unmatched_end_tag of string
     | `Bad_namespace of string
-    | `Misnested_tag of string * string
+    | `Misnested_tag of string * string * (string * string) list
     | `Bad_content of string ]
   (** Errors reported by the parsers. A few of these are also used by the
       writers.
@@ -163,10 +163,10 @@ sig
         resolved to a namespace, and by the writers when the namespace [s] can't
         be resolved to a prefix (or the default namespace).
 
-      - [`Misnested_tag (what, where)] is reported by the HTML parser when a tag
-        appears where it is not allowed. For example, if the input has a
-        [<body>] tag inside a [<p>] tag, the parser will report
-        [`Misnested_tag ("body", "p")].
+      - [`Misnested_tag (what, where, attributes)] is reported by the HTML
+        parser when a tag appears where it is not allowed. For example, if the
+        input has a [<body class="">] tag inside a [<p>] tag, the parser will
+        report [`Misnested_tag ("body", "p", [("class", "")])].
 
       - [`Bad_content where] is reported by the HTML parser if an element has
         content it is not allowed to have. For example, if there is stray text
