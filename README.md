@@ -39,14 +39,14 @@ string bad_html         "<body><p><em>Markup.ml<p>rocks!"
                         `Start_element "em"
                         `Text ["Markup.ml"]
                         ~report (1, 10) (`Unmatched_start_tag "em")
-                        `End_element                   (* /em: recovery *)
-                        `End_element                   (* /p: not an error *)
+                        `End_element                   (* </em>: recovery *)
+                        `End_element                   (* </p>: not an error *)
                         `Start_element "p"
                         `Start_element "em"            (* recovery *)
                         `Text ["rocks!"]
-                        `End_element                   (* /em *)
-                        `End_element                   (* /p *)
-                        `End_element                   (* /body *)
+                        `End_element                   (* </em> *)
+                        `End_element                   (* </p> *)
+                        `End_element                   (* </body> *)
 
 |> pretty_print         (* adjusts the `Text signals *)
 
