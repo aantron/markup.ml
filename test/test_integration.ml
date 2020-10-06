@@ -58,6 +58,15 @@ let tests = [
     |> to_list
     |> assert_equal [`Start_element ((Ns.svg, "a"), []); `End_element]);
 
+  ("integration.rb" >:: fun _ ->
+    "<rb>京<rt>きょう"
+    |> string
+    |> parse_html
+    |> signals
+    |> write_html
+    |> to_string
+    |> assert_equal "<ruby><rb>京</rb><rt>きょう</rt></ruby>");
+
   ("integration.pretty_print" >:: fun _ ->
     "<root>foo<nested>bar</nested><nested>baz</nested></root>"
     |> string
