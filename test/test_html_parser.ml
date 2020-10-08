@@ -515,6 +515,25 @@ let tests = [
         4, 12, S  `End_element;
         4, 12, S  `End_element]);
 
+  ("html.parser.ruby" >:: fun _ ->
+    expect "<rb>a<rt>b"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "body");
+        1,  1, E (`Misnested_tag ("rb", "body", []));
+        1,  1, S (start_element "rb");
+        1,  6, E (`Misnested_tag ("rt", "body", []));
+        1,  5, S (`Text ["a"]);
+        1,  6, S (start_element "rt");
+        1,  6, E (`Unmatched_start_tag "rt");
+        1,  1, E (`Unmatched_start_tag "rb");
+        1, 10, S (`Text ["b"]);
+        1, 11, S  `End_element;
+        1, 11, S  `End_element;
+        1, 11, S  `End_element;
+        1, 11, S  `End_element]);
+
   ("html.parser.truncated-body" >:: fun _ ->
     expect "<body>"
       [ 1,  1, S (start_element "html");

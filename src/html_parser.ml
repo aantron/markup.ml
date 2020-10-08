@@ -1969,25 +1969,33 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         reconstruct_active_formatting_elements (fun () ->
         push_and_emit l t mode))
 
-    | l, `Start ({name = "rb" | "rp" | "rtc"} as t) ->
+    | l, `Start ({name = "rb" | "rtc"} as t) ->
       (fun mode' ->
-        if Stack.in_scope open_elements "ruby" then
-          pop_implied l (fun () ->
+        let finish () =
           if Stack.current_element_is open_elements ["ruby"] then
             mode' ()
           else
-            misnested_tag l t context_name mode'))
+            misnested_tag l t context_name mode'
+        in
+        if Stack.in_scope open_elements "ruby" then
+          pop_implied l finish
+        else
+          finish ())
       (fun () ->
         push_and_emit l t mode)
 
-    | l, `Start ({name = "rt"} as t) ->
+    | l, `Start ({name = "rp" | "rt"} as t) ->
       (fun mode' ->
-        if Stack.in_scope open_elements "ruby" then
-          pop_implied ~except:"rtc" l (fun () ->
+        let finish () =
           if Stack.current_element_is open_elements ["ruby"; "rtc"] then
             mode' ()
           else
-            misnested_tag l t context_name mode'))
+            misnested_tag l t context_name mode'
+        in
+        if Stack.in_scope open_elements "ruby" then
+          pop_implied ~except:"rtc" l finish
+        else
+          finish ())
       (fun () ->
         push_and_emit l t mode)
 
