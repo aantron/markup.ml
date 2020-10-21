@@ -1,19 +1,7 @@
-(* -*- tuareg -*- *)
-
-let preprocess =
-  match Sys.getenv "BISECT_ENABLE" with
-  | "yes" -> "(preprocess (pps bisect_ppx))"
-  | _ -> ""
-  | exception Not_found -> ""
-
-let () = Jbuild_plugin.V1.send @@ {|
-
 (library
  (name markup)
  (public_name markup)
  (synopsis "Error-recovering functional HTML5 and XML parsers")
- |} ^ preprocess ^ {|
+ (instrumentation (backend bisect_ppx))
  (libraries uutf)
  (flags (:standard -w +A-4-9-44-48 -warn-error -3-4-9-44-48 -safe-string)))
-
-|}

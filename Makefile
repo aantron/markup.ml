@@ -9,15 +9,14 @@ entities :
 	dune exec src/translate_entities/translate_entities.exe \
 	  > src/entities.ml
 
-COVERAGE := _coverage
-
 .PHONY : test
 test :
 	dune runtest
 
 .PHONY : coverage
 coverage :
-	BISECT_ENABLE=yes dune runtest --force
+	find . -name '*.coverage' | xargs rm -f
+	dune runtest --instrument-with bisect_ppx --force
 	bisect-ppx-report html --expect src/ --do-not-expect src/translate_entities/
 	bisect-ppx-report summary
 	@echo See _coverage/index.html
@@ -109,4 +108,4 @@ check-doc-prereqs :
 clean :
 	rm -rf $(HTML) $(PUBLISH) $(DOC_ZIP)
 	dune clean
-	rm -rf $(COVERAGE)
+	rm -rf _coverage
