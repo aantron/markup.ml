@@ -1,6 +1,6 @@
 .PHONY : build
 build :
-	dune build
+	dune build -p markup,markup-lwt
 
 # This is not part of the ordinary build process. The output file, entities.ml,
 # is checked into git.
@@ -12,7 +12,7 @@ entities :
 COVERAGE := _coverage
 
 .PHONY : test
-test : build
+test :
 	dune runtest
 
 .PHONY : coverage

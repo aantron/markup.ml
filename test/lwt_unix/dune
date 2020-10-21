@@ -3,7 +3,7 @@
  (libraries lwt.unix markup-lwt.unix ounit2 test_support)
  (flags (:standard -w +A-44)))
 
-(alias
- (name runtest)
+(rule
+ (alias runtest)
  (package markup-lwt)
  (action (run %{exe:test_lwt.exe} -runner sequential)))

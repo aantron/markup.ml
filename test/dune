@@ -3,7 +3,7 @@
  (libraries markup ounit2 test_support)
  (flags (:standard -w +A-44-48)))
 
-(alias
- (name runtest)
+(rule
+ (alias runtest)
  (package markup)
  (action (run %{exe:test.exe} -runner sequential)))
