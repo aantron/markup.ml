@@ -338,6 +338,11 @@ let pretty_print signals =
           [`Text [indent indentation]]
           (phrasing indentation 0) throw e k
 
+      | `Doctype _ ->
+        list
+          [signal; `Text ["\n"]]
+          (flow indentation) throw e k
+
       | _ ->
         list
           [signal]
@@ -362,6 +367,8 @@ let pretty_print signals =
           [signal]
           (phrasing indentation phrasing_nesting_level) throw e k
 
+      (* | `Start_element _ | `End_element | `Doctype _ | `Xml _ | `PI _
+      | `Comment _ -> *)
       | _ ->
         push signals signal;
         list
