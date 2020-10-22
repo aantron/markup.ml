@@ -399,9 +399,7 @@ foo</bar>
     example, if the first signal would be [`Doctype], the context is set to
     [`Document], but if the first signal would be [`Start_element "td"], the
     context is set to [`Fragment "tr"]. If the first signal would be
-    [`Start_element "g"], the context is set to [`Fragment "svg"].
-
- *)
+    [`Start_element "g"], the context is set to [`Fragment "svg"]. *)
 
 val write_html :
   ?escape_attribute:(string -> string) ->
@@ -409,8 +407,7 @@ val write_html :
   ([< signal ], 's) stream -> (char, 's) stream
 (** Similar to {!write_xml}, but emits HTML5 instead of XML.
     If [~escape_attribute] and/or [~escape_text] are provided,
-    they are used instead of default escaping functions.
-*)
+    they are used instead of default escaping functions. *)
 
 
 
