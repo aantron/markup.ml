@@ -296,15 +296,6 @@ content ::= `Text | element | `PI | `Comment
     exceeds about [Sys.max_string_length / 2], they will emit a [`Text] signal
     with several strings. *)
 
-type content_signal =
-  [ `Start_element of name * (name * string) list
-  | `End_element
-  | `Text of string list ]
-(** A restriction of type {!signal} to only elements and text, i.e. no comments,
-    processing instructions, or declarations. This can be useful for pattern
-    matching in applications that only care about the content and element
-    structure of a document. See the helper {!content}. *)
-
 val signal_to_string : [< signal ] -> string
 (** Provides a human-readable representation of signals for debugging. *)
 
@@ -545,7 +536,7 @@ val to_list : ('a, sync) stream -> 'a list
 
 (** {2 Utility} *)
 
-val content : ([< signal ], 's) stream -> (content_signal, 's) stream
+val content : ([< signal ], 's) stream -> (signal, 's) stream
 (** Converts a {!signal} stream into a {!content_signal} stream by filtering out
     all signals besides [`Start_element], [`End_element], and [`Text]. *)
 
@@ -677,7 +668,7 @@ val text : ([< signal ], 's) stream -> (char, 's) stream
     [`Text ss] signal, the result stream has the bytes of the strings [ss], and
     all other signals are ignored. *)
 
-val trim : ([> content_signal ] as 'a, 's) stream -> ('a, 's) stream
+val trim : (signal, 's) stream -> (signal, 's) stream
 (** Trims insignificant whitespace in an HTML signal stream. Whitespace around
     flow ("block") content does not matter, but whitespace in phrasing
     ("inline") content does. So, if the input stream is
@@ -707,7 +698,7 @@ val normalize_text :
     after parsing, or generating streams from scratch, and would like to clean
     up the [`Text] signals. *)
 
-val pretty_print : ([> content_signal ] as 'a, 's) stream -> ('a, 's) stream
+val pretty_print : (signal, 's) stream -> (signal, 's) stream
 (** Adjusts the whitespace in the [`Text] signals in the given stream so that
     the output appears nicely-indented when the stream is converted to bytes and
     written.

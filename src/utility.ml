@@ -238,7 +238,7 @@ let rec trim_string_list trim = function
 let trim signals =
   let signals = normalize_text signals in
 
-  let signals_and_flow : ('signal * bool) Kstream.t =
+  let signals_and_flow =
     Kstream.transform begin fun phrasing_nesting_level signal _throw k ->
       match signal with
       | `Start_element (name, _) ->
