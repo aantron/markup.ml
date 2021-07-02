@@ -426,6 +426,17 @@ let tests = [
        10, 13, S  `End_element;
        10, 13, S  `End_element]);
 
+  ("html.parser.attributes" >:: fun _ ->
+    expect "<div :class='foo'></div>"
+      [ 1,  1, S (start_element "html");
+        1,  1, S (start_element "head");
+        1,  1, S  `End_element;
+        1,  1, S (start_element "body");
+        1,  1, S (`Start_element ((html_ns, "div"), [(("", ":class"), "foo")]));
+        1, 19, S  `End_element;
+        1, 25, S  `End_element;
+        1, 25, S  `End_element]);
+
   ("html.parser.links" >:: fun _ ->
     expect
       {|<a href="foo.com?bar=on&acte=123">foo</a>|}
