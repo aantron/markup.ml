@@ -433,9 +433,10 @@ let tests = [
         1,  1, S (start_element "head");
         1,  1, S  `End_element;
         1,  1, S (start_element "body");
-        1, 1, S (`Start_element ((html_ns, "a"), [(("", "href"), "foo.com?bar=on&acte=123")]));
-        1,  35, S (`Text ["foo"]);
-        1,  38, S  `End_element;
+        1,  1, S (`Start_element ((html_ns, "a"),
+          [(("", "href"), "foo.com?bar=on&acte=123")]));
+        1, 35, S (`Text ["foo"]);
+        1, 38, S  `End_element;
         1, 42, S  `End_element;
         1, 42, S  `End_element];
 
@@ -445,9 +446,10 @@ let tests = [
         1,  1, S (start_element "head");
         1,  1, S  `End_element;
         1,  1, S (start_element "body");
-        1, 1, S (`Start_element ((html_ns, "a"), [(("", "href"), "foo.com?bar=on&image=on")]));
-        1,  35, S (`Text ["foo"]);
-        1,  38, S  `End_element;
+        1,  1, S (`Start_element ((html_ns, "a"),
+          [(("", "href"), "foo.com?bar=on&image=on")]));
+        1, 35, S (`Text ["foo"]);
+        1, 38, S  `End_element;
         1, 42, S  `End_element;
         1, 42, S  `End_element];
 
@@ -457,9 +459,10 @@ let tests = [
         1,  1, S (start_element "head");
         1,  1, S  `End_element;
         1,  1, S (start_element "body");
-        1, 1, S (`Start_element ((html_ns, "a"), [(("", "href"), "foo.com?bar=onℑ")]));
-        1,  33, S (`Text ["foo"]);
-        1,  36, S  `End_element;
+        1,  1, S (`Start_element ((html_ns, "a"),
+          [(("", "href"), "foo.com?bar=onℑ")]));
+        1, 33, S (`Text ["foo"]);
+        1, 36, S  `End_element;
         1, 40, S  `End_element;
         1, 40, S  `End_element]);
 
