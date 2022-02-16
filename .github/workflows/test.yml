@@ -19,7 +19,6 @@ jobs:
         - 4.05.0
         - 4.04.2
         - 4.03.0
-        - 4.02.3
 
     steps:
     - uses: actions/checkout@v2
