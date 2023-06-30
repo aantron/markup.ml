@@ -604,6 +604,18 @@ val trees :
     trees are emitted on the resulting stream, in the sequence that they appear
     in the input. *)
 
+val trees_with_loc :
+  ?text:(loc:location -> string list -> 'a) ->
+  ?element:(loc:location -> name -> (name * string) list -> 'a list -> 'a) ->
+  ?comment:(loc:location -> string -> 'a) ->
+  ?pi:(loc:location -> string -> string -> 'a) ->
+  ?xml:(loc:location -> xml_declaration -> 'a) ->
+  ?doctype:(loc:location -> doctype -> 'a) ->
+  's parser -> ('a, 's) stream
+(** Like {!tree}, but converts all top-level trees, not only the first one. The
+    trees are emitted on the resulting stream, in the sequence that they appear
+    in the input. *)
+
 type 'a node =
   [ `Element of name * (name * string) list * 'a list
   | `Text of string
@@ -890,6 +902,16 @@ sig
     ?xml:(xml_declaration -> 'a) ->
     ?doctype:(doctype -> 'a) ->
     ([< signal ], _) stream -> 'a option io
+
+  val tree_with_loc :
+    ?text:(loc:location -> string list -> 'a) ->
+    ?element:(loc:location -> name -> (name * string) list -> 'a list -> 'a) ->
+    ?comment:(loc:location -> string -> 'a) ->
+    ?pi:(loc:location -> string -> string -> 'a) ->
+    ?xml:(loc:location -> xml_declaration -> 'a) ->
+    ?doctype:(loc:location -> doctype -> 'a) ->
+    's parser -> 'a option io
+
 end
 
 (**/**)

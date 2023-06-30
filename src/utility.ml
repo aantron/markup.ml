@@ -118,6 +118,68 @@ let from_tree f node =
 
   traverse [] node |> List.rev |> of_list
 
+type ('data, 'sync) stream = 'data Kstream.t
+
+type 's parser =
+  {mutable location : location;
+   mutable signals  : (signal, 's) stream}
+
+let trees_with_loc ?text ?element ?comment ?pi ?xml ?doctype s =
+  let rec match_node throw k none =
+    let loc = s.location in
+    next s.signals throw none begin function
+      | `Start_element (name, attributes) ->
+        match_content [] throw (fun children ->
+        match element with
+        | None -> match_node throw k none
+        | Some element -> k (element ~loc name attributes children))
+
+      | `End_element -> none ()
+
+      | `Text ss ->
+        begin match text with
+        | None -> match_node throw k none
+        | Some text -> k (text ~loc ss)
+        end
+
+      | `Doctype d ->
+        begin match doctype with
+        | None -> match_node throw k none
+        | Some doctype -> k (doctype ~loc d)
+        end
+
+      | `Xml x ->
+        begin match xml with
+        | None -> match_node throw k none
+        | Some xml -> k (xml ~loc x)
+        end
+
+      | `PI (t, s) ->
+        begin match pi with
+        | None -> match_node throw k none
+        | Some pi -> k (pi ~loc t s)
+        end
+
+      | `Comment s ->
+        begin match comment with
+        | None -> match_node throw k none
+        | Some comment -> k (comment ~loc s)
+        end
+    end
+
+  and match_content acc throw k =
+    match_node throw
+      (fun n -> match_content (n::acc) throw k)
+      (fun () -> k (List.rev acc))
+
+  in
+
+  (fun throw e k -> match_node throw k e) |> make
+
+let tree_with_loc ?text ?element ?comment ?pi ?xml ?doctype s throw k =
+  let s' = trees_with_loc ?text ?element ?comment ?pi ?xml ?doctype s in
+  next s' throw (fun () -> k None) (fun t -> k (Some t))
+
 let elements select s =
   let depth = ref 0 in
   let started = ref 0 in
