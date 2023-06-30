@@ -28,6 +28,7 @@ jobs:
       with:
         ocaml-compiler: ${{matrix.ocaml}}
     - run: sudo apt-get install python3-bs4
+    - run: opam update
     - run: opam install --deps-only --with-test . --yes
     - run: opam install js_of_ocaml --yes
 
