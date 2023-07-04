@@ -14,6 +14,10 @@ type token =
 
 type state = [ `Data | `RCDATA | `RAWTEXT | `Script_data | `PLAINTEXT ]
 
+(* from https://www.w3.org/TR/REC-html40/index/attributes.html *)
+let uri_type = [ "action"; "background" ; "cite"; "classid"; "codebase"
+               ; "data"; "href"; "longdesc"; "profile"; "src"; "usemap" ]
+
 let replace_windows_1252_entity = function
   | 0x80 -> 0x20AC
   | 0x82 -> 0x201A
@@ -347,20 +351,23 @@ let tokenize report (input, get_location) =
                   k (Some code_points))
                 in
 
-                if not in_attribute then unterminated ()
-                else
+                match in_attribute with
+                | None -> unterminated ()
+                | Some name ->
+                   let uri = List.mem name uri_type in
                   match maybe_v with
                   | Some ((_, c) as v) when is_alphanumeric c ->
                     push_list input (List.rev (v::matched));
                     k None
                   | Some ((_, 0x003D) as v) ->
                     push_list input (List.rev (v::matched));
-
-                    report location
-                      (`Bad_token ("&" ^ text ^ "=", "attribute",
-                        "unterminated entity reference followed by '='"))
-                      !throw(fun () ->
-                    k None)
+                     if not uri then
+                       report location
+                         (`Bad_token ("&" ^ text ^ "=", "attribute",
+                                      "unterminated entity reference followed by '='"))
+                         !throw(fun () ->
+                           k None)
+                     else k None
                   | _ -> unterminated ())
         in
 
@@ -408,7 +415,7 @@ let tokenize report (input, get_location) =
 
   (* 8.2.4.2, 8.2.4.4. *)
   and character_reference_state state l =
-    consume_character_reference false None l begin function
+    consume_character_reference None None l begin function
       | None ->
         emit (l, `Char 0x0026) state
 
@@ -1052,8 +1059,9 @@ let tokenize report (input, get_location) =
         after_attribute_value_quoted_state l' tag
 
       | Some (l, 0x0026) ->
-        character_reference_in_attribute quote l value_buffer (fun () ->
-        attribute_value_quoted_state quote l' tag name value_buffer)
+         character_reference_in_attribute quote (Some name) l value_buffer
+           (fun () ->
+             attribute_value_quoted_state quote l' tag name value_buffer)
 
       | Some (l, 0) ->
         report l (`Bad_token ("U+0000", "attribute value", "null")) !throw
@@ -1079,8 +1087,9 @@ let tokenize report (input, get_location) =
         before_attribute_name_state l' tag
 
       | Some (l, 0x0026) ->
-        character_reference_in_attribute 0x003E l value_buffer (fun () ->
-        attribute_value_unquoted_state l' tag name value_buffer)
+         character_reference_in_attribute 0x003E (Some name) l value_buffer
+           (fun () ->
+             attribute_value_unquoted_state l' tag name value_buffer)
 
       | Some (_, 0x003E) ->
         tag.attributes <-
@@ -1108,8 +1117,8 @@ let tokenize report (input, get_location) =
     end
 
   (* 8.2.4.41. *)
-  and character_reference_in_attribute allowed l value_buffer k =
-    consume_character_reference true (Some allowed) l begin function
+  and character_reference_in_attribute allowed name l value_buffer k =
+    consume_character_reference name (Some allowed) l begin function
       | None ->
         add_utf_8 value_buffer 0x0026;
         k ()

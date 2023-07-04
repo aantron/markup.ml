@@ -24,8 +24,8 @@ let expect ?prefix ?(context = Some `Document) text signals =
   text
   |> Markup__Stream_io.string
   |> Markup__Encoding.utf_8
-  |> Markup__Input.preprocess is_valid_html_char Error.ignore_errors
-  |> Markup__Html_tokenizer.tokenize Error.ignore_errors
+  |> Markup__Input.preprocess is_valid_html_char report
+  |> Markup__Html_tokenizer.tokenize report
   |> Markup__Html_parser.parse context report
   |> iter iterate;
 
@@ -740,6 +740,7 @@ let tests = [
         1,  1, S (start_element "head");
         1,  1, S  `End_element;
         1,  1, S (start_element "body");
+        1,  7, E (`Bad_token ("U+0000", "content", "null"));
         1,  7, E (`Bad_token ("U+0000", "body", "null"));
         1,  8, E (`Bad_document "doctype should be first");
         1, 23, E (`Misnested_tag ("html", "body", []));
@@ -937,11 +938,13 @@ let tests = [
 
   ("html.parser.nulls" >:: fun _ ->
     expect ~context:(Some (`Fragment "svg")) "\x00foo"
-      [ 1,  1, E (`Bad_token ("U+0000", "foreign content", "null"));
+      [ 1,  1, E (`Bad_token ("U+0000", "content", "null"));
+        1,  1, E (`Bad_token ("U+0000", "foreign content", "null"));
         1,  1, S (`Text ["\xef\xbf\xbdfoo"])];
 
     expect ~context:(Some (`Fragment "body")) "<table>\x00foo</table>"
       [ 1,  1, S (start_element "table");
+        1,  8, E (`Bad_token ("U+0000", "content", "null"));
         1,  8, E (`Bad_token ("U+0000", "table", "null"));
         1,  9, E (`Bad_content "table");
         1, 10, E (`Bad_content "table");
@@ -950,7 +953,8 @@ let tests = [
         1, 12, S  `End_element];
 
     expect ~context:(Some (`Fragment "select")) "\x00foo"
-      [ 1,  1, E (`Bad_token ("U+0000", "select", "null"));
+      [ 1,  1, E (`Bad_token ("U+0000", "content", "null"));
+        1,  1, E (`Bad_token ("U+0000", "select", "null"));
         1,  2, S (`Text ["foo"])]);
 
   ("html.parser.foreign.cdata" >:: fun _ ->
