@@ -319,8 +319,6 @@ struct
 
   let adjust_svg_attributes attributes =
     attributes |> List.map (fun ((ns, name), value) ->
-      if ns <> svg_ns then (ns, name), value
-      else
         let name =
           match name with
           | "attributename" -> "attributeName"
