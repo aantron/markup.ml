@@ -811,18 +811,18 @@ let tests = [
         1, 29, S  `End_element;
         1, 29, S  `End_element]);
 
-  ("html.parser.foreign" >:: fun _ ->
-    expect "<body><svg viewBox=\"0 0 24 24\"><g/></svg></body>"
+  ("html.parser.foreign.attribute" >:: fun _ ->
+    expect "<body><svg refX=\"\"><g/></svg></body>"
       [ 1,  1, S (start_element "html");
         1,  1, S (start_element "head");
         1,  1, S  `End_element;
         1,  1, S (start_element "body");
-        1,  7, S (`Start_element ((svg_ns, "svg"), [ ("", "viewBox"), "0 0 24 24" ]));
-        1, 32, S (`Start_element ((svg_ns, "g"), []));
-        1, 32, S  `End_element;
-        1, 36, S  `End_element;
-        1, 49, S  `End_element;
-        1, 49, S  `End_element]);
+        1,  7, S (`Start_element ((svg_ns, "svg"), [("", "refX"), ""]));
+        1, 20, S (`Start_element ((svg_ns, "g"), []));
+        1, 20, S  `End_element;
+        1, 24, S  `End_element;
+        1, 37, S  `End_element;
+        1, 37, S  `End_element]);
 
   ("html.parser.foreign.svg-followed-by-html" >:: fun _ ->
     expect ~context:(Some (`Fragment "body"))
