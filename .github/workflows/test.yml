@@ -8,6 +8,8 @@ jobs:
       fail-fast: false
       matrix:
         ocaml:
+        - 5.00.0
+        - 4.14.1
         - 4.13.1
         - 4.12.1
         - 4.11.2
@@ -21,11 +23,11 @@ jobs:
         - 4.03.0
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: ${{matrix.ocaml}}
-    - run: sudo apt-get install python-bs4
+    - run: sudo apt-get install python3-bs4
     - run: opam install --deps-only --with-test . --yes
     - run: opam install js_of_ocaml --yes
 

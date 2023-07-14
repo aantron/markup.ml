@@ -592,6 +592,17 @@ element ::= `Start_element node* `End_element
     See {!trees} if the input stream might have multiple top-level trees. This
     function [tree] only retrieves the first one. *)
 
+val tree_with_loc :
+  ?text:(location -> string list -> 'a) ->
+  ?element:(location -> name -> (name * string) list -> 'a list -> 'a) ->
+  ?comment:(location -> string -> 'a) ->
+  ?pi:(location -> string -> string -> 'a) ->
+  ?xml:(location -> xml_declaration -> 'a) ->
+  ?doctype:(location -> doctype -> 'a) ->
+  's parser -> 'a option
+(** Like {!tree}, but the location (i.e. line and column of the beginning of
+    the input) is passed to each function. *)
+
 val trees :
   ?text:(string list -> 'a) ->
   ?element:(name -> (name * string) list -> 'a list -> 'a) ->
@@ -603,6 +614,17 @@ val trees :
 (** Like {!tree}, but converts all top-level trees, not only the first one. The
     trees are emitted on the resulting stream, in the sequence that they appear
     in the input. *)
+
+val trees_with_loc :
+  ?text:(location -> string list -> 'a) ->
+  ?element:(location -> name -> (name * string) list -> 'a list -> 'a) ->
+  ?comment:(location -> string -> 'a) ->
+  ?pi:(location -> string -> string -> 'a) ->
+  ?xml:(location -> xml_declaration -> 'a) ->
+  ?doctype:(location -> doctype -> 'a) ->
+  's parser -> ('a, 's) stream
+(** Like {!trees}, but the location (i.e. line and column of the beginning of
+    the input) is passed to each function. *)
 
 type 'a node =
   [ `Element of name * (name * string) list * 'a list
@@ -890,6 +912,16 @@ sig
     ?xml:(xml_declaration -> 'a) ->
     ?doctype:(doctype -> 'a) ->
     ([< signal ], _) stream -> 'a option io
+
+  val tree_with_loc :
+    ?text:(location -> string list -> 'a) ->
+    ?element:(location -> name -> (name * string) list -> 'a list -> 'a) ->
+    ?comment:(location -> string -> 'a) ->
+    ?pi:(location -> string -> string -> 'a) ->
+    ?xml:(location -> xml_declaration -> 'a) ->
+    ?doctype:(location -> doctype -> 'a) ->
+    's parser -> 'a option io
+
 end
 
 (**/**)
