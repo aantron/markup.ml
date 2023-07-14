@@ -238,12 +238,12 @@ sig
     ([< signal ], _) stream -> 'a option io
 
   val tree_with_loc :
-    ?text:(loc:location -> string list -> 'a) ->
-    ?element:(loc:location -> name -> (name * string) list -> 'a list -> 'a) ->
-    ?comment:(loc:location -> string -> 'a) ->
-    ?pi:(loc:location -> string -> string -> 'a) ->
-    ?xml:(loc:location -> xml_declaration -> 'a) ->
-    ?doctype:(loc:location -> doctype -> 'a) ->
+    ?text:(location -> string list -> 'a) ->
+    ?element:(location -> name -> (name * string) list -> 'a list -> 'a) ->
+    ?comment:(location -> string -> 'a) ->
+    ?pi:(location -> string -> string -> 'a) ->
+    ?xml:(location -> xml_declaration -> 'a) ->
+    ?doctype:(location -> doctype -> 'a) ->
     's parser -> 'a option io
 
 end

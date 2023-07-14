@@ -126,44 +126,45 @@ type 's parser =
 
 let trees_with_loc ?text ?element ?comment ?pi ?xml ?doctype s =
   let rec match_node throw k none =
-    let loc = s.location in
-    next s.signals throw none begin function
+    next s.signals throw none begin fun signal ->
+      let loc = s.location in
+      match signal with
       | `Start_element (name, attributes) ->
         match_content [] throw (fun children ->
         match element with
         | None -> match_node throw k none
-        | Some element -> k (element ~loc name attributes children))
+        | Some element -> k (element loc name attributes children))
 
       | `End_element -> none ()
 
       | `Text ss ->
         begin match text with
         | None -> match_node throw k none
-        | Some text -> k (text ~loc ss)
+        | Some text -> k (text loc ss)
         end
 
       | `Doctype d ->
         begin match doctype with
         | None -> match_node throw k none
-        | Some doctype -> k (doctype ~loc d)
+        | Some doctype -> k (doctype loc d)
         end
 
       | `Xml x ->
         begin match xml with
         | None -> match_node throw k none
-        | Some xml -> k (xml ~loc x)
+        | Some xml -> k (xml loc x)
         end
 
       | `PI (t, s) ->
         begin match pi with
         | None -> match_node throw k none
-        | Some pi -> k (pi ~loc t s)
+        | Some pi -> k (pi loc t s)
         end
 
       | `Comment s ->
         begin match comment with
         | None -> match_node throw k none
-        | Some comment -> k (comment ~loc s)
+        | Some comment -> k (comment loc s)
         end
     end
 
