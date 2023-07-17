@@ -4,6 +4,7 @@
 open Common
 
 val parse :
+  ?get_opens : ((unit -> open_elements) option ref) ->
   [< `Document | `Fragment ] option ->
   (string -> string option) ->
   (open_elements -> Error.parse_handler) ->

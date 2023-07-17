@@ -7,11 +7,13 @@ open Token_tag
 
 let is_whitespace_only strings = List.for_all is_whitespace_only strings
 
-let parse context namespace report tokens =
+let parse ?(get_opens=ref None) context namespace report tokens =
   let open_elements = ref [] in
-  let report =
-    report (List.map (fun (l,name,_,attrs) -> (name,l,attrs)) !open_elements)
+  let opens () =
+    List.map (fun (l,name,_,attrs) -> (name,l,attrs)) !open_elements
   in
+  get_opens := Some opens;
+  let report l error throw k = report (opens ()) l error throw k in
   let namespaces = Namespace.Parsing.init namespace in
   let is_fragment = ref false in
   let fragment_allowed = ref true in

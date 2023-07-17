@@ -93,12 +93,15 @@ struct
   let parse_xml
       report ?encoding namespace entity context source =
     let with_encoding (encoding : Encoding.t) k =
-      let report' = report [] in
+      let get_opens = ref None in
+      let parse = Xml_parser.parse ~get_opens context namespace report in
+      let report' x =
+        report (match !get_opens with None -> [] | Some f -> f ()) x in
       source
       |> encoding ~report:report'
       |> Input.preprocess Common.is_valid_xml_char report'
       |> Xml_tokenizer.tokenize report' entity
-      |> Xml_parser.parse context namespace report
+      |> parse
       |> k
     in
 
@@ -120,14 +123,15 @@ struct
 
   let parse_html report ?encoding context source =
     let get_opens = ref None in
-    let parse = Html_parser.parse ~get_opens in
-    let report' = report (match !get_opens with None -> [] | Some f -> f ()) in
+    let parse = Html_parser.parse ~get_opens context report in
+    let report' x =
+      report (match !get_opens with None -> [] | Some f -> f ()) x in
     let with_encoding (encoding : Encoding.t) k =
       source
       |> encoding ~report:report'
       |> Input.preprocess Common.is_valid_html_char report'
       |> Html_tokenizer.tokenize report'
-      |> parse context report
+      |> parse
       |> k
     in
 
