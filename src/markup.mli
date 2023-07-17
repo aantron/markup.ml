@@ -228,6 +228,9 @@ end
 (** {2 Signals} *)
 
 type name = string * string
+type attributes = (name * string) list
+type open_elements = (name * location * attributes) list
+
 (** Expanded name: a namespace URI followed by a local name. *)
 
 type xml_declaration =
@@ -320,7 +323,7 @@ val location : _ parser -> location
 (** {2 XML} *)
 
 val parse_xml :
-  ?report:(location -> Error.t -> unit) ->
+  ?report:(open_elements -> location -> Error.t -> unit) ->
   ?encoding:Encoding.t ->
   ?namespace:(string -> string option) ->
   ?entity:(string -> string option) ->
@@ -370,7 +373,7 @@ val write_xml :
 (** {2 HTML} *)
 
 val parse_html :
-  ?report:(location -> Error.t -> unit) ->
+  ?report:(open_elements -> location -> Error.t -> unit) ->
   ?encoding:Encoding.t ->
   ?context:[< `Document | `Fragment of string ] ->
   (char, 's) stream -> 's parser
@@ -825,7 +828,7 @@ sig
   (** {2 XML} *)
 
   val parse_xml :
-    ?report:(location -> Error.t -> unit io) ->
+    ?report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
@@ -840,7 +843,7 @@ sig
   (** {2 HTML} *)
 
   val parse_html :
-    ?report:(location -> Error.t -> unit io) ->
+    ?report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser

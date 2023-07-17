@@ -1022,12 +1022,6 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
   let ended = ref (fun _ -> ()) in
   let output = ref (fun _ -> ()) in
 
-  let report_if = Error.report_if report in
-  let unmatched_end_tag l name k =
-    report l (`Unmatched_end_tag name) !throw k in
-  let misnested_tag l t context_name k =
-    report l (`Misnested_tag (t.name, context_name, t.Token_tag.attributes)) !throw k in
-
   let open_elements = Stack.create () in
   let active_formatting_elements = Active.create () in
   let subtree_buffer = Subtree.create open_elements in
@@ -1041,6 +1035,20 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   set_foreign (fun () ->
     Stack.current_element_is_foreign context open_elements);
+
+  let report l error throw k =
+    let elts = List.map
+                 (fun e ->
+                   let (ns, s) = e.element_name in
+                   ((Ns.to_string ns, s), e.location, e.attributes))
+                 !open_elements
+    in
+    report elts l error throw k in
+  let report_if = Error.report_if report in
+  let unmatched_end_tag l name k =
+    report l (`Unmatched_end_tag name) !throw k in
+  let misnested_tag l t context_name k =
+    report l (`Misnested_tag (t.name, context_name, t.Token_tag.attributes)) !throw k in
 
   let report_if_stack_has_other_than names k =
     let rec iterate = function

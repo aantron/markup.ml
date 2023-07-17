@@ -5,7 +5,7 @@ open Common
 
 val parse :
   [< `Document | `Fragment of string ] option ->
-  Error.parse_handler ->
+  (open_elements -> Error.parse_handler) ->
   (location * Html_tokenizer.token) Kstream.t *
   (Html_tokenizer.state -> unit) *
   ((unit -> bool) -> unit) ->

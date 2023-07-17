@@ -9,6 +9,9 @@ let is_whitespace_only strings = List.for_all is_whitespace_only strings
 
 let parse context namespace report tokens =
   let open_elements = ref [] in
+  let report =
+    report (List.map (fun (l,name,_,attrs) -> (name,l,attrs)) !open_elements)
+  in
   let namespaces = Namespace.Parsing.init namespace in
   let is_fragment = ref false in
   let fragment_allowed = ref true in
@@ -45,7 +48,7 @@ let parse context namespace report tokens =
     in
 
     deduplicate [] attributes (fun attributes ->
-    open_elements := (l, expanded_name, raw_name)::!open_elements;
+    open_elements := (l, expanded_name, raw_name, attributes)::!open_elements;
     emit l (`Start_element (expanded_name, attributes)) state))
 
   and pop l state =
@@ -190,7 +193,7 @@ let parse context namespace report tokens =
 
         let is_on_stack =
           !open_elements
-          |> List.exists (fun (_, name, _) -> name = expanded_name)
+          |> List.exists (fun (_, name, _, _) -> name = expanded_name)
         in
 
         if not is_on_stack then
@@ -198,13 +201,13 @@ let parse context namespace report tokens =
         else
           let rec pop_until_match () =
             match !open_elements with
-            | (_, name, _)::_ when name = expanded_name ->
+            | (_, name, _, _)::_ when name = expanded_name ->
               pop l (fun () ->
               match !open_elements with
               | [] when not !is_fragment -> after_root_state ()
               | _ -> content_state ())
 
-            | (l', _, name)::_ ->
+            | (l', _, name, _)::_ ->
               report l' (`Unmatched_start_tag name) !throw (fun () ->
               pop l pop_until_match)
 
@@ -225,7 +228,7 @@ let parse context namespace report tokens =
         let rec pop_stack () =
           match !open_elements with
           | [] -> emit_end ()
-          | (l', _, raw_name)::_ ->
+          | (l', _, raw_name, _)::_ ->
             report l' (`Unmatched_start_tag raw_name) !throw (fun () ->
             pop l pop_stack)
         in
