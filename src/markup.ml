@@ -56,6 +56,8 @@ module Error = Error
 
 
 type name = Common.name
+type attributes = (name * string) list
+type open_elements = (name * location * attributes) list
 
 type xml_declaration = Common.xml_declaration =
   {version    : string;
@@ -91,11 +93,15 @@ struct
   let parse_xml
       report ?encoding namespace entity context source =
     let with_encoding (encoding : Encoding.t) k =
+      let get_opens = ref None in
+      let parse = Xml_parser.parse ~get_opens context namespace report in
+      let report' x =
+        report (match !get_opens with None -> [] | Some f -> f ()) x in
       source
-      |> encoding ~report
-      |> Input.preprocess Common.is_valid_xml_char report
-      |> Xml_tokenizer.tokenize report entity
-      |> Xml_parser.parse context namespace report
+      |> encoding ~report:report'
+      |> Input.preprocess Common.is_valid_xml_char report'
+      |> Xml_tokenizer.tokenize report' entity
+      |> parse
       |> k
     in
 
@@ -116,12 +122,16 @@ struct
     |> Utility.strings_to_bytes
 
   let parse_html report ?encoding context source =
+    let get_opens = ref None in
+    let parse = Html_parser.parse ~get_opens context report in
+    let report' x =
+      report (match !get_opens with None -> [] | Some f -> f ()) x in
     let with_encoding (encoding : Encoding.t) k =
       source
-      |> encoding ~report
-      |> Input.preprocess Common.is_valid_html_char report
-      |> Html_tokenizer.tokenize report
-      |> Html_parser.parse context report
+      |> encoding ~report:report'
+      |> Input.preprocess Common.is_valid_html_char report'
+      |> Html_tokenizer.tokenize report'
+      |> parse
       |> k
     in
 
@@ -190,6 +200,7 @@ sig
 
   val parse_xml :
     ?report:(location -> Error.t -> unit io) ->
+    ?detailed_report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
@@ -203,6 +214,7 @@ sig
 
   val parse_html :
     ?report:(location -> Error.t -> unit io) ->
+    ?detailed_report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser
@@ -248,6 +260,7 @@ end
 
 module Asynchronous (IO : IO) =
 struct
+  let wrap_report_ops report = fun ops l e -> IO.to_cps (fun () -> report ops l e)
   let wrap_report report = fun l e -> IO.to_cps (fun () -> report l e)
 
   module Encoding =
@@ -259,15 +272,20 @@ struct
   end
 
   let parse_xml
-      ?(report = fun _ _ -> IO.return ())
+      ?report ?detailed_report
       ?encoding
       ?(namespace = fun _ -> None)
       ?(entity = fun _ -> None)
       ?context
       source =
-
+    let report = match detailed_report, report with
+      | Some f, None -> f
+      | None, Some f -> (fun _ -> f)
+      | Some _, Some _ -> invalid_arg "both report and detailed_report given"
+      | None, None -> (fun _ _ _ -> IO.return ())
+    in
     Cps.parse_xml
-      (wrap_report report) ?encoding namespace entity context source
+      (wrap_report_ops report) ?encoding namespace entity context source
 
   let write_xml
       ?(report = fun _ _ -> IO.return ())
@@ -277,12 +295,17 @@ struct
     Cps.write_xml (wrap_report report) prefix signals
 
   let parse_html
-      ?(report = fun _ _ -> IO.return ())
+      ?report ?detailed_report
       ?encoding
       ?context
       source =
-
-    Cps.parse_html (wrap_report report) ?encoding context source
+    let report = match detailed_report, report with
+      | Some f, None -> f
+      | None, Some f -> (fun _ -> f)
+      | Some _, Some _ -> invalid_arg "both report and detailed_report given"
+      | None, None -> (fun _ _ _ -> IO.return ())
+    in
+    Cps.parse_html (wrap_report_ops report) ?encoding context source
 
   let write_html ?escape_attribute ?escape_text signals =
     Cps.write_html ?escape_attribute ?escape_text signals

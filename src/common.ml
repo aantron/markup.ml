@@ -12,6 +12,8 @@ let compare_locations (line, column) (line', column') =
   | order -> order
 
 type name = string * string
+type attributes = (name * string) list
+type open_elements = (name * location * attributes) list
 
 let xml_ns = "http://www.w3.org/XML/1998/namespace"
 let xmlns_ns = "http://www.w3.org/2000/xmlns/"

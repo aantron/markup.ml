@@ -228,6 +228,9 @@ end
 (** {2 Signals} *)
 
 type name = string * string
+type attributes = (name * string) list
+type open_elements = (name * location * attributes) list
+
 (** Expanded name: a namespace URI followed by a local name. *)
 
 type xml_declaration =
@@ -321,6 +324,7 @@ val location : _ parser -> location
 
 val parse_xml :
   ?report:(location -> Error.t -> unit) ->
+  ?detailed_report:(open_elements -> location -> Error.t -> unit) ->
   ?encoding:Encoding.t ->
   ?namespace:(string -> string option) ->
   ?entity:(string -> string option) ->
@@ -333,6 +337,10 @@ val parse_xml :
     If [~report] is provided, [report] is called for every error encountered.
     You may raise an exception in [report], and it will propagate to the code
     reading the signal stream.
+
+    [~detailed_report] is similar to report, but receive the list of
+    open_elements. You must only give [~report] or [~detailed_report] but not
+    both.
 
     If [~encoding] is {e not} specified, the parser detects the input encoding
     automatically. Otherwise, the given encoding is used.
@@ -371,6 +379,7 @@ val write_xml :
 
 val parse_html :
   ?report:(location -> Error.t -> unit) ->
+  ?detailed_report:(open_elements -> location -> Error.t -> unit) ->
   ?encoding:Encoding.t ->
   ?context:[< `Document | `Fragment of string ] ->
   (char, 's) stream -> 's parser
@@ -826,6 +835,7 @@ sig
 
   val parse_xml :
     ?report:(location -> Error.t -> unit io) ->
+    ?detailed_report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
@@ -841,6 +851,7 @@ sig
 
   val parse_html :
     ?report:(location -> Error.t -> unit io) ->
+    ?detailed_report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser
