@@ -119,13 +119,15 @@ struct
     |> Utility.strings_to_bytes
 
   let parse_html report ?encoding context source =
-    let report' = report [] in
+    let get_opens = ref None in
+    let parse = Html_parser.parse ~get_opens in
+    let report' = report (match !get_opens with None -> [] | Some f -> f ()) in
     let with_encoding (encoding : Encoding.t) k =
       source
       |> encoding ~report:report'
       |> Input.preprocess Common.is_valid_html_char report'
       |> Html_tokenizer.tokenize report'
-      |> Html_parser.parse context report
+      |> parse context report
       |> k
     in
 
