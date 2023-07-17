@@ -26,7 +26,7 @@ let expect ?prefix ?(context = Some `Document) text signals =
   |> Markup__Encoding.utf_8
   |> Markup__Input.preprocess is_valid_html_char Error.ignore_errors
   |> Markup__Html_tokenizer.tokenize Error.ignore_errors
-  |> Markup__Html_parser.parse context report
+  |> Markup__Html_parser.parse context (fun _ -> report)
   |> iter iterate;
 
   ended ()

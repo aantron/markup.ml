@@ -193,7 +193,8 @@ sig
   end
 
   val parse_xml :
-    ?report:(open_elements -> location -> Error.t -> unit io) ->
+    ?report:(location -> Error.t -> unit io) ->
+    ?detailed_report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?namespace:(string -> string option) ->
     ?entity:(string -> string option) ->
@@ -206,7 +207,8 @@ sig
     ([< signal ], _) stream -> (char, async) stream
 
   val parse_html :
-    ?report:(open_elements -> location -> Error.t -> unit io) ->
+    ?report:(location -> Error.t -> unit io) ->
+    ?detailed_report:(open_elements -> location -> Error.t -> unit io) ->
     ?encoding:Encoding.t ->
     ?context:[< `Document | `Fragment of string ] ->
     (char, _) stream -> async parser
@@ -264,13 +266,18 @@ struct
   end
 
   let parse_xml
-      ?(report = fun _ _ _ -> IO.return ())
+      ?report ?detailed_report
       ?encoding
       ?(namespace = fun _ -> None)
       ?(entity = fun _ -> None)
       ?context
       source =
-
+    let report = match detailed_report, report with
+      | Some f, None -> f
+      | None, Some f -> (fun _ -> f)
+      | Some _, Some _ -> invalid_arg "both report and detailed_report given"
+      | None, None -> (fun _ _ _ -> IO.return ())
+    in
     Cps.parse_xml
       (wrap_report_ops report) ?encoding namespace entity context source
 
@@ -282,11 +289,16 @@ struct
     Cps.write_xml (wrap_report report) prefix signals
 
   let parse_html
-      ?(report = fun _ _ _ -> IO.return ())
+      ?report ?detailed_report
       ?encoding
       ?context
       source =
-
+    let report = match detailed_report, report with
+      | Some f, None -> f
+      | None, Some f -> (fun _ -> f)
+      | Some _, Some _ -> invalid_arg "both report and detailed_report given"
+      | None, None -> (fun _ _ _ -> IO.return ())
+    in
     Cps.parse_html (wrap_report_ops report) ?encoding context source
 
   let write_html ?escape_attribute ?escape_text signals =
