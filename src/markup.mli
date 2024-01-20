@@ -665,10 +665,15 @@ val text : ([< signal ], 's) stream -> (char, 's) stream
     [`Text ss] signal, the result stream has the bytes of the strings [ss], and
     all other signals are ignored. *)
 
-val trim : (signal, 's) stream -> (signal, 's) stream
-(** Trims insignificant whitespace in an HTML signal stream. Whitespace around
-    flow ("block") content does not matter, but whitespace in phrasing
-    ("inline") content does. So, if the input stream is
+val trim :
+  ?preserve_whitespace:(name -> (name * string) list -> bool) ->
+  (signal, 's) stream ->
+  (signal, 's) stream
+(** Trims insignificant whitespace.
+
+    In an HTML signal stream, whitespace around flow ("block") content does not
+    matter, but whitespace in phrasing ("inline") content does. So, if the input
+    stream is
 
 {[
 <div>
@@ -684,7 +689,11 @@ val trim : (signal, 's) stream -> (signal, 's) stream
 <div><p><em>foo</em> bar</p></div>
 ]}
 
-    Note that whitespace around the [</em>] tag was preserved. *)
+    Note that whitespace around the [</em>] tag was preserved.
+
+    In an XML stream, whitespace is assumed to be insignificant unless an
+    ancestor element has the xml:space=preserve attribute. You can specify
+    [?preserve_whitespace] to preserve more or less whitespace. *)
 
 val normalize_text :
   ([> `Text of string list ] as 'a, 's) stream -> ('a, 's) stream
@@ -695,7 +704,10 @@ val normalize_text :
     after parsing, or generating streams from scratch, and would like to clean
     up the [`Text] signals. *)
 
-val pretty_print : (signal, 's) stream -> (signal, 's) stream
+val pretty_print :
+  ?preserve_whitespace:(name -> (name * string) list -> bool)
+  -> (signal, 's) stream
+  -> (signal, 's) stream
 (** Adjusts the whitespace in the [`Text] signals in the given stream so that
     the output appears nicely-indented when the stream is converted to bytes and
     written.
@@ -720,7 +732,11 @@ val pretty_print : (signal, 's) stream -> (signal, 's) stream
 
     Note that no whitespace was inserted around [<em>] and [</em>], because
     doing so would create a word break that wasn't present in the original
-    stream. *)
+    stream.
+
+    In an XML stream, whitespace is assumed to be insignificant unless an
+    ancestor element has the xml:space=preserve attribute. You can specify
+    [?preserve_whitespace] to control the whitespace changes. *)
 
 val html5 : ([< signal ], 's) stream -> (signal, 's) stream
 (** Converts a signal stream into an HTML5 signal stream by stripping any

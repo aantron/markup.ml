@@ -214,9 +214,12 @@ let normalize_text s =
 
   make match_other
 
-let is_phrasing_element (namespace, element_name) =
+let default_preserve_whitespace (namespace, element_name) attrs =
   if namespace <> html_ns then
-    false
+    List.exists
+      (fun ((ns, key), value) ->
+        ns = xml_ns && key = "space" && value = "preserve")
+      attrs
   else
     match element_name with
     | "a" | "abbr" | "b" | "bdi" | "bdo" | "br" | "button" | "cite" | "code"
@@ -235,17 +238,17 @@ let rec trim_string_list trim = function
     | "" -> trim_string_list trim more
     | s -> s::more
 
-let trim signals =
+let trim ?(preserve_whitespace = default_preserve_whitespace) signals =
   let signals = normalize_text signals in
 
   let signals_and_flow =
     Kstream.transform begin fun phrasing_nesting_level signal _throw k ->
       match signal with
-      | `Start_element (name, _) ->
+      | `Start_element (name, attrs) ->
         if phrasing_nesting_level > 0 then
           k ([signal, false], Some (phrasing_nesting_level + 1))
         else
-          if is_phrasing_element name then
+          if preserve_whitespace name attrs then
             k ([signal, false], Some 1)
           else
             k ([signal, true], Some 0)
@@ -295,8 +298,8 @@ let trim signals =
 
 let tab_width = 1
 
-let pretty_print signals =
-  let signals = trim signals in
+let pretty_print ?(preserve_whitespace = default_preserve_whitespace) signals =
+  let signals = trim ~preserve_whitespace signals in
 
   let indent n =
     let n = if n < 0 then 0 else n in
@@ -308,7 +311,7 @@ let pretty_print signals =
   and flow indentation throw e k =
     next signals throw e begin fun signal ->
       match signal with
-      | `Start_element (name, _) when not @@ is_phrasing_element name ->
+      | `Start_element (name, attrs) when not @@ preserve_whitespace name attrs ->
         (* If the next signal is `End_element, don't insert a line break. This
            is mainly for collapsing inherently empty tags like <meta> and
            <br>. *)
@@ -352,7 +355,7 @@ let pretty_print signals =
   and phrasing indentation phrasing_nesting_level throw e k =
     next signals throw e begin fun signal ->
       match signal with
-      | `Start_element (name, _) when is_phrasing_element name ->
+      | `Start_element (name, attrs) when preserve_whitespace name attrs ->
         list
           [signal]
           (phrasing indentation (phrasing_nesting_level + 1)) throw e k
