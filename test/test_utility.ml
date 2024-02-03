@@ -239,6 +239,51 @@ let tests = [
       `End_element;
       `Text ["\n"]]);
 
+  ("utility.pretty_print.xml" >:: fun _ ->
+    let parse_print ?preserve_whitespace () =
+      Markup.string (String.trim {|
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:r><w:rPr></w:rPr><w:t xml:space="preserve">a </w:t></w:r><w:r><w:rPr></w:rPr><w:t>b c</w:t></w:r>
+</w:document>
+|})
+      |> Markup.parse_xml
+      |> Markup.signals
+      |> pretty_print ?preserve_whitespace
+      |> Markup.write_xml
+      |> Markup.to_string
+    in
+    assert_equal ~printer:Fun.id (parse_print ()) (String.trim {|
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:r>
+  <w:rPr/>
+  <w:t xml:space="preserve">a </w:t>
+ </w:r>
+ <w:r>
+  <w:rPr/>
+  <w:t>
+   b c
+  </w:t>
+ </w:r>
+</w:document>
+|} ^ "\n");
+    let preserve_whitespace name _ =
+      name = ("http://schemas.openxmlformats.org/wordprocessingml/2006/main", "t")
+    in
+    assert_equal ~printer:Fun.id (parse_print ~preserve_whitespace ()) (String.trim {|
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:r>
+  <w:rPr/>
+  <w:t xml:space="preserve">a </w:t>
+ </w:r>
+ <w:r>
+  <w:rPr/>
+  <w:t>b c</w:t>
+ </w:r>
+</w:document>
+|} ^ "\n");
+  );
+
   ("utility.html5" >:: fun _ ->
     [doctype;
      doctype;
