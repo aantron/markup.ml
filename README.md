@@ -1,7 +1,5 @@
-# Markup.ml &nbsp; [![CI status][ci-img]][ci] [![Coverage][coveralls-img]][coveralls]
+# Markup.ml &nbsp; [![Coverage][coveralls-img]][coveralls]
 
-[ci]:            https://github.com/aantron/markup.ml/actions
-[ci-img]:        https://img.shields.io/github/workflow/status/aantron/markup.ml/test/master
 [coveralls]:     https://coveralls.io/github/aantron/markup.ml?branch=master
 [coveralls-img]: https://img.shields.io/coveralls/aantron/markup.ml/master.svg
 
