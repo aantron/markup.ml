@@ -25,7 +25,6 @@ jobs:
     - uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: ${{matrix.ocaml}}
-    - run: sudo apt-get install python-bs4
     - run: opam install --deps-only --with-test . --yes
     - run: opam install js_of_ocaml --yes
 
