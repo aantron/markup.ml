@@ -39,14 +39,10 @@ end
 type async = unit
 type sync = unit
 
-type ('data, 'sync) stream = 'data Kstream.t
-
 let kstream s = s
 let of_kstream s = s
 
 let of_list = Kstream.of_list
-
-
 
 type location = Common.location
 let compare_locations = Common.compare_locations
@@ -73,9 +69,7 @@ type signal = Common.signal
 
 let signal_to_string = Common.signal_to_string
 
-type 's parser =
-  {mutable location : location;
-   mutable signals  : (signal, 's) stream}
+include Utility
 
 let signals parser = parser.signals
 let location parser = parser.location
@@ -158,8 +152,6 @@ let preprocess_input_stream source =
   Input.preprocess (fun _ -> true) Error.ignore_errors source
 
 
-
-include Utility
 
 
 
@@ -244,6 +236,16 @@ sig
     ?xml:(xml_declaration -> 'a) ->
     ?doctype:(doctype -> 'a) ->
     ([< signal ], _) stream -> 'a option io
+
+  val tree_with_loc :
+    ?text:(location -> string list -> 'a) ->
+    ?element:(location -> name -> (name * string) list -> 'a list -> 'a) ->
+    ?comment:(location -> string -> 'a) ->
+    ?pi:(location -> string -> string -> 'a) ->
+    ?xml:(location -> xml_declaration -> 'a) ->
+    ?doctype:(location -> doctype -> 'a) ->
+    's parser -> 'a option io
+
 end
 
 module Asynchronous (IO : IO) =
@@ -332,6 +334,9 @@ struct
 
   let tree ?text ?element ?comment ?pi ?xml ?doctype s =
     Utility.tree ?text ?element ?comment ?pi ?xml ?doctype s |> IO.of_cps
+
+  let tree_with_loc ?text ?element ?comment ?pi ?xml ?doctype s =
+    Utility.tree_with_loc ?text ?element ?comment ?pi ?xml ?doctype s |> IO.of_cps
 end
 
 include Asynchronous (Synchronous)
