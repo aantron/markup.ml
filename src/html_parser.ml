@@ -1121,7 +1121,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
           | _::ancestors -> iterate' ancestors
         in
         iterate' ancestors
-      | {element_name = _, ("tr" | "th")}::_::_ -> in_cell_mode
+      | {element_name = _, ("td" | "th")}::_::_ -> in_cell_mode
       | {element_name = _, "tr"}::_ -> in_row_mode
       | {element_name = _, ("tbody" | "thead" | "tfoot")}::_ ->
         in_table_body_mode
@@ -1777,27 +1777,32 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
     | l, `End {name = "form"} ->
       if not @@ Stack.has open_elements "template" then begin
-        let form_element = !form_element_pointer in
+        let node = !form_element_pointer in
         form_element_pointer := None;
-        match form_element with
-        | Some element when Stack.target_in_scope open_elements element ->
+        match node with
+        | None ->
+          report l (`Unmatched_end_tag "form") !throw mode
+        | Some element when not (Stack.target_in_scope open_elements element) ->
+          report l (`Unmatched_end_tag "form") !throw mode
+        | Some element -> 
           pop_implied l (fun () ->
           match Stack.current_element open_elements with
           | Some element' when element' == element ->
             pop l mode
           | _ ->
-            report element.location (`Unmatched_start_tag "form") !throw
-              (fun () ->
-            pop_until (fun element' -> element' == element) l (fun () ->
-            pop l mode)))
-        | _ ->
-          report l (`Unmatched_end_tag "form") !throw mode
+            report element.location (`Unmatched_start_tag "form") !throw mode)
       end
-      else
+      else begin
         if not @@ Stack.in_scope open_elements "form" then
           report l (`Unmatched_end_tag "form") !throw mode
         else
-          close_element_with_implied "form" l mode
+          pop_implied l (fun () ->
+            match Stack.current_element open_elements with
+            | Some {element_name = `HTML, "form"} ->
+              pop_until (function {element_name = `HTML, "form"} -> true | _ -> false) l mode
+            | _ ->
+              report l (`Unmatched_end_tag "form") !throw mode)
+      end
 
     | l, `End {name = "p"} ->
       (fun mode' ->
@@ -2162,10 +2167,12 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       pop l mode))
 
     | l, `Start ({name = "form"} as t) ->
-      misnested_tag l t "table" (fun () ->
-      push_and_emit l t (fun () ->
-      pop l mode))
-
+      if (Stack.has open_elements "template") || !form_element_pointer <> None then
+        misnested_tag l t "table" mode
+      else begin
+        push_and_emit ~set_form_element_pointer:true l t mode;
+        pop l mode
+      end
     | _, `EOF as v ->
       in_body_mode_rules "table" mode v
 

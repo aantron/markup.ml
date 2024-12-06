@@ -1419,6 +1419,16 @@ let tests = [
         1, 13, S  `End_element]
   );
 
+  ("html.parser.form.in-table" >:: fun _ ->
+    expect ~context:(Some (`Fragment "body")) "<form><table><form></table>"
+      [ 1,  1, S (start_element "form");
+        1,  7, S (start_element "table");
+        1, 14, E (`Misnested_tag ("form", "table", []));
+        1, 20, S  `End_element;
+        1, 1, E (`Unmatched_start_tag "form");
+        1, 28, S  `End_element]
+  );
+
   ("html.parser.form.unopened" >:: fun _ ->
     expect ~context:(Some (`Fragment "body")) "</form>"
       [ 1,  1, E (`Unmatched_end_tag "form")]);
