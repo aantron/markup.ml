@@ -1524,5 +1524,16 @@ let tests = [
         1, 14, S (start_element "frame");
         1, 14, S  `End_element;
         1, 21, S  `End_element;
-        1, 32, S  `End_element])
+        1, 32, S  `End_element]);
+
+  ("html.parser.template" >:: fun _ ->
+    expect ~context:None "<template></template>"
+      [ 1,  1, S (start_element "template");
+        1, 11, S  `End_element];
+
+    expect ~context:None "<template><p></p></template>"
+      [ 1,  1, S (start_element "template");
+        1, 11, S (start_element "p");
+        1, 14, S  `End_element;
+        1, 18, S  `End_element]);
 ]

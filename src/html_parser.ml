@@ -2546,7 +2546,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
 
   (* 8.2.5.4.18. *)
   and in_template_mode () =
-    dispatch tokens (fun v -> in_table_mode_rules in_template_mode v)
+    dispatch tokens (fun v -> in_template_mode_rules in_template_mode v)
 
   (* 8.2.5.4.18. *)
   and in_template_mode_rules mode = function
