@@ -15,6 +15,11 @@ let uutf_decoder encoding name =
   (fun report bytes ->
     let decoder = Uutf.decoder ~encoding `Manual in
 
+    (* Uutf consumes each byte before we hand it the next one, so a single
+       one-byte buffer can be reused across the whole stream rather than
+       allocating a fresh one per byte. *)
+    let byte = Bytes.create 1 in
+
     (fun throw empty k ->
       let rec run () =
         match Uutf.decode decoder with
@@ -27,7 +32,10 @@ let uutf_decoder encoding name =
         | `Await ->
           next bytes throw
             (fun () -> Uutf.Manual.src decoder bytes_empty 0 0; run ())
-            (fun c -> Uutf.Manual.src decoder (Bytes.make 1 c) 0 1; run ())
+            (fun c ->
+              Bytes.unsafe_set byte 0 c;
+              Uutf.Manual.src decoder byte 0 1;
+              run ())
       in
       run ())
     |> make)
