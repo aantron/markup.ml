@@ -1338,6 +1338,16 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     !ended ()))
 
   and reconstruct_active_formatting_elements mode =
+    match !active_formatting_elements with
+    (* Fast path: there is nothing to reconstruct when the list is empty or its
+       most recent entry is a marker or an already-open element. This holds for
+       essentially every character insertion, which calls this per character, so
+       skip the list walk, tuple allocation, and ref write below. *)
+    | []
+    | Active.Marker::_
+    | Active.Element_ ({is_open = true}, _, _)::_ -> mode ()
+
+    | _ ->
     let rec get_prefix prefix = function
       | [] -> prefix, []
       | Active.Marker::_ as l -> prefix, l
