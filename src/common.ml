@@ -137,7 +137,11 @@ let char c =
   else
     format_char c
 
-let is_valid_html_char c = not (is_control_character c || is_non_character c)
+let is_valid_html_char c =
+  (* Fast path for printable ASCII, which is the vast majority of input and is
+     always valid; avoids two function calls per character on the hot path. *)
+  is_in_range 0x0020 0x007E c
+  || not (is_control_character c || is_non_character c)
 
 let is_valid_xml_char c =
   is_in_range 0x0020 0xD7FF c
