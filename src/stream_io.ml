@@ -3,20 +3,24 @@
 
 open Kstream
 
-let state_fold f initial =
-  let state = ref initial in
-  (fun throw e k ->
-    f !state throw e (fun (c, new_state) ->
-      state := new_state; k c))
+(* Track the read position with a mutable index, avoiding a per-byte allocation
+   on this hot path. *)
+let string s =
+  let position = ref 0 in
+  (fun _ e k ->
+    let i = !position in
+    if i >= String.length s then e ()
+    else (position := i + 1; k (String.unsafe_get s i)))
   |> make
 
-let string s =
-  state_fold (fun i _ e k ->
-    if i >= String.length s then e () else k (s.[i], i + 1)) 0
-
+(* Same as [string], over a Buffer.t. *)
 let buffer b =
-  state_fold (fun i _ e k ->
-    if i >= Buffer.length b then e () else k (Buffer.nth b i, i + 1)) 0
+  let position = ref 0 in
+  (fun _ e k ->
+    let i = !position in
+    if i >= Buffer.length b then e ()
+    else (position := i + 1; k (Buffer.nth b i)))
+  |> make
 
 (* Optimized away by Flambda. *)
 type result = Count of int | Exn of exn
