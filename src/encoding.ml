@@ -10,15 +10,19 @@ let wrap f = fun ?(report = Error.ignore_errors) s -> f report s
 
 let bytes_empty = Bytes.create 0
 
+let chunk_size = 4096
+
 (* Decoders based on the Uutf library. *)
 let uutf_decoder encoding name =
   (fun report bytes ->
     let decoder = Uutf.decoder ~encoding `Manual in
 
-    (* Uutf consumes each byte before we hand it the next one, so a single
-       one-byte buffer can be reused across the whole stream rather than
-       allocating a fresh one per byte. *)
-    let byte = Bytes.create 1 in
+    (* The byte source yields one byte per pull, but feeding Uutf a byte at a
+       time is slow. Instead we buffer up to [chunk_size] bytes and let Uutf
+       decode the whole chunk before refilling. The buffer is reused across
+       chunks; Uutf consumes each chunk fully (copying any straddling sequence
+       into its own scratch) before returning `Await, so overwriting it is safe. *)
+    let chunk = Bytes.create chunk_size in
 
     (fun throw empty k ->
       let rec run () =
@@ -29,13 +33,22 @@ let uutf_decoder encoding name =
           let location = Uutf.decoder_line decoder, Uutf.decoder_col decoder in
           report location (`Decoding_error (s, name)) throw (fun () ->
           k u_rep)
-        | `Await ->
+        | `Await -> fill 0
+
+      (* Fill [chunk] with bytes and then handoff to [feed]. *)
+      and fill n =
+        if n >= chunk_size then feed n
+        else
           next bytes throw
-            (fun () -> Uutf.Manual.src decoder bytes_empty 0 0; run ())
-            (fun c ->
-              Bytes.unsafe_set byte 0 c;
-              Uutf.Manual.src decoder byte 0 1;
-              run ())
+            (fun () -> feed n)
+            (* unsafe_set is safe because of the above chunk_size guard. *)
+            (fun c -> Bytes.unsafe_set chunk n c; fill (n + 1))
+
+      (* Feed [chunk] to Uutf and then handoff to [run]. *)
+      and feed n =
+        if n = 0 then Uutf.Manual.src decoder bytes_empty 0 0
+        else Uutf.Manual.src decoder chunk 0 n;
+        run ()
       in
       run ())
     |> make)
