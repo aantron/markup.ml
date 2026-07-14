@@ -6,9 +6,9 @@ open Xmlm
 
 let (|>) x f = f x
 
-let parse file =
+let parse s =
   try
-    make_input ~entity:(fun _ -> Some "") (`Channel (open_in file))
+    make_input ~entity:(fun _ -> Some "") (`String (0, s))
     |> input_doc_tree ~el:(fun _ _ -> ()) ~data:ignore
     |> ignore
   with Xmlm.Error ((l, c), e) as exn ->
@@ -16,5 +16,4 @@ let parse file =
     raise exn
 
 let () =
-  measure 100 "xmlm" xml_spec "xml" (fun () ->
-    parse xml_spec)
+  measure 100 "xmlm" "xml_spec" "xml" (fun () -> parse xml_spec)

@@ -6,16 +6,27 @@ open Nethtml
 
 let (|>) x f = f x
 
-let parse file =
-  file
-  |> open_in
-  |> Lexing.from_channel
+let parse s =
+  s
+  |> Lexing.from_string
   |> parse_document ~dtd:relaxed_html40_dtd
   |> ignore
 
 let () =
-  measure 100 "nethtml" google_page "html" (fun () ->
-    parse google_page);
+  measure 100 "nethtml" "google" "html"
+    (fun () -> parse google_page);
 
-  measure 100 "nethtml" xml_spec "html" (fun () ->
-    parse xml_spec)
+  measure 100 "nethtml" "xml_spec" "html"
+    (fun () -> parse xml_spec);
+
+  measure 100 "nethtml" "stress_cjk" "html"
+    (fun () -> parse stress_cjk);
+
+  measure 100 "nethtml" "stress_formatting" "html"
+    (fun () -> parse stress_formatting);
+
+  measure 100 "nethtml" "stress_entities" "html"
+    (fun () -> parse stress_entities);
+
+  measure 100 "nethtml" "stress_deep_nesting" "html"
+    (fun () -> parse stress_deep_nesting)

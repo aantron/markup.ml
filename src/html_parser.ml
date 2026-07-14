@@ -1027,6 +1027,23 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     report l (`Misnested_tag (t.name, context_name, t.Token_tag.attributes)) !throw k in
 
   let open_elements = Stack.create () in
+
+  (* Number of open <p> elements on the stack. [in_button_scope "p"] can only be
+     true when this is positive, so tracking it lets close_current_p_element skip
+     a full open-elements scan on every block-level start tag. Without it,
+     opening N nested block elements (e.g. <div>) is O(N^2), because each open
+     scans the whole growing stack for a p to close. Maintained incrementally on
+     push/pop; recomputed after the (rare) adoption agency, which can also remove
+     p elements. *)
+  let open_p_count = ref 0 in
+  let is_paragraph element =
+    match element.element_name with `HTML, "p" -> true | _ -> false in
+  let count_open_p () =
+    List.fold_left
+      (fun n element -> if is_paragraph element then n + 1 else n)
+      0 !open_elements
+  in
+
   let active_formatting_elements = Active.create () in
   let subtree_buffer = Subtree.create open_elements in
   let text = Text.prepare () in
@@ -1202,6 +1219,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       Element.create ~is_html_integration_point (namespace, name) location
     in
     open_elements := element_entry::!open_elements;
+    if is_paragraph element_entry then incr open_p_count;
 
     if set_form_element_pointer then
       form_element_pointer := Some element_entry;
@@ -1229,6 +1247,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       (fun () ->
         open_elements := more;
         element.is_open <- false;
+        if is_paragraph element then decr open_p_count;
         if element.suppress then mode ()
         else emit' location `End_element mode))
 
@@ -1311,8 +1330,18 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
       | _ -> false) location (fun () ->
     pop location mode)))
 
+  (* The adoption agency can remove p elements from the stack (they are not
+     formatting elements, but can lie between one and its furthest block), so
+     recompute the cached count afterwards rather than trying to track its
+     internal stack surgery. It is rare and already O(stack), so the extra scan
+     is immaterial. *)
+  and run_adoption_agency l name mode =
+    adoption_agency_algorithm l name (fun () ->
+      open_p_count := count_open_p ();
+      mode ())
+
   and close_current_p_element l mode =
-    if Stack.in_button_scope open_elements "p" then
+    if !open_p_count > 0 && Stack.in_button_scope open_elements "p" then
       close_element_with_implied "p" l mode
     else mode ()
 
@@ -1338,6 +1367,16 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
     !ended ()))
 
   and reconstruct_active_formatting_elements mode =
+    match !active_formatting_elements with
+    (* Fast path: there is nothing to reconstruct when the list is empty or its
+       most recent entry is a marker or an already-open element. This holds for
+       essentially every character insertion, which calls this per character, so
+       skip the list walk, tuple allocation, and ref write below. *)
+    | []
+    | Active.Marker::_
+    | Active.Element_ ({is_open = true}, _, _)::_ -> mode ()
+
+    | _ ->
     let rec get_prefix prefix = function
       | [] -> prefix, []
       | Active.Marker::_ as l -> prefix, l
@@ -1843,7 +1882,7 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         | None -> k ()
         | Some existing ->
           misnested_tag l t "a" (fun () ->
-          adoption_agency_algorithm l "a" (fun () ->
+          run_adoption_agency l "a" (fun () ->
           Stack.remove open_elements existing;
           Active.remove active_formatting_elements existing;
           k ())))
@@ -1866,14 +1905,14 @@ let parse requested_context report (tokens, set_tokenizer_state, set_foreign) =
         if not @@ Stack.in_scope open_elements "nobr" then k ()
         else
           misnested_tag l t "nobr" (fun () ->
-          adoption_agency_algorithm l "nobr" (fun () ->
+          run_adoption_agency l "nobr" (fun () ->
           reconstruct_active_formatting_elements k)))
       (fun () -> push_and_emit ~formatting:true l t mode))
 
     | l, `End {name =
         "a" | "b" | "big" | "code" | "em" | "font" | "i" | "nobr" | "s" |
         "small" | "strike" | "strong" | "tt" | "u" as name} ->
-      adoption_agency_algorithm l name mode
+      run_adoption_agency l name mode
 
     | l, `Start ({name = "applet" | "marquee" | "object"} as t) ->
       frameset_ok := false;
